@@ -1,9 +1,11 @@
 # unnamed_os
 
 ## Building environment:
-`rustup target add riscv64imac-unknown-none-elf`
+`rustup target add riscv64imac-unknown-none-elf`  
+`cargo install cargo-binutils`  
+`rustup component add llvm-tools-preview`  
 
-## QEMU (require ninja):
+## QEMU (ninja is required):
 `wget https://download.qemu.org/qemu-6.2.0.tar.xz`  
 `tar xvJf qemu-6.2.0.tar.xz`  
 `cd qemu-6.2.0`  
@@ -14,10 +16,5 @@
 出现 ERROR: glib-2.48 gthread-2.0 is required to compile QEMU 时，可以通过 sudo apt-get install libglib2.0-dev 安装；  
 出现 ERROR: pixman >= 0.21.8 not present 时，可以通过 sudo apt-get install libpixman-1-dev 安装。  
 
-## How to build:
-### build elf: `cargo build`
-### make image: `rust-objcopy target/riscv64imac-unknown-none-elf/debug/unnamed_os --strip-all -O binary target/riscv64imac-unknown-none-elf/debug/kernel.bin`
-
-## Tools:
-`cargo install cargo-binutils`  
-`rustup component add llvm-tools-preview`
+## Run:  
+`make run`
