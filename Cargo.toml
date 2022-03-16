@@ -1,5 +1,5 @@
 [package]
-name = "unnamed_os"
+name = "rusted_os"
 version = "0.1.0"
 edition = "2018"
 

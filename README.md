@@ -1,4 +1,4 @@
-# unnamed_os
+# rusted_os
 
 ## Building environment:
 `rustup target add riscv64imac-unknown-none-elf`  

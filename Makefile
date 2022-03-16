@@ -1,6 +1,6 @@
 TARGET	    := riscv64imac-unknown-none-elf
 MODE		:= debug
-KERNEL_FILE := target/$(TARGET)/$(MODE)/unnamed_os
+KERNEL_FILE := target/$(TARGET)/$(MODE)/rusted_os
 BIN_FILE	:= target/$(TARGET)/$(MODE)/kernel.bin
 
 OBJDUMP	 := rust-objdump --arch-name=riscv64

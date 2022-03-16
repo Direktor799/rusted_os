@@ -12,6 +12,6 @@ global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
-    println!("Hello unnamed_os!");
+    println!("Hello rusted_os!");
     panic!("end of rust_main")
 }
