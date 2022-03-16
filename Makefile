@@ -37,6 +37,7 @@ qemu: build
 			-machine virt \
 			-nographic \
 			-bios default \
+			-kernel $(BIN_FILE)\
 			-device loader,file=$(BIN_FILE),addr=0x80200000
 
 # 一键运行
