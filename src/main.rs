@@ -4,6 +4,7 @@
 
 #[macro_use]
 mod console;
+mod interrupt;
 mod panic;
 mod sbi;
 
@@ -11,7 +12,12 @@ use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
 
 #[no_mangle]
+/// This is where we start.
 pub extern "C" fn rust_main() -> ! {
     println!("Hello rusted_os!");
-    panic!("end of rust_main")
+    interrupt::init();
+    unsafe {
+        core::arch::asm!("ebreak");
+    }
+    loop {}
 }
