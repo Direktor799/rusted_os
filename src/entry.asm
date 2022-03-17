@@ -1,5 +1,6 @@
     .section .text.entry
     .globl _start
+# 程序入口处 分配栈空间并调用rust_main
 _start:
     la sp, boot_stack_top
     call rust_main

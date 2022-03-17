@@ -5,6 +5,7 @@ use riscv::register::{scause, stvec};
 
 global_asm!(include_str!("./interrupt.asm"));
 
+/// 初始化中断向量
 pub fn init() {
     unsafe {
         extern "C" {
@@ -14,6 +15,7 @@ pub fn init() {
     }
 }
 
+/// 中断处理程序
 #[no_mangle]
 pub fn handle_interrupt(context: &mut Context, scause: scause::Scause, stval: usize) {
     println!("Interrupted: {:?}", scause.cause());
