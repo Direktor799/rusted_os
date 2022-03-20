@@ -18,7 +18,7 @@ pub fn init() {
 /// 中断处理程序
 #[no_mangle]
 pub fn handle_interrupt(context: &mut Context, scause: scause::Scause, stval: usize) {
-    println!("Interrupted: {:?}", scause.cause());
+    // println!("Interrupted: {:?}", scause.cause());
     match scause.cause() {
         scause::Trap::Exception(scause::Exception::Breakpoint) => breakpoint(context),
         scause::Trap::Interrupt(scause::Interrupt::SupervisorTimer) => supervisor_timer(context),
