@@ -1,15 +1,17 @@
-use super::allocator;
+use super::allocator::allocator::OutsideBuddySystemAllocator;
 
 pub const KERNEL_HEAP_SIZE: usize = 0x80_0000;
 
 static mut HEAP_SPACE: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
 
 #[global_allocator]
-static mut ALLOCATOR: allocator::allocator::Dummy = allocator::allocator::Dummy::new();
+static mut ALLOCATOR: OutsideBuddySystemAllocator<32> = OutsideBuddySystemAllocator::<32>::new();
 
 pub fn init() {
     unsafe {
-        ALLOCATOR.init(HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE);
+        ALLOCATOR
+            .borrow_mut()
+            .init(HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE);
     }
 }
 

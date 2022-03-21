@@ -22,9 +22,15 @@ pub extern "C" fn rust_main() -> ! {
     println!("Hello rusted_os!");
     interrupt::init();
     memory::init();
-    let _x = Box::new(1);
+    {
+        let _x = Box::new(1);
+        {
+            let _x = Box::new(1);
+            let _y = Box::new(1);
+        }
+    }
     // unsafe {
     //     core::arch::asm!("ebreak");
     // }
-    loop {}
+    panic!("Dummy as fuck");
 }
