@@ -1,21 +1,21 @@
-use super::allocator::allocator::OutsideBuddySystemAllocator;
-
-pub const KERNEL_HEAP_SIZE: usize = 0x80_0000;
-
-static mut HEAP_SPACE: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
+use super::buddy_system::OutsideBuddySystemAllocator;
+use crate::config::KERNEL_HEAP_SIZE;
 
 #[global_allocator]
-static mut ALLOCATOR: OutsideBuddySystemAllocator<32> = OutsideBuddySystemAllocator::<32>::new();
-
-pub fn init() {
-    unsafe {
-        ALLOCATOR
-            .borrow_mut()
-            .init(HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE);
-    }
-}
+static mut HEAP_ALLOCATOR: OutsideBuddySystemAllocator<32> =
+    OutsideBuddySystemAllocator::<32>::new();
 
 #[alloc_error_handler]
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("Allocation error: {:?}", layout);
+}
+
+static mut KERNEL_HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
+
+pub fn init() {
+    unsafe {
+        HEAP_ALLOCATOR
+            .borrow_mut()
+            .init(KERNEL_HEAP.as_ptr() as usize, KERNEL_HEAP_SIZE);
+    }
 }

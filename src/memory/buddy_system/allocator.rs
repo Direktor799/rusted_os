@@ -55,7 +55,6 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
                     self.free_list[spliting_order - 1].push(second_addr);
                 }
                 self.allocated += size;
-                println!("alloc done: {:?}", self);
                 return NonNull::new(self.free_list[order].pop().unwrap() as *mut u8)
                     .unwrap()
                     .as_ptr();
@@ -86,7 +85,6 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
             } else {
                 self.free_list[curr_order].push(curr_addr as *mut usize);
                 self.allocated -= size;
-                println!("dealloc done: {:?}", self);
                 return;
             }
         }

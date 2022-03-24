@@ -3,15 +3,15 @@
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
 
+extern crate alloc;
+
 #[macro_use]
 mod console;
+mod config;
 mod interrupt;
 mod memory;
 mod panic;
 mod sbi;
-
-extern crate alloc;
-use alloc::boxed::Box;
 
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
@@ -22,15 +22,18 @@ pub extern "C" fn rust_main() -> ! {
     println!("Hello rusted_os!");
     interrupt::init();
     memory::init();
-    {
-        let _x = Box::new(1);
-        {
-            let _x = Box::new(1);
-            let _y = Box::new(1);
+    unsafe {
+        for _ in 0..2 {
+            let frame_0 = match memory::frame::FRAME_ALLOCATOR.borrow_mut().alloc() {
+                Option::Some(frame_tracker) => frame_tracker,
+                Option::None => panic!("None"),
+            };
+            let frame_1 = match memory::frame::FRAME_ALLOCATOR.borrow_mut().alloc() {
+                Option::Some(frame_tracker) => frame_tracker,
+                Option::None => panic!("None"),
+            };
+            println!("{:?} and {:?}", frame_0.address(), frame_1.address());
         }
     }
-    // unsafe {
-    //     core::arch::asm!("ebreak");
-    // }
     panic!("Dummy as fuck");
 }

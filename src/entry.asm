@@ -8,6 +8,7 @@ _start:
     .section .bss.stack
     .globl boot_stack
 boot_stack:
-    .space 4096 * 16
+# 16K内核栈
+    .space 1024 * 16
     .globl boot_stack_top
 boot_stack_top:

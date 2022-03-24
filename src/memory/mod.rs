@@ -2,13 +2,17 @@
 //!
 //!
 
-mod allocator;
+mod address;
+mod buddy_system;
+pub mod frame;
 mod heap;
+
+pub use address::PhysAddr;
 
 /// 内存管理相关的子模块
 ///
 /// - [`heap::init`]
 pub fn init() {
     heap::init();
-    println!("mod memory initialized");
+    frame::init();
 }
