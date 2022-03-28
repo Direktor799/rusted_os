@@ -1,7 +1,7 @@
 use super::context::Context;
 use super::timer;
 use core::arch::global_asm;
-use riscv::register::{scause, stvec};
+use riscv::register::scause;
 
 global_asm!(include_str!("./interrupt.asm"));
 
@@ -11,7 +11,10 @@ pub fn init() {
         extern "C" {
             fn __interrupt();
         }
-        stvec::write(__interrupt as usize, stvec::TrapMode::Direct);
+        // stvec::write(__interrupt as usize, stvec::TrapMode::Direct);
+        core::arch::asm!(
+            "csrw stvec, {}", in(reg) __interrupt as usize
+        )
     }
 }
 
