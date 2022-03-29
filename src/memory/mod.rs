@@ -4,8 +4,9 @@
 
 mod address;
 mod buddy_system;
-pub mod frame;
+mod frame;
 mod heap;
+mod page_table;
 
 pub use address::PhysAddr;
 

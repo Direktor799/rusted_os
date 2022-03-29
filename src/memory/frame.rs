@@ -8,11 +8,19 @@ use core::ops::Deref;
 pub struct FrameTracker(PhysPageNum);
 
 impl FrameTracker {
-    pub fn address(&self) -> PhysAddr {
-        self.0.address()
+    pub fn new(ppn: PhysPageNum) -> Self {
+        let bytes_array = ppn.get_bytes_array();
+        for byte in bytes_array {
+            *byte = 0;
+        }
+        Self(ppn)
     }
 
-    pub fn page_num(&self) -> PhysPageNum {
+    pub fn addr(&self) -> PhysAddr {
+        self.0.addr()
+    }
+
+    pub fn ppn(&self) -> PhysPageNum {
         self.0
     }
 }
@@ -66,12 +74,12 @@ impl FrameAllocator {
     pub fn alloc(&mut self) -> Option<FrameTracker> {
         if let Some(ppn) = self.recycled.pop() {
             // 优先使用已回收的页面
-            Some(FrameTracker(ppn))
+            Some(FrameTracker::new(ppn))
         } else if self.curr_ppn < self.end_ppn {
             // 其次使用未分配的页面
             let ppn = self.curr_ppn;
             self.curr_ppn.0 += 1;
-            Some(FrameTracker(ppn))
+            Some(FrameTracker::new(ppn))
         } else {
             None // 否则分配失败
         }
@@ -94,6 +102,6 @@ pub fn init() {
     unsafe {
         FRAME_ALLOCATOR
             .borrow_mut()
-            .init(frame_start_num, MEMORY_END_ADDR.page_num());
+            .init(frame_start_num, MEMORY_END_ADDR.ppn());
     }
 }
