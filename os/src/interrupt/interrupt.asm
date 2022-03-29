@@ -4,6 +4,8 @@
 .set    REG_SIZE, 8
 .set    CONTEXT_SIZE, 34
 
+.align 2
+
 # 用于将寄存器的值保存到栈指定位置的宏
 .macro SAVE reg, offset
     sd  \reg, \offset*8(sp)
@@ -29,45 +31,37 @@
 # 进入中断
 # 保存 Context 并且进入 Rust 中的中断处理函数 interrupt::handler::handle_interrupt()
 __interrupt:
-    # 在栈上开辟 Context 所需的空间
-    addi    sp, sp, -CONTEXT_SIZE*REG_SIZE
-
-    # 保存通用寄存器，除了 x0（固定为 0）
-    SAVE    x1, 1
-    # 将原来的 sp（sp 又名 x2）写入 2 位置
-    addi    x1, sp, CONTEXT_SIZE*REG_SIZE
-    SAVE    x1, 2
-    # 保存 x3 至 x31
-    .set    n, 3
+    csrrw sp, sscratch, sp                      # 切换到内核栈
+    addi    sp, sp, -CONTEXT_SIZE*REG_SIZE      # 在栈上开辟 Context 所需的空间
+    SAVE    x1, 1                               # 保存通用寄存器，除了 x0（固定为 0）
+    .set    n, 3                                # 保存其他寄存器
     .rept   29
         SAVE_N  %n
         .set    n, n + 1
     .endr
-
-    # 取出 CSR 并保存
-    csrr    s1, sstatus
-    csrr    s2, sepc
-    SAVE    s1, 32
-    SAVE    s2, 33
-
-    # 调用 handle_interrupt，传入参数
-    # context: &mut Context
-    mv      a0, sp
-    # scause: Scause
-    csrr    a1, scause
-    # stval: usize
-    csrr    a2, stval
-    jal  handle_interrupt
+    csrr    t1, sstatus                         # 取出 CSR 并保存
+    SAVE    t1, 32
+    csrr    t2, sepc
+    SAVE    t2, 33
+    csrr    t3, sscratch                        # 将原来的 sp(x2)写入 2 位置
+    SAVE    t3, 2
+    mv      a0, sp                              # context: &mut Context
+    csrr    a1, scause                          # scause: Scause
+    csrr    a2, stval                           # stval: usize
+    jal  interrupt_handler
 
     .globl __restore
 # 离开中断
 # 从 Context 中恢复所有寄存器，并跳转至 Context 中 sepc 的位置
 __restore:
+    mv sp, a0                                   # 中断恢复 + U初始化
     # 恢复 CSR
-    LOAD    s1, 32
-    LOAD    s2, 33
-    csrw    sstatus, s1
-    csrw    sepc, s2
+    LOAD    t1, 32
+    csrw    sstatus, t1
+    LOAD    t2, 33
+    csrw    sepc, t2
+    LOAD    t3, 2
+    csrw    sscratch, t3
 
     # 恢复通用寄存器
     LOAD    x1, 1
@@ -77,7 +71,6 @@ __restore:
         LOAD_N  %n
         .set    n, n + 1
     .endr
-
-    # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
-    LOAD    x2, 2
+    addi    sp, sp, CONTEXT_SIZE*REG_SIZE       # 归还内核栈空间
+    csrrw sp, sscratch, sp                      # 切换到用户栈
     sret
