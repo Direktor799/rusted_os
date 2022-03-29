@@ -1,7 +1,7 @@
 # rusted_os
 
 ## Building environment:
-`rustup target add riscv64imac-unknown-none-elf`  
+`rustup target add riscv64gc-unknown-none-elf`  
 `cargo install cargo-binutils`  
 `rustup component add llvm-tools-preview`  
 
@@ -9,7 +9,7 @@
 `wget https://download.qemu.org/qemu-6.2.0.tar.xz`  
 `tar xvJf qemu-6.2.0.tar.xz`  
 `cd qemu-6.2.0`  
-`./configure --target-list=riscv32-softmmu,riscv64-softmmu`  
+`./configure --target-list=riscv64-softmmu,riscv64-linux-user`  
 `make -j$(nproc)`  
 `sudo make install`    
 出现 ERROR: pkg-config binary 'pkg-config' not found 时，可以通过 `sudo apt-get install pkg-config` 安装；  
