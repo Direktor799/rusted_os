@@ -54,7 +54,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
 
 fn breakpoint(context: &mut Context) {
     println!("Breakpoint at 0x{:x}", context.sepc);
-    context.sepc += 4;
+    context.sepc += 2;
 }
 
 fn supervisor_timer(_: &Context) {
