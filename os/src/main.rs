@@ -14,6 +14,7 @@ mod memory;
 mod panic;
 mod sbi;
 mod syscall;
+mod sync;
 mod timer;
 mod task;
 
@@ -29,7 +30,7 @@ pub extern "C" fn rust_main() -> ! {
     interrupt::init();
     memory::init();
     unsafe {
-        batch::run_next_app();
+       batch::run_next_app();
     }
     panic!("Dummy as fuck");
 }
