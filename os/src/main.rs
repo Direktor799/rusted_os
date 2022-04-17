@@ -26,7 +26,7 @@ pub extern "C" fn rust_main() -> ! {
     println!("Hello rusted_os!");
     interrupt::init();
     memory::init();
-    loader::init();
-    loader::run_next_app();
+    // loader::init();
+    // loader::run_next_app();
     panic!("Dummy as fuck");
 }

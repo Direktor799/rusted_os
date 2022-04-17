@@ -1,6 +1,5 @@
 use super::address::{VPNRange, VirtPageNum};
 use super::frame::{FrameTracker, FRAME_ALLOCATOR};
-use super::page_table::{R, U, W, X};
 use alloc::collections::BTreeMap;
 
 enum MapType {
