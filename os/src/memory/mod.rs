@@ -16,4 +16,5 @@ pub use address::PhysAddr;
 pub fn init() {
     heap::init();
     frame::init();
+    println!("mod memory initialized!");
 }
