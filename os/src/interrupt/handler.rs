@@ -2,6 +2,7 @@ use super::context::Context;
 use crate::loader::run_next_app;
 use crate::syscall::sys_call;
 use crate::task::schedule_callback;
+use crate::timer;
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
