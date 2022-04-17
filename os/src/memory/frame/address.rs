@@ -85,7 +85,7 @@ impl VirtPageNum {
         let mut indices = [0; 3];
         for i in (0..3).rev() {
             indices[i] = vpn & (PAGE_SIZE / 8 - 1);
-            vpn >>= PAGE_SIZE_BITS / 3;
+            vpn >>= PAGE_SIZE_BITS - 3;
         }
         indices
     }
@@ -101,12 +101,12 @@ pub struct VPNRange {
 impl Iterator for VPNRange {
     type Item = VirtPageNum;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.curr_vpn == self.end_vpn {
-            None
-        } else {
+        let mut res = Option::None;
+        if self.curr_vpn < self.end_vpn {
+            res = Some(self.curr_vpn);
             self.curr_vpn.0 += 1;
-            Some(VirtPageNum(self.curr_vpn.0))
         }
+        res
     }
 }
 
