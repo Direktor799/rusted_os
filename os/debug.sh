@@ -1,0 +1,1 @@
+riscv64-unknown-elf-gdb target/riscv64gc-unknown-none-elf/debug/rusted_os --command=init.gdb
