@@ -2,6 +2,7 @@ use super::context::Context;
 use crate::timer;
 use crate::batch::run_next_app;
 use crate::syscall::sys_call;
+use crate::task::schedule_callback;
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
@@ -9,7 +10,7 @@ use riscv::register::{
     sie, stval, stvec
 };
 
-global_asm!(include_str!("./interrupt.asm"));
+global_asm!(include_str!("./interrupt.S"));
 
 /// 初始化中断向量
 pub fn init() {
@@ -71,4 +72,5 @@ fn breakpoint(context: &mut Context) {
 
 fn supervisor_timer(_: &Context) {
     println!("timer called");
+    schedule_callback();
 }

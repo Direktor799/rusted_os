@@ -16,9 +16,9 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     }
 }
 
-pub fn sys_exit(state: i32) -> ! {
-    println!("[kernel] Application exit with code {}", state);
-    unsafe {
-        run_next_app();
-    }
-}
+// pub fn sys_exit(state: i32) -> ! {
+//     println!("[kernel] Application exit with code {}", state);
+//     unsafe {
+//         run_next_app();
+//     }
+// }

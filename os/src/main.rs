@@ -15,6 +15,7 @@ mod panic;
 mod sbi;
 mod syscall;
 mod timer;
+mod task;
 
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
