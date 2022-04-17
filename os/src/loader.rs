@@ -1,4 +1,4 @@
-//! batch subsystem
+//! loader subsystem
 use crate::interrupt::context::Context;
 use core::arch::asm;
 use core::cell::RefCell;
@@ -47,7 +47,7 @@ impl UserStack {
 }
 
 pub struct AppManager {
-    num_app: usize,
+    app_num: usize,
     current_app: usize,
     app_start: [usize; MAX_APP_NUM + 1],
 }
@@ -55,31 +55,41 @@ pub struct AppManager {
 impl AppManager {
     pub const fn new() -> Self {
         Self {
-            num_app: 0,
+            app_num: 0,
             current_app: 0,
             app_start: [0; MAX_APP_NUM + 1],
         }
     }
     pub fn init(&mut self) {
         extern "C" {
-            fn _num_app();
+            fn _app_num();
         }
         unsafe {
-            let num_app_ptr = _num_app as usize as *const usize;
-            let num_app = num_app_ptr.read_volatile();
+            let app_num_ptr = _app_num as usize as *const usize;
+            let app_num = app_num_ptr.read_volatile();
             let mut app_start: [usize; MAX_APP_NUM + 1] = [0; MAX_APP_NUM + 1];
             let app_start_raw: &[usize] =
-                core::slice::from_raw_parts(num_app_ptr.add(1), num_app + 1);
-            app_start[..=num_app].copy_from_slice(app_start_raw);
-            self.num_app = num_app;
-            self.current_app = 0;
+                core::slice::from_raw_parts(app_num_ptr.add(1), app_num + 1);
+            app_start[..=app_num].copy_from_slice(app_start_raw);
+            self.app_num = app_num;
             self.app_start = app_start;
+            asm!("fence.i");
+            for app_id in 0..self.app_num {
+                let app_addr = self.get_app_addr(app_id);
+                core::slice::from_raw_parts_mut(app_addr as *mut u8, APP_SIZE_LIMIT).fill(0);
+                let app_src = core::slice::from_raw_parts(
+                    self.app_start[app_id] as *const u8,
+                    self.app_start[app_id + 1] - self.app_start[app_id],
+                );
+                let app_dst = core::slice::from_raw_parts_mut(app_addr as *mut u8, app_src.len());
+                app_dst.copy_from_slice(app_src);
+            }
         }
     }
 
     pub fn print_app_info(&self) {
-        println!("[kernel] num_app = {}", self.num_app);
-        for i in 0..self.num_app {
+        println!("[kernel] app_num = {}", self.app_num);
+        for i in 0..self.app_num {
             println!(
                 "[kernel] app_{} [{:#x}, {:#x})",
                 i,
@@ -89,26 +99,8 @@ impl AppManager {
         }
     }
 
-    fn load_app(&self, app_id: usize) {
-        if app_id >= self.num_app {
-            panic!("All applications completed!");
-        }
-        println!("[kernel] Loading app_{}", app_id);
-        unsafe {
-            asm!("fence.i");
-            core::slice::from_raw_parts_mut(APP_BASE_ADDRESS as *mut u8, APP_SIZE_LIMIT).fill(0);
-            let app_src = core::slice::from_raw_parts(
-                self.app_start[app_id] as *const u8,
-                self.app_start[app_id + 1] - self.app_start[app_id],
-            );
-            let app_dst =
-                core::slice::from_raw_parts_mut(APP_BASE_ADDRESS as *mut u8, app_src.len());
-            app_dst.copy_from_slice(app_src);
-        }
-    }
-
-    pub fn get_current_app(&self) -> usize {
-        self.current_app
+    pub fn get_app_addr(&self, app_id: usize) -> usize {
+        APP_BASE_ADDRESS + app_id * APP_SIZE_LIMIT
     }
 }
 
@@ -129,26 +121,33 @@ impl Deref for OutsideAppManager {
 
 pub static mut APP_MANAGER: OutsideAppManager = OutsideAppManager::new();
 
-/// init batch subsystem
+/// init loader subsystem
 pub fn init() {
     unsafe {
         APP_MANAGER.borrow_mut().init();
         APP_MANAGER.borrow_mut().print_app_info();
     }
+    println!("mod loader initialized!");
 }
 
 pub fn run_next_app() -> ! {
     unsafe {
         let mut app_manager = APP_MANAGER.borrow_mut();
-        let current_app = app_manager.get_current_app();
-        app_manager.load_app(current_app);
+        if app_manager.current_app >= app_manager.app_num {
+            panic!("All done!");
+        }
+        let addr = app_manager.get_app_addr(app_manager.current_app);
+        println!(
+            "[kernel] Running app_{} at {:x}",
+            app_manager.current_app, addr
+        );
+        let context = Context::app_init_context(addr, USER_STACK.get_sp());
         app_manager.current_app += 1;
         drop(app_manager);
         extern "C" {
             fn __restore(cx_addr: usize);
         }
-        let context = Context::app_init_context(APP_BASE_ADDRESS, USER_STACK.get_sp());
         __restore(KERNEL_STACK.push_context(context) as *const _ as usize);
-        panic!("Unreachable in batch::run_current_app!");
+        unreachable!();
     }
 }

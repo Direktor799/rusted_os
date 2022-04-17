@@ -1,6 +1,6 @@
 use super::context::Context;
 use super::timer;
-use crate::batch::run_next_app;
+use crate::loader::run_next_app;
 use crate::syscall::sys_call;
 use core::arch::global_asm;
 use riscv::register::scause::{Exception, Interrupt, Scause, Trap};
@@ -23,7 +23,6 @@ pub fn init() {
 /// 中断处理程序
 #[no_mangle]
 pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) -> &mut Context {
-    println!("Interrupted: {:?}", scause.cause());
     match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         Trap::Interrupt(Interrupt::SupervisorTimer) => supervisor_timer(context),
@@ -37,7 +36,11 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
             run_next_app();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
-            println!("[kernel] IllegalInstruction in application, kernel killed it.");
+            println!(
+                "[kernel] IllegalInstruction at {:x}: {:x}, kernel killed it.",
+                context.sepc,
+                unsafe { *(context.sepc as *const usize) }
+            );
             run_next_app();
         }
         _ => {
