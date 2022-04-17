@@ -1,5 +1,4 @@
 use super::address::{PhysAddr, PhysPageNum};
-use crate::config::{MEMORY_END_ADDR, PAGE_SIZE};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefCell;
@@ -90,18 +89,5 @@ impl FrameAllocator {
             panic!("{:?} is not allocated!", ppn);
         }
         self.recycled.push(ppn);
-    }
-}
-
-pub fn init() {
-    extern "C" {
-        fn kernel_end(); // 在linker script中定义的内存地址
-    }
-    let kernel_end_addr = kernel_end as usize;
-    let frame_start_num = PhysPageNum((kernel_end_addr + PAGE_SIZE - 1) / PAGE_SIZE);
-    unsafe {
-        FRAME_ALLOCATOR
-            .borrow_mut()
-            .init(frame_start_num, MEMORY_END_ADDR.ppn());
     }
 }

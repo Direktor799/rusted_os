@@ -2,13 +2,8 @@
 //!
 //!
 
-mod address;
-mod buddy_system;
 mod frame;
 mod heap;
-mod page_table;
-
-pub use address::PhysAddr;
 
 /// 内存管理相关的子模块
 ///

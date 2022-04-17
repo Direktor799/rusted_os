@@ -1,5 +1,8 @@
-use super::buddy_system::OutsideBuddySystemAllocator;
 use crate::config::KERNEL_HEAP_SIZE;
+use allocator::OutsideBuddySystemAllocator;
+
+mod allocator;
+mod linked_list;
 
 #[global_allocator]
 static mut HEAP_ALLOCATOR: OutsideBuddySystemAllocator<32> =

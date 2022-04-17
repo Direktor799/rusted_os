@@ -9,10 +9,10 @@ pub struct PhysAddr(pub usize);
 #[derive(Copy, Clone)]
 pub struct VirtAddr(pub usize);
 
-#[derive(Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Copy, Clone, PartialEq, PartialOrd)]
 pub struct PhysPageNum(pub usize);
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VirtPageNum(pub usize);
 
 impl Debug for PhysAddr {
@@ -88,5 +88,34 @@ impl VirtPageNum {
             vpn >>= PAGE_SIZE_BITS / 3;
         }
         indices
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct VPNRange {
+    start_vpn: VirtPageNum,
+    end_vpn: VirtPageNum,
+    curr_vpn: VirtPageNum,
+}
+
+impl Iterator for VPNRange {
+    type Item = VirtPageNum;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.curr_vpn == self.end_vpn {
+            None
+        } else {
+            self.curr_vpn.0 += 1;
+            Some(VirtPageNum(self.curr_vpn.0))
+        }
+    }
+}
+
+impl VPNRange {
+    pub fn new(start_vpn: VirtPageNum, end_vpn: VirtPageNum) -> Self {
+        Self {
+            start_vpn,
+            end_vpn,
+            curr_vpn: start_vpn,
+        }
     }
 }

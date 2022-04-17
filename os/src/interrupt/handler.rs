@@ -74,5 +74,5 @@ fn breakpoint(context: &mut Context) {
 }
 
 fn supervisor_timer(_: &Context) {
-    println!("timer called");
+    // println!("timer called");
 }

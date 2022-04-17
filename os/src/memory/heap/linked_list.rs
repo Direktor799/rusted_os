@@ -1,6 +1,4 @@
 //! Linked list for memory management
-
-#![allow(unused)]
 use core::marker::Copy;
 use core::{fmt, ptr};
 
