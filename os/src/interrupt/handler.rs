@@ -1,13 +1,12 @@
 use super::context::Context;
-use crate::timer;
-use crate::batch::run_next_app;
+use crate::loader::run_next_app;
 use crate::syscall::sys_call;
 use crate::task::schedule_callback;
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{Exception, Interrupt, Scause, Trap},
-    sie, stval, stvec
+    sie, stval, stvec,
 };
 
 global_asm!(include_str!("./interrupt.S"));
@@ -34,12 +33,12 @@ pub fn enable_timer_interrupt() {
 /// 中断处理程序
 #[no_mangle]
 pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) -> &mut Context {
-    println!("Interrupted: {:?}", scause.cause());
     match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             timer::set_next_timeout();
-            supervisor_timer(context)},
+            supervisor_timer(context)
+        }
         Trap::Exception(Exception::UserEnvCall) => {
             context.sepc += 4;
             context.x[10] =
@@ -50,7 +49,11 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
             run_next_app();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
-            println!("[kernel] IllegalInstruction in application, kernel killed it.");
+            println!(
+                "[kernel] IllegalInstruction at {:x}: {:x}, kernel killed it.",
+                context.sepc,
+                unsafe { *(context.sepc as *const usize) }
+            );
             run_next_app();
         }
         _ => {
@@ -67,7 +70,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
 
 fn breakpoint(context: &mut Context) {
     println!("Breakpoint at 0x{:x}", context.sepc);
-    context.sepc += 4;
+    context.sepc += 2;
 }
 
 fn supervisor_timer(_: &Context) {
