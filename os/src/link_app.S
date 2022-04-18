@@ -3,11 +3,12 @@
     .section .data
     .globl _app_num
 _app_num:
-    .quad 3
+    .quad 4
     .quad app_0_start
     .quad app_1_start
     .quad app_2_start
-    .quad app_2_end
+    .quad app_3_start
+    .quad app_3_end
 
     .section .data
     .globl app_0_start
@@ -29,3 +30,10 @@ app_1_end:
 app_2_start:
     .incbin "../user/target/riscv64gc-unknown-none-elf/release/02threes.bin"
 app_2_end:
+
+    .section .data
+    .globl app_3_start
+    .globl app_3_end
+app_3_start:
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/03yield.bin"
+app_3_end:
