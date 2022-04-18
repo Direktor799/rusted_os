@@ -25,9 +25,9 @@ global_asm!(include_str!("link_app.S"));
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
     println!("Hello rusted_os!");
-    loader::init();
     interrupt::init();
     memory::init();
-    loader::run_next_app();
+    loader::init();
+    task::init();
     panic!("Dummy as fuck");
 }

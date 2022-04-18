@@ -3,11 +3,13 @@ mod schd;
 mod switch;
 mod task;
 
+use crate::interrupt::Context;
+use crate::loader::APP_MANAGER;
 pub use context::TaskContext;
 use core::cell::RefCell;
 use schd::{get_default_time_slice, get_time_slice, SchdMaster};
 pub use switch::__switch;
-pub use task::{TaskControlBlock, TaskStatus};
+pub use task::{TaskControlBlock, TaskPos, TaskStatus};
 
 pub struct TaskManager(RefCell<TaskManagerInner>);
 
@@ -17,6 +19,21 @@ struct TaskManagerInner {
 }
 
 impl TaskManager {
+    fn init(&mut self) {
+        unsafe {
+            let app_num = APP_MANAGER.borrow_mut().get_app_num();
+            for i in 0..app_num {
+                let tcb = TaskControlBlock::new(
+                    APP_MANAGER.borrow_mut().init_app_context(i) as *mut Context as usize
+                );
+                self.0.borrow_mut().schd.add_new_task(tcb);
+                if i == 0 {
+                    self.0.borrow_mut().current_task = Some(tcb);
+                }
+            }
+        }
+    }
+
     fn run_next_and_return_slice(&self) -> usize {
         let mut inner = self.0.borrow_mut();
         let mut current_task = inner.current_task;
@@ -63,4 +80,18 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 /// to implement the basic task scheduling
 pub fn schedule_callback() -> usize {
     unsafe { TASK_MANAGER.run_next_and_return_slice() }
+}
+
+pub fn init() {
+    unsafe {
+        TASK_MANAGER.init();
+        let mut task_manager = TASK_MANAGER.0.borrow_mut();
+        let current_task = task_manager.current_task.as_ref().unwrap().clone();
+        drop(task_manager);
+        let mut _unused = TaskContext::zero_init();
+        unsafe {
+            __switch(&mut _unused as *mut TaskContext, &current_task.task_cx);
+        }
+        unreachable!();
+    }
 }

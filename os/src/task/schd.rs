@@ -1,8 +1,8 @@
+use super::task::*;
+use super::TaskContext;
 use crate::config::{
     TASK_QUEUE_FCFS1_SLICE, TASK_QUEUE_FCFS2_SLICE, TASK_QUEUE_RR_SLICE, TASK_QUEUE_SIZE,
 };
-use super::TaskContext;
-use super::task::*;
 
 struct WaitingQueue<T> {
     queue: [T; TASK_QUEUE_SIZE],
@@ -44,7 +44,7 @@ impl MultilevelFeedbackQueue {
         let tcb = TaskControlBlock {
             task_status: TaskStatus::UnInit,
             task_cx: TaskContext::zero_init(),
-            task_pos: TaskPos::Fcfs1
+            task_pos: TaskPos::Fcfs1,
         };
         MultilevelFeedbackQueue {
             fcfs1_queue: WaitingQueue {
@@ -61,7 +61,7 @@ impl MultilevelFeedbackQueue {
                 queue: [tcb; TASK_QUEUE_SIZE],
                 head: 0,
                 tail: 0,
-            }
+            },
         }
     }
     pub fn requeue(&mut self, mut task: TaskControlBlock) -> bool {
@@ -87,34 +87,37 @@ impl MultilevelFeedbackQueue {
         self.fcfs1_queue.push(task)
     }
     pub fn get_task(&mut self) -> Option<TaskControlBlock> {
-            let task = self.fcfs1_queue.pop();
-            if let Some(ref task) = task {
-                return Option::from(*task);
-            }
-            let task = self.fcfs2_queue.pop();
-            if let Some(ref task) = task {
-                return Option::from(*task);
-            }
-            let task = self.rr_queue.pop();
-            if let Some(ref task) = task {
-                return Option::from(*task);
-            }
+        let task = self.fcfs1_queue.pop();
+        if let Some(ref task) = task {
+            return Option::from(*task);
+        }
+        let task = self.fcfs2_queue.pop();
+        if let Some(ref task) = task {
+            return Option::from(*task);
+        }
+        let task = self.rr_queue.pop();
+        if let Some(ref task) = task {
+            return Option::from(*task);
+        }
         None
     }
 }
 
 pub struct SchdMaster {
-    mlfq: MultilevelFeedbackQueue
+    mlfq: MultilevelFeedbackQueue,
 }
 
 impl SchdMaster {
-    pub const fn new() -> Self{
+    pub const fn new() -> Self {
         SchdMaster {
-            mlfq: MultilevelFeedbackQueue::new()
+            mlfq: MultilevelFeedbackQueue::new(),
         }
     }
     /// push current task control block into MLFQ and return the next task to be executed
-    pub fn get_next_and_requeue_current(&mut self, mut current_task_cb: TaskControlBlock) -> TaskControlBlock {
+    pub fn get_next_and_requeue_current(
+        &mut self,
+        mut current_task_cb: TaskControlBlock,
+    ) -> TaskControlBlock {
         let mut next_task_info = self.mlfq.get_task(); // get a new task
         if let Some(ref mut task_info) = next_task_info {
             let next_task_cb = *task_info;
@@ -126,20 +129,18 @@ impl SchdMaster {
         }
         current_task_cb
     }
+
+    pub fn add_new_task(&mut self, tcb: TaskControlBlock) {
+        self.mlfq.enqueue(tcb);
+    }
 }
 
 #[inline(always)]
 pub fn get_time_slice(pos: TaskPos) -> usize {
     match pos {
-        TaskPos::Fcfs1 => {
-            TASK_QUEUE_FCFS1_SLICE
-        }
-        TaskPos::Fcfs2 => {
-            TASK_QUEUE_FCFS2_SLICE
-        }
-        TaskPos::Rr => {
-            TASK_QUEUE_RR_SLICE
-        }
+        TaskPos::Fcfs1 => TASK_QUEUE_FCFS1_SLICE,
+        TaskPos::Fcfs2 => TASK_QUEUE_FCFS2_SLICE,
+        TaskPos::Rr => TASK_QUEUE_RR_SLICE,
     }
 }
 

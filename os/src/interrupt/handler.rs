@@ -1,7 +1,6 @@
 use super::context::Context;
-use crate::loader::run_next_app;
 use crate::syscall::sys_call;
-use crate::task::schedule_callback;
+use crate::task::{exit_current_and_run_next, schedule_callback};
 use crate::timer;
 use core::arch::global_asm;
 use riscv::register::{
@@ -20,7 +19,7 @@ pub fn init() {
     // stvec::write(__interrupt as usize, stvec::TrapMode::Direct);
     unsafe {
         stvec::write(__interrupt as usize, TrapMode::Direct);
-        sie::set_stimer();
+        // enable_timer_interrupt();
         timer::set_next_timeout(100000);
     }
 }
@@ -46,7 +45,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
         }
         Trap::Exception(Exception::StoreFault) => {
             println!("[kernel] StoreFault in application, kernel killed it.");
-            run_next_app();
+            exit_current_and_run_next(-1);
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!(
@@ -54,7 +53,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
                 context.sepc,
                 unsafe { *(context.sepc as *const usize) }
             );
-            run_next_app();
+            exit_current_and_run_next(-1);
         }
         _ => {
             panic!(

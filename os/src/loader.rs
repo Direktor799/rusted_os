@@ -1,5 +1,5 @@
 //! loader subsystem
-use crate::interrupt::context::Context;
+use crate::interrupt::Context;
 use core::arch::asm;
 use core::cell::RefCell;
 use core::ops::Deref;
@@ -7,29 +7,27 @@ use core::ops::Deref;
 const USER_STACK_SIZE: usize = 4096 * 2;
 const KERNEL_STACK_SIZE: usize = 4096 * 2;
 const MAX_APP_NUM: usize = 16;
-const APP_BASE_ADDRESS: usize = 0x80400000;
+const APP_BASE_ADDRESS: usize = 0x80500000;
 const APP_SIZE_LIMIT: usize = 0x20000;
 
 #[repr(align(4096))]
-struct KernelStack {
-    data: [u8; KERNEL_STACK_SIZE],
-}
+#[derive(Clone, Copy)]
+struct KernelStack([u8; KERNEL_STACK_SIZE]);
 
 #[repr(align(4096))]
-struct UserStack {
-    data: [u8; USER_STACK_SIZE],
-}
+#[derive(Clone, Copy)]
+struct UserStack([u8; USER_STACK_SIZE]);
 
-static KERNEL_STACK: KernelStack = KernelStack {
-    data: [0; KERNEL_STACK_SIZE],
-};
-static USER_STACK: UserStack = UserStack {
-    data: [0; USER_STACK_SIZE],
-};
+/// 每个用户程序的内核栈
+static KERNEL_STACKS: [KernelStack; MAX_APP_NUM] =
+    [KernelStack([0; KERNEL_STACK_SIZE]); MAX_APP_NUM];
+
+/// 每个用户程序的用户栈
+static USER_STACKS: [UserStack; MAX_APP_NUM] = [UserStack([0; USER_STACK_SIZE]); MAX_APP_NUM];
 
 impl KernelStack {
     fn get_sp(&self) -> usize {
-        self.data.as_ptr() as usize + KERNEL_STACK_SIZE
+        self.0.as_ptr() as usize + KERNEL_STACK_SIZE
     }
     pub fn push_context(&self, cx: Context) -> &'static mut Context {
         let cx_ptr = (self.get_sp() - core::mem::size_of::<Context>()) as *mut Context;
@@ -42,7 +40,7 @@ impl KernelStack {
 
 impl UserStack {
     fn get_sp(&self) -> usize {
-        self.data.as_ptr() as usize + USER_STACK_SIZE
+        self.0.as_ptr() as usize + USER_STACK_SIZE
     }
 }
 
@@ -60,6 +58,7 @@ impl AppManager {
             app_start: [0; MAX_APP_NUM + 1],
         }
     }
+
     pub fn init(&mut self) {
         extern "C" {
             fn _app_num();
@@ -102,6 +101,18 @@ impl AppManager {
     pub fn get_app_addr(&self, app_id: usize) -> usize {
         APP_BASE_ADDRESS + app_id * APP_SIZE_LIMIT
     }
+
+    pub fn get_app_num(&self) -> usize {
+        self.app_num
+    }
+
+    /// 将app地址和用户栈地址作为上下文压入内核栈中，使下一步restore时可以跳转到app并换栈
+    pub fn init_app_context(&self, app_id: usize) -> &mut Context {
+        KERNEL_STACKS[app_id].push_context(Context::app_init_context(
+            self.get_app_addr(app_id),
+            USER_STACKS[app_id].get_sp(),
+        ))
+    }
 }
 
 pub struct OutsideAppManager(RefCell<AppManager>);
@@ -128,26 +139,4 @@ pub fn init() {
         APP_MANAGER.borrow_mut().print_app_info();
     }
     println!("mod loader initialized!");
-}
-
-pub fn run_next_app() -> ! {
-    unsafe {
-        let mut app_manager = APP_MANAGER.borrow_mut();
-        if app_manager.current_app >= app_manager.app_num {
-            panic!("All done!");
-        }
-        let addr = app_manager.get_app_addr(app_manager.current_app);
-        println!(
-            "[kernel] Running app_{} at {:x}",
-            app_manager.current_app, addr
-        );
-        let context = Context::app_init_context(addr, USER_STACK.get_sp());
-        app_manager.current_app += 1;
-        drop(app_manager);
-        extern "C" {
-            fn __restore(cx_addr: usize);
-        }
-        __restore(KERNEL_STACK.push_context(context) as *const _ as usize);
-        unreachable!();
-    }
 }

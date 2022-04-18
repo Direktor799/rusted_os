@@ -1,6 +1,8 @@
 use fs::*;
+use proc::*;
 
 mod fs;
+mod proc;
 
 const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
