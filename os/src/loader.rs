@@ -1,4 +1,4 @@
-//! batch subsystem
+//! loader subsystem
 use crate::interrupt::context::Context;
 use core::arch::asm;
 use core::cell::RefCell;
@@ -129,7 +129,7 @@ impl Deref for OutsideAppManager {
 
 pub static mut APP_MANAGER: OutsideAppManager = OutsideAppManager::new();
 
-/// init batch subsystem
+/// init loader subsystem
 pub fn init() {
     unsafe {
         APP_MANAGER.borrow_mut().init();
@@ -149,6 +149,6 @@ pub fn run_next_app() -> ! {
         }
         let context = Context::app_init_context(APP_BASE_ADDRESS, USER_STACK.get_sp());
         __restore(KERNEL_STACK.push_context(context) as *const _ as usize);
-        panic!("Unreachable in batch::run_current_app!");
+        panic!("Unreachable in loader::run_current_app!");
     }
 }

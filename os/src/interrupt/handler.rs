@@ -1,13 +1,13 @@
 use super::context::Context;
-use crate::timer;
-use crate::batch::run_next_app;
+use crate::loader::run_next_app;
 use crate::syscall::sys_call;
 use crate::task::schedule_callback;
+use crate::timer;
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{Exception, Interrupt, Scause, Trap},
-    sie, stval, stvec
+    sie, stval, stvec,
 };
 
 global_asm!(include_str!("./interrupt.S"));
@@ -39,7 +39,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
             supervisor_timer(context);
-        },
+        }
         Trap::Exception(Exception::UserEnvCall) => {
             context.sepc += 4;
             context.x[10] =
