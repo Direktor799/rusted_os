@@ -3,17 +3,14 @@ mod schd;
 mod switch;
 mod task;
 
+use crate::sync::UPSafeCell;
 pub use context::TaskContext;
+use core::cell::RefCell;
+use schd::{get_default_time_slice, get_time_slice, SchdMaster};
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
-use crate::sync::UPSafeCell;
-use lazy_static::*;
-use schd::{get_default_time_slice, get_time_slice, SchdMaster};
-
-pub struct TaskManager {
-    inner: UPSafeCell<TaskManagerInner>,
-}
+pub struct TaskManager(RefCell<TaskManagerInner>);
 
 struct TaskManagerInner {
     current_task: Option<TaskControlBlock>,
@@ -22,7 +19,7 @@ struct TaskManagerInner {
 
 impl TaskManager {
     fn run_next_and_return_slice(&self) -> usize {
-        let mut inner = self.inner.exclusive_access();
+        let mut inner = self.0.borrow_mut();
         let mut current_task = inner.current_task;
         if let Some(ref mut current_task) = current_task {
             let mut next_task = inner.schd.get_next_and_requeue_current(*current_task);
@@ -39,7 +36,7 @@ impl TaskManager {
         }
     }
     fn set_current_task_status(&self, stat: TaskStatus) {
-        let inner = self.inner.exclusive_access();
+        let inner = self.0.borrow_mut();
         let mut current_task = inner.current_task;
         if let Some(ref mut current_task) = current_task {
             current_task.task_status = stat;
@@ -47,19 +44,15 @@ impl TaskManager {
     }
 }
 
-lazy_static! {
-    pub static ref TASK_MANAGER: TaskManager = TaskManager {
-        inner: unsafe {
-            UPSafeCell::new(TaskManagerInner {
-                current_task: None,
-                schd: SchdMaster::new(),
-            })
-        }
-    };
-}
+pub static mut TASK_MANAGER: TaskManager = TaskManager(RefCell::new(TaskManagerInner {
+    current_task: None,
+    schd: SchdMaster::new(),
+}));
 
 pub fn set_current_task_status(stat: TaskStatus) {
-    TASK_MANAGER.set_current_task_status(stat);
+    unsafe {
+        TASK_MANAGER.set_current_task_status(stat);
+    }
 }
 
 pub fn exit_current_and_run_next(exit_code: i32) {
@@ -70,5 +63,5 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 /// the callback function used in the supervisor time interrupt
 /// to implement the basic task scheduling
 pub fn schedule_callback() -> usize {
-    TASK_MANAGER.run_next_and_return_slice()
+    unsafe { TASK_MANAGER.run_next_and_return_slice() }
 }
