@@ -44,8 +44,8 @@ impl TaskManager {
             drop(inner);
             unsafe {
                 println!(
-                    "switching to {:?}",
-                    *(next_task.task_cx.sp as *const Context)
+                    "switching to 0x{:x}",
+                    (*(next_task.task_cx.sp as *const Context)).sepc
                 );
                 __switch(
                     &mut current_task.task_cx as *mut TaskContext,
@@ -97,6 +97,10 @@ pub fn init() {
         let current_task = task_manager.current_task.as_ref().unwrap().clone();
         drop(task_manager);
         let mut _unused = TaskContext::zero_init();
+        println!(
+            "first time switching to 0x{:x}",
+            (*(current_task.task_cx.sp as *const Context)).sepc
+        );
         unsafe {
             __switch(&mut _unused as *mut TaskContext, &current_task.task_cx);
         }
