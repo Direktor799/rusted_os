@@ -13,9 +13,10 @@ pub mod loader;
 mod memory;
 mod panic;
 mod sbi;
+mod sync;
 mod syscall;
-mod timer;
 mod task;
+mod timer;
 
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));

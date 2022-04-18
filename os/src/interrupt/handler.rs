@@ -21,7 +21,7 @@ pub fn init() {
     unsafe {
         stvec::write(__interrupt as usize, TrapMode::Direct);
         sie::set_stimer();
-        timer::set_next_timeout();
+        timer::set_next_timeout(100000);
     }
 }
 
@@ -37,8 +37,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
     match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
-            timer::set_next_timeout();
-            supervisor_timer(context)
+            supervisor_timer(context);
         }
         Trap::Exception(Exception::UserEnvCall) => {
             context.sepc += 4;
@@ -76,5 +75,6 @@ fn breakpoint(context: &mut Context) {
 
 fn supervisor_timer(_: &Context) {
     println!("timer called");
-    schedule_callback();
+    let slice = schedule_callback();
+    timer::set_next_timeout(slice);
 }
