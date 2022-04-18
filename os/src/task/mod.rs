@@ -46,7 +46,7 @@ impl TaskManager {
         let next_task = inner.schd.get_next_and_requeue_current(current_task);
         inner.current_task = Option::from(next_task);
         if let None = next_task {
-            panic!("all task completed!");
+            panic!("all tasks have completed!");
         }
         let mut next_task = next_task.unwrap();
         drop(inner);
