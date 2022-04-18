@@ -89,6 +89,7 @@ pub fn init() {
         let current_task = task_manager.current_task.as_ref().unwrap().clone();
         drop(task_manager);
         let mut _unused = TaskContext::zero_init();
+        println!("{:?}", current_task.task_cx);
         unsafe {
             __switch(&mut _unused as *mut TaskContext, &current_task.task_cx);
         }
