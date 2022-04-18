@@ -29,7 +29,7 @@ impl<T: Copy> WaitingQueue<T> {
         Option::from(self.queue[head])
     }
     pub fn size(&mut self) -> usize {
-        (self.tail - self.head + TASK_QUEUE_SIZE) % TASK_QUEUE_SIZE
+        (self.tail + TASK_QUEUE_SIZE - self.head) % TASK_QUEUE_SIZE
     }
 }
 

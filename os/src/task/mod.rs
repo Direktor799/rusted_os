@@ -43,6 +43,10 @@ impl TaskManager {
             inner.current_task = Option::from(next_task);
             drop(inner);
             unsafe {
+                println!(
+                    "switching to {:?}",
+                    *(next_task.task_cx.sp as *const Context)
+                );
                 __switch(
                     &mut current_task.task_cx as *mut TaskContext,
                     &mut next_task.task_cx as *mut TaskContext,
