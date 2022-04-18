@@ -19,8 +19,8 @@ pub fn init() {
     // stvec::write(__interrupt as usize, stvec::TrapMode::Direct);
     unsafe {
         stvec::write(__interrupt as usize, TrapMode::Direct);
-        // enable_timer_interrupt();
-        timer::set_next_timeout(100000);
+        enable_timer_interrupt();
+        timer::set_next_timeout(1000);
     }
 }
 
@@ -73,7 +73,7 @@ fn breakpoint(context: &mut Context) {
 }
 
 fn supervisor_timer(_: &Context) {
-    // println!("timer called");
+    println!("timer called");
     let slice = schedule_callback();
     timer::set_next_timeout(slice);
 }
