@@ -59,10 +59,9 @@ impl TaskManager {
         }
     }
     fn set_current_task_status(&self, stat: TaskStatus) {
-        let inner = self.0.borrow_mut();
-        let mut current_task = inner.current_task;
-        if let Some(ref mut current_task) = current_task {
-            current_task.task_status = stat;
+        let mut inner = self.0.borrow_mut();
+        if let Some(current_task) = inner.current_task.as_mut() {
+            (*current_task).task_status = stat;
         }
     }
 }
