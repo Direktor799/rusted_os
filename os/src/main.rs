@@ -13,7 +13,6 @@ pub mod loader;
 mod memory;
 mod panic;
 mod sbi;
-mod sync;
 mod syscall;
 mod task;
 mod timer;
@@ -28,7 +27,7 @@ pub extern "C" fn rust_main() -> ! {
     println!("Hello rusted_os!");
     loader::init();
     interrupt::init();
-    // memory::init();
+    memory::init();
     loader::run_next_app();
     panic!("Dummy as fuck");
 }
