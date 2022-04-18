@@ -38,29 +38,29 @@ impl TaskManager {
 
     fn run_next_and_return_slice(&self) -> usize {
         let mut inner = self.0.borrow_mut();
-        let mut current_task = inner.current_task;
-        if let Some(ref mut current_task) = current_task {
-            let mut next_task = inner.schd.get_next_and_requeue_current(*current_task);
-            inner.current_task = Option::from(next_task);
-            if let Some(ref mut next_task) = next_task {
-                drop(inner);
-                unsafe {
-                    println!(
-                        "switching to 0x{:x}",
-                        (*(next_task.task_cx.sp as *const Context)).sepc
-                    );
-                    __switch(
-                        &mut current_task.task_cx as *mut TaskContext,
-                        &mut next_task.task_cx as *mut TaskContext,
-                    );
-                }
-                get_time_slice(next_task.task_pos)
-            } else {
-                return get_default_time_slice();
-            }
-        } else {
-            get_default_time_slice()
+        let current_task = inner.current_task;
+        if let None = current_task {
+            return get_default_time_slice();
         }
+        let mut current_task = current_task.unwrap();
+        let next_task = inner.schd.get_next_and_requeue_current(current_task);
+        inner.current_task = Option::from(next_task);
+        if let None = next_task {
+            panic!("all task completed!");
+        }
+        let mut next_task = next_task.unwrap();
+        drop(inner);
+        unsafe {
+            println!(
+                "switching to 0x{:x}",
+                (*(next_task.task_cx.sp as *const Context)).sepc
+            );
+            __switch(
+                &mut current_task.task_cx as *mut TaskContext,
+                &mut next_task.task_cx as *mut TaskContext,
+            );
+        }
+        get_time_slice(next_task.task_pos)
     }
     fn set_current_task_status(&self, stat: TaskStatus) {
         let mut inner = self.0.borrow_mut();
