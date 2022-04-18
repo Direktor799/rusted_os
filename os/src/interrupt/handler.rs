@@ -73,7 +73,6 @@ fn breakpoint(context: &mut Context) {
 }
 
 fn supervisor_timer(_: &Context) {
-    println!("timer called");
-    let slice = schedule_callback();
-    timer::set_next_timeout(slice);
+    // println!("timer called");
+    schedule_callback();
 }
