@@ -114,10 +114,12 @@ impl SchdMaster {
         }
     }
     /// push current task control block into MLFQ and return the next task to be executed
+    /// 
+    /// next task can be None
     pub fn get_next_and_requeue_current(
         &mut self,
         mut current_task_cb: TaskControlBlock,
-    ) -> TaskControlBlock {
+    ) -> Option<TaskControlBlock> {
         let mut next_task_info = self.mlfq.get_task(); // get a new task
         if let Some(ref mut task_info) = next_task_info {
             let next_task_cb = *task_info;
@@ -125,9 +127,12 @@ impl SchdMaster {
                 current_task_cb.task_status = TaskStatus::Ready;
                 self.mlfq.requeue(current_task_cb);
             }
-            return next_task_cb;
+            return Option::from(next_task_cb);
         }
-        current_task_cb
+        if current_task_cb.task_status == TaskStatus::Exited {
+            return None;
+        }
+        Option::from(current_task_cb)
     }
 
     pub fn add_new_task(&mut self, tcb: TaskControlBlock) {

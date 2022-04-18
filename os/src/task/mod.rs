@@ -42,18 +42,22 @@ impl TaskManager {
         if let Some(ref mut current_task) = current_task {
             let mut next_task = inner.schd.get_next_and_requeue_current(*current_task);
             inner.current_task = Option::from(next_task);
-            drop(inner);
-            unsafe {
-                println!(
-                    "switching to 0x{:x}",
-                    (*(next_task.task_cx.sp as *const Context)).sepc
-                );
-                __switch(
-                    &mut current_task.task_cx as *mut TaskContext,
-                    &mut next_task.task_cx as *mut TaskContext,
-                );
+            if let Some(ref mut next_task) = next_task {
+                drop(inner);
+                unsafe {
+                    println!(
+                        "switching to 0x{:x}",
+                        (*(next_task.task_cx.sp as *const Context)).sepc
+                    );
+                    __switch(
+                        &mut current_task.task_cx as *mut TaskContext,
+                        &mut next_task.task_cx as *mut TaskContext,
+                    );
+                }
+                get_time_slice(next_task.task_pos)
+            } else {
+                return get_default_time_slice();
             }
-            get_time_slice(next_task.task_pos)
         } else {
             get_default_time_slice()
         }
