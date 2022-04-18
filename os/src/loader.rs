@@ -75,6 +75,7 @@ impl AppManager {
             asm!("fence.i");
             for app_id in 0..self.app_num {
                 let app_addr = self.get_app_addr(app_id);
+                println!("loading app_{} to 0x{:x}", app_id, app_addr);
                 core::slice::from_raw_parts_mut(app_addr as *mut u8, APP_SIZE_LIMIT).fill(0);
                 let app_src = core::slice::from_raw_parts(
                     self.app_start[app_id] as *const u8,
