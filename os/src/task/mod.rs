@@ -27,9 +27,10 @@ impl TaskManager {
                 let tcb = TaskControlBlock::new(
                     APP_MANAGER.borrow_mut().init_app_context(i) as *mut Context as usize
                 );
-                self.0.borrow_mut().schd.add_new_task(tcb);
                 if i == 0 {
                     self.0.borrow_mut().current_task = Some(tcb);
+                } else {
+                    self.0.borrow_mut().schd.add_new_task(tcb);
                 }
             }
         }
