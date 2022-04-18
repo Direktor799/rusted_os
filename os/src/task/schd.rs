@@ -130,9 +130,10 @@ impl SchdMaster {
             return Option::from(next_task_cb);
         }
         if current_task_cb.task_status == TaskStatus::Exited {
-            return None;
+            None
+        } else {
+            Option::from(current_task_cb)
         }
-        Option::from(current_task_cb)
     }
 
     pub fn add_new_task(&mut self, tcb: TaskControlBlock) {
