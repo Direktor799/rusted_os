@@ -50,6 +50,7 @@ impl TaskManager {
         }
         let mut next_task = next_task.unwrap();
         drop(inner);
+        timer::set_next_timeout(get_time_slice(next_task.task_pos));
         unsafe {
             println!(
                 "switching to 0x{:x}",
@@ -60,7 +61,7 @@ impl TaskManager {
                 &mut next_task.task_cx as *mut TaskContext,
             );
         }
-        get_time_slice(next_task.task_pos)
+        unreachable!();
     }
     fn set_current_task_status(&self, stat: TaskStatus) {
         let mut inner = self.0.borrow_mut();
