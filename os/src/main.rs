@@ -7,16 +7,15 @@ extern crate alloc;
 
 #[macro_use]
 mod console;
-pub mod batch;
 mod config;
 mod interrupt;
+pub mod loader;
 mod memory;
 mod panic;
 mod sbi;
 mod syscall;
-mod sync;
-mod timer;
 mod task;
+mod timer;
 
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
@@ -26,11 +25,9 @@ global_asm!(include_str!("link_app.S"));
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
     println!("Hello rusted_os!");
-    batch::init();
+    loader::init();
     interrupt::init();
     memory::init();
-    unsafe {
-       batch::run_next_app();
-    }
+    loader::run_next_app();
     panic!("Dummy as fuck");
 }
