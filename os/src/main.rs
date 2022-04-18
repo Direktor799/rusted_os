@@ -29,5 +29,6 @@ pub extern "C" fn rust_main() -> ! {
     memory::init();
     loader::init();
     task::init();
+    task::run();
     panic!("Dummy as fuck");
 }

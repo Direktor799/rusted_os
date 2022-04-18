@@ -52,10 +52,10 @@ impl TaskManager {
         drop(inner);
         timer::set_next_timeout(get_time_slice(next_task.task_pos));
         unsafe {
-            println!(
-                "switching to 0x{:x}",
-                (*(next_task.task_cx.sp as *const Context)).sepc
-            );
+            // println!(
+            //     "switching to 0x{:x}",
+            //     (*(next_task.task_cx.sp as *const Context)).sepc
+            // );
             __switch(
                 &mut current_task.task_cx as *mut TaskContext,
                 &mut next_task.task_cx as *mut TaskContext,
@@ -91,20 +91,28 @@ pub fn exit_current_and_run_next(exit_code: i32) {
 /// the callback function used in the supervisor time interrupt
 /// to implement the basic task scheduling
 pub fn schedule_callback() {
-    unsafe { TASK_MANAGER.switch_to_next_task(); }
+    unsafe {
+        TASK_MANAGER.switch_to_next_task();
+    }
 }
 
 pub fn init() {
     unsafe {
         TASK_MANAGER.init();
+        println!("mod task initialized!");
+    }
+}
+
+pub fn run() {
+    unsafe {
         let task_manager = TASK_MANAGER.0.borrow_mut();
         let current_task = task_manager.current_task.as_ref().unwrap().clone();
         drop(task_manager);
         let mut _unused = TaskContext::zero_init();
-        println!(
-            "first time switching to 0x{:x}",
-            (*(current_task.task_cx.sp as *const Context)).sepc
-        );
+        // println!(
+        //     "first time switching to 0x{:x}",
+        //     (*(current_task.task_cx.sp as *const Context)).sepc
+        // );
         __switch(&mut _unused as *mut TaskContext, &current_task.task_cx);
         unreachable!();
     }

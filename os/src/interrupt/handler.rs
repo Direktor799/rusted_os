@@ -1,4 +1,5 @@
 use super::context::Context;
+use crate::config::TASK_QUEUE_FCFS1_SLICE;
 use crate::syscall::sys_call;
 use crate::task::{exit_current_and_run_next, schedule_callback};
 use crate::timer;
@@ -20,7 +21,7 @@ pub fn init() {
     unsafe {
         stvec::write(__interrupt as usize, TrapMode::Direct);
         enable_timer_interrupt();
-        timer::set_next_timeout(1000);
+        timer::set_next_timeout(TASK_QUEUE_FCFS1_SLICE);
     }
 }
 
