@@ -76,7 +76,7 @@ pub static mut TASK_MANAGER: TaskManager = TaskManager(RefCell::new(TaskManagerI
     schd: SchdMaster::new(),
 }));
 
-pub fn set_current_task_status(stat: TaskStatus) {
+fn set_current_task_status(stat: TaskStatus) {
     unsafe {
         TASK_MANAGER.set_current_task_status(stat);
     }
@@ -84,8 +84,16 @@ pub fn set_current_task_status(stat: TaskStatus) {
 
 pub fn exit_current_and_run_next(exit_code: i32) {
     set_current_task_status(TaskStatus::Exited);
-    schedule_callback();
+    unsafe {
+        TASK_MANAGER.switch_to_next_task();
+    }
     // TODO set exit code in the task context
+}
+
+pub fn suspend_current_and_run_next() {
+    unsafe {
+        TASK_MANAGER.switch_to_next_task();
+    }
 }
 
 /// the callback function used in the supervisor time interrupt
