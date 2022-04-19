@@ -4,11 +4,15 @@
 #[macro_use]
 extern crate user_lib;
 
+use user_lib::*;
+
 #[no_mangle]
 fn main() -> i32 {
-    for _ in 0..300 {
-        print!("yield");
-        user_lib::r#yield();
+    let current_timer = get_time();
+    let wait_for = current_timer + 3000;
+    while get_time() < wait_for {
+        r#yield();
     }
+    println!("Test sleep OK!");
     0
 }
