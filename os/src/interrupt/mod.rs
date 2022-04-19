@@ -2,8 +2,10 @@
 //!
 //!
 
-pub mod context;
+mod context;
 mod handler;
+
+pub use context::Context;
 
 /// 初始化中断相关的子模块
 ///

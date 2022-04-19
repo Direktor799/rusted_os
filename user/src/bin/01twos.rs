@@ -6,6 +6,8 @@ extern crate user_lib;
 
 #[no_mangle]
 fn main() -> i32 {
-    println!("Hello, world!");
-    0
+    for _ in 0..200 {
+        print!("{}", 2);
+    }
+    2
 }

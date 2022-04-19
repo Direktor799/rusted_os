@@ -1,6 +1,7 @@
 use super::context::Context;
-use crate::loader::run_next_app;
+use crate::config::TASK_QUEUE_FCFS1_SLICE;
 use crate::syscall::sys_call;
+use crate::task::{exit_current_and_run_next, schedule_callback};
 use crate::timer;
 use core::arch::global_asm;
 use riscv::register::{
@@ -9,7 +10,7 @@ use riscv::register::{
     sie, stval, stvec,
 };
 
-global_asm!(include_str!("./interrupt.asm"));
+global_asm!(include_str!("./interrupt.S"));
 
 /// 初始化中断向量
 pub fn init() {
@@ -19,8 +20,8 @@ pub fn init() {
     // stvec::write(__interrupt as usize, stvec::TrapMode::Direct);
     unsafe {
         stvec::write(__interrupt as usize, TrapMode::Direct);
-        sie::set_stimer();
-        timer::set_next_timeout();
+        enable_timer_interrupt();
+        timer::set_next_timeout(TASK_QUEUE_FCFS1_SLICE);
     }
 }
 
@@ -36,8 +37,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
     match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
-            timer::set_next_timeout();
-            supervisor_timer(context)
+            supervisor_timer(context);
         }
         Trap::Exception(Exception::UserEnvCall) => {
             context.sepc += 4;
@@ -46,7 +46,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
         }
         Trap::Exception(Exception::StoreFault) => {
             println!("[kernel] StoreFault in application, kernel killed it.");
-            run_next_app();
+            exit_current_and_run_next(-1);
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!(
@@ -54,7 +54,7 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
                 context.sepc,
                 unsafe { *(context.sepc as *const usize) }
             );
-            run_next_app();
+            exit_current_and_run_next(-1);
         }
         _ => {
             panic!(
@@ -75,4 +75,5 @@ fn breakpoint(context: &mut Context) {
 
 fn supervisor_timer(_: &Context) {
     // println!("timer called");
+    schedule_callback();
 }

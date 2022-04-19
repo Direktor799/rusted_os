@@ -1,5 +1,3 @@
-use crate::loader::run_next_app;
-
 const FD_STDOUT: usize = 1;
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
@@ -14,9 +12,4 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             panic!("sys_write with fd not supported")
         }
     }
-}
-
-pub fn sys_exit(state: i32) -> ! {
-    println!("[kernel] Application exit with code {}", state);
-    run_next_app()
 }
