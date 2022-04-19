@@ -1,4 +1,4 @@
-use crate::task::{exit_current_and_run_next, schedule_callback};
+use crate::task::{exit_current_and_run_next, suspend_current_and_run_next};
 use crate::timer::get_time_ms;
 
 pub fn sys_exit(exit_code: i32) -> ! {
@@ -10,7 +10,7 @@ pub fn sys_exit(exit_code: i32) -> ! {
 }
 
 pub fn sys_yield() -> isize {
-    schedule_callback();
+    suspend_current_and_run_next();
     0
 }
 
