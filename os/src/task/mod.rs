@@ -23,6 +23,7 @@ impl TaskManager {
     fn init(&mut self) {
         unsafe {
             let app_num = APP_MANAGER.borrow_mut().get_app_num();
+            println!("{}", app_num);
             for i in 0..app_num {
                 let tcb = TaskControlBlock::new(
                     APP_MANAGER.borrow_mut().init_app_context(i) as *mut Context as usize
@@ -38,28 +39,22 @@ impl TaskManager {
 
     fn switch_to_next_task(&self) {
         let mut inner = self.0.as_ref().unwrap().borrow_mut();
-        let current_task = inner.current_task;
-        if let None = current_task {
-            timer::set_next_timeout(get_default_time_slice())
-        }
-        let mut current_task = current_task.unwrap();
-        let next_task = inner.schd.get_next_and_requeue_current(current_task);
-        inner.current_task = Option::from(next_task);
-        if let None = next_task {
-            panic!("all tasks have completed!");
-        }
-        let mut next_task = next_task.unwrap();
-        drop(inner);
+        let mut current_task = inner.current_task.take().expect("[kernel] No current task");
+        let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
+        let mut next_task = inner
+            .schd
+            .get_next_and_requeue_current(current_task)
+            .expect("[kernel] All tasks have completed!");
+        let next_task_cx = &mut next_task.task_cx as *mut TaskContext;
         timer::set_next_timeout(get_time_slice(next_task.task_pos));
+        inner.current_task = Some(next_task);
+        drop(inner);
         unsafe {
             // println!(
             //     "switching to 0x{:x}",
-            //     (*(next_task.task_cx.sp as *const Context)).sepc
+            //     (*((*next_task_cx).sp as *const Context)).sepc
             // );
-            __switch(
-                &mut current_task.task_cx as *mut TaskContext,
-                &mut next_task.task_cx as *mut TaskContext,
-            );
+            __switch(current_task_cx, next_task_cx);
         }
         unreachable!();
     }
@@ -114,15 +109,16 @@ pub fn init() {
 
 pub fn run() {
     unsafe {
-        let task_manager = TASK_MANAGER.0.as_ref().unwrap().borrow_mut();
-        let current_task = task_manager.current_task.as_ref().unwrap().clone();
+        let mut task_manager = TASK_MANAGER.0.as_mut().unwrap().borrow_mut();
+        let current_task = task_manager.current_task.as_mut().unwrap();
+        let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
         drop(task_manager);
         let mut _unused = TaskContext::zero_init();
         // println!(
         //     "first time switching to 0x{:x}",
         //     (*(current_task.task_cx.sp as *const Context)).sepc
         // );
-        __switch(&mut _unused as *mut TaskContext, &current_task.task_cx);
+        __switch(&mut _unused as *mut TaskContext, current_task_cx);
         unreachable!();
     }
 }
