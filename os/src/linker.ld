@@ -13,6 +13,10 @@ SECTIONS
     text_start = .;
     .text : {
         *(.text.entry)
+        . = ALIGN(4K);
+        trampoline_start = .;
+        *(.text.trampoline);
+        . = ALIGN(4K);
         *(.text .text.*)
     }
     . = ALIGN(4K);

@@ -23,11 +23,8 @@ impl TaskManager {
     fn init(&mut self) {
         unsafe {
             let app_num = APP_MANAGER.borrow_mut().get_app_num();
-            println!("{}", app_num);
             for i in 0..app_num {
-                let tcb = TaskControlBlock::new(
-                    APP_MANAGER.borrow_mut().init_app_context(i) as *mut Context as usize
-                );
+                let tcb = TaskControlBlock::new(APP_MANAGER.borrow_mut().get_app_data(i), i);
                 if i == 0 {
                     self.0.as_ref().unwrap().borrow_mut().current_task = Some(tcb);
                 } else {
@@ -58,11 +55,23 @@ impl TaskManager {
         }
         unreachable!();
     }
+
     fn set_current_task_status(&self, stat: TaskStatus) {
         let mut inner = self.0.as_ref().unwrap().borrow_mut();
         if let Some(current_task) = inner.current_task.as_mut() {
             (*current_task).task_status = stat;
         }
+    }
+
+    pub fn get_current_token(&self) -> usize {
+        let inner = self.0.as_ref().unwrap().borrow();
+        let current = inner.current_task.as_ref().unwrap();
+        current.get_user_token()
+    }
+    pub fn get_current_trap_cx(&self) -> &mut Context {
+        let inner = self.0.as_ref().unwrap().borrow();
+        let current = inner.current_task.as_ref().unwrap();
+        current.get_trap_cx()
     }
 }
 
@@ -116,7 +125,7 @@ pub fn run() {
         let mut _unused = TaskContext::zero_init();
         // println!(
         //     "first time switching to 0x{:x}",
-        //     (*(current_task.task_cx.sp as *const Context)).sepc
+        //     (*((*current_task_cx).sp as *const Context)).sepc
         // );
         __switch(&mut _unused as *mut TaskContext, current_task_cx);
         unreachable!();

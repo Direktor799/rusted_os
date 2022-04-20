@@ -1,12 +1,12 @@
 use super::context::Context;
-use crate::config::TASK_QUEUE_FCFS1_SLICE;
+use crate::config::{TASK_QUEUE_FCFS1_SLICE, TRAMPOLINE, TRAP_CONTEXT};
 use crate::syscall::sys_call;
-use crate::task::{exit_current_and_run_next, schedule_callback};
+use crate::task::{exit_current_and_run_next, schedule_callback, TASK_MANAGER};
 use crate::timer;
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
-    scause::{Exception, Interrupt, Scause, Trap},
+    scause::{self, Exception, Interrupt, Scause, Trap},
     sie, stval, stvec,
 };
 
@@ -17,12 +17,9 @@ pub fn init() {
     extern "C" {
         fn __interrupt();
     }
-    // stvec::write(__interrupt as usize, stvec::TrapMode::Direct);
-    unsafe {
-        stvec::write(__interrupt as usize, TrapMode::Direct);
-        enable_timer_interrupt();
-        timer::set_next_timeout(TASK_QUEUE_FCFS1_SLICE);
-    }
+    set_kernel_interrupt();
+    enable_timer_interrupt();
+    timer::set_next_timeout(TASK_QUEUE_FCFS1_SLICE);
 }
 
 pub fn enable_timer_interrupt() {
@@ -31,9 +28,30 @@ pub fn enable_timer_interrupt() {
     }
 }
 
+fn set_kernel_interrupt() {
+    unsafe { stvec::write(interrupt_kernel as usize, TrapMode::Direct) };
+}
+
+fn set_user_trap_entry() {
+    unsafe { stvec::write(TRAMPOLINE as usize, TrapMode::Direct) };
+}
+
+#[no_mangle]
+pub fn interrupt_kernel() -> ! {
+    panic!(
+        "[kernel] Multi-interrupt: {:?}\nstval: {:x}",
+        scause::read().cause(),
+        stval::read()
+    )
+}
+
 /// 中断处理程序
 #[no_mangle]
-pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) -> &mut Context {
+pub fn interrupt_handler() -> ! {
+    set_kernel_interrupt();
+    let context = unsafe { TASK_MANAGER.get_current_trap_cx() };
+    let scause = scause::read();
+    let stval = stval::read();
     match scause.cause() {
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
@@ -65,7 +83,29 @@ pub fn interrupt_handler(context: &mut Context, scause: Scause, stval: usize) ->
             );
         }
     }
-    context
+    interrupt_return();
+}
+
+pub fn interrupt_return() -> ! {
+    set_user_trap_entry();
+    let user_satp = unsafe { TASK_MANAGER.get_current_token() };
+    extern "C" {
+        fn __interrupt();
+        fn __restore();
+    }
+    // offset to __restore
+    let restore_va = __restore as usize - __interrupt as usize + TRAMPOLINE;
+    unsafe {
+        core::arch::asm!(
+            "fence.i",
+            "jr {restore_va}",
+            restore_va = in(reg) restore_va,
+            in("a0") TRAP_CONTEXT,      // 固定的用户空间context位置
+            in("a1") user_satp,
+            options(noreturn)
+        );
+    }
+    unreachable!("Unreachable in back_to_user!");
 }
 
 fn breakpoint(context: &mut Context) {

@@ -49,6 +49,9 @@ impl PhysAddr {
     pub fn aligned(&self) -> bool {
         self.page_offset() == 0
     }
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        unsafe { (self.0 as *mut T).as_mut().unwrap() }
+    }
 }
 
 impl VirtAddr {
@@ -75,11 +78,19 @@ impl PhysPageNum {
 
     pub fn get_bytes_array(&self) -> &'static mut [u8] {
         let pa = self.addr();
-        unsafe { core::slice::from_raw_parts_mut(pa.0 as *mut u8, PAGE_SIZE / 8) }
+        unsafe { core::slice::from_raw_parts_mut(pa.0 as *mut u8, PAGE_SIZE) }
+    }
+
+    pub fn get_mut<T>(&self) -> &'static mut T {
+        self.addr().get_mut()
     }
 }
 
 impl VirtPageNum {
+    pub fn addr(&self) -> VirtAddr {
+        VirtAddr(self.0 << PAGE_SIZE_BITS)
+    }
+
     pub fn indices(&self) -> [usize; 3] {
         let mut vpn = self.0;
         let mut indices = [0; 3];

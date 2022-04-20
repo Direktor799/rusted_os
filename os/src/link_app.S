@@ -14,26 +14,26 @@ _app_num:
     .globl app_0_start
     .globl app_0_end
 app_0_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/00ones.bin"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/00ones"
 app_0_end:
 
     .section .data
     .globl app_1_start
     .globl app_1_end
 app_1_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/01twos.bin"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/01twos"
 app_1_end:
 
     .section .data
     .globl app_2_start
     .globl app_2_end
 app_2_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/02threes.bin"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/02threes"
 app_2_end:
 
     .section .data
     .globl app_3_start
     .globl app_3_end
 app_3_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/03yield.bin"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/03yield"
 app_3_end:

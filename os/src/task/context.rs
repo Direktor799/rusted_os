@@ -1,5 +1,7 @@
 //! Implementation of [`TaskContext`]
 
+use crate::interrupt::interrupt_return;
+
 /// Task Context
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
@@ -31,6 +33,14 @@ impl TaskContext {
             ra: __restore as usize,
             sp: kstack_ptr,
             s: [0; 12],
+        }
+    }
+
+    pub fn goto_trap_return(kernel_sp: usize) -> Self {
+        Self {
+            ra: interrupt_return as usize,
+            s: [0; 12],
+            sp: kernel_sp,
         }
     }
 }

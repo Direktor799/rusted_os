@@ -62,7 +62,7 @@ impl SchdMaster {
             mlfq: MultilevelFeedbackQueue::new(),
         }
     }
-    /// push_back current task control block into MLFQ and return the next task to be executed
+    /// push current task control block into MLFQ and return the next task to be executed
     ///
     /// next task can be None
     pub fn get_next_and_requeue_current(

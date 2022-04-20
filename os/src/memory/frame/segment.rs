@@ -1,6 +1,8 @@
 use super::address::{VPNRange, VirtPageNum};
 use super::frame::{FrameTracker, FRAME_ALLOCATOR};
+use crate::config::PAGE_SIZE;
 use alloc::collections::BTreeMap;
+use core::cmp::min;
 
 enum MapType {
     Identical,
@@ -11,7 +13,7 @@ pub type SegFlags = u8;
 
 pub struct MemorySegment {
     vpn_range: VPNRange,
-    data_frames: BTreeMap<VirtPageNum, FrameTracker>,
+    pub data_frames: BTreeMap<VirtPageNum, FrameTracker>,
     map_type: MapType,
     flags: SegFlags,
 }
@@ -31,7 +33,15 @@ impl MemorySegment {
         }
     }
 
-    pub fn map_iter(&self) -> alloc::collections::btree_map::Iter<VirtPageNum, FrameTracker> {
-        self.data_frames.iter()
+    pub fn copy_data(&self, vpn_range: VPNRange, data: &[u8]) {
+        let mut current_start = 0;
+        for vpn in vpn_range {
+            let src = &data[current_start..min(data.len(), current_start + PAGE_SIZE)];
+            self.data_frames[&vpn].ppn().get_bytes_array()[..src.len()].copy_from_slice(src);
+            current_start += PAGE_SIZE;
+            if current_start >= data.len() {
+                break;
+            }
+        }
     }
 }

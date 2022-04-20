@@ -3,13 +3,14 @@ use address::{PhysAddr, PhysPageNum};
 use frame::FRAME_ALLOCATOR;
 use memory_set::MemorySet;
 
-mod address;
+pub mod address;
 mod frame;
-mod memory_set;
+pub mod memory_set;
 mod page_table;
 mod segment;
 
-static mut KERNEL_MEMORY_SET: Option<MemorySet> = None;
+pub use page_table::{R, W};
+pub static mut KERNEL_MEMORY_SET: Option<MemorySet> = None;
 
 pub fn init() {
     extern "C" {

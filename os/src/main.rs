@@ -25,8 +25,8 @@ global_asm!(include_str!("link_app.S"));
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
     println!("[kernel] Hello rusted_os!");
-    interrupt::init();
     memory::init();
+    interrupt::init();
     loader::init();
     task::init();
     // let mut cur_time = timer::get_time_ms() / 1000;
