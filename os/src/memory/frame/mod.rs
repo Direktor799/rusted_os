@@ -9,7 +9,7 @@ pub mod memory_set;
 mod page_table;
 mod segment;
 
-pub use page_table::{R, W};
+pub use page_table::{PageTable, R, W};
 pub static mut KERNEL_MEMORY_SET: Option<MemorySet> = None;
 
 pub fn init() {

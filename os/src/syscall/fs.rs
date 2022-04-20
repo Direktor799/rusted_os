@@ -1,11 +1,16 @@
+use crate::memory::PageTable;
+use crate::task::TASK_MANAGER;
 const FD_STDOUT: usize = 1;
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let data_segments = PageTable::get_buffer_in_kernel(user_satp_token, buf, len);
     match fd {
         FD_STDOUT => {
-            let slice = unsafe { core::slice::from_raw_parts(buf, len) };
-            let str = core::str::from_utf8(slice).unwrap();
-            print!("{}", str);
+            for data_segment in data_segments {
+                let str = core::str::from_utf8(data_segment).unwrap();
+                print!("{}", str);
+            }
             len as isize
         }
         _ => {

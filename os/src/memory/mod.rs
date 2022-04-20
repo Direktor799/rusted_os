@@ -7,6 +7,7 @@ mod heap;
 
 pub use frame::address;
 pub use frame::memory_set::MemorySet;
+pub use frame::PageTable;
 pub use frame::KERNEL_MEMORY_SET;
 pub use frame::{R, W};
 

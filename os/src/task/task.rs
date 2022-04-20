@@ -53,7 +53,6 @@ impl TaskControlBlock {
             kernel_stack_end - 1,
             interrupt_handler as usize,
         );
-        println!("{:x?}", trap_cx);
         Self {
             task_status: TaskStatus::Ready,
             task_cx: TaskContext::goto_trap_return(kernel_stack_end - 1),

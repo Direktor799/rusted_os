@@ -1,6 +1,6 @@
 //! 页表
 
-use super::address::{PhysPageNum, VirtPageNum};
+use super::address::*;
 use super::frame::{FrameTracker, FRAME_ALLOCATOR};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -54,6 +54,13 @@ impl PageTable {
                 root_ppn: frame.ppn(),
                 frames: vec![frame],
             }
+        }
+    }
+
+    pub fn from_token(token: usize) -> Self {
+        Self {
+            root_ppn: PhysPageNum(token & (1 << 44) - 1),
+            frames: vec![],
         }
     }
 
@@ -111,5 +118,27 @@ impl PageTable {
 
     pub fn satp_token(&self) -> usize {
         8usize << 60 | self.root_ppn.0
+    }
+
+    pub fn get_buffer_in_kernel(
+        user_token: usize,
+        ptr: *const u8,
+        len: usize,
+    ) -> Vec<&'static [u8]> {
+        let mut data_segments = vec![];
+        let user_page_table = Self::from_token(user_token);
+        let mut current_start = ptr as usize;
+        let end = current_start + len;
+        while current_start < end {
+            let start_va = VirtAddr(current_start);
+            let ppn = user_page_table
+                .translate(start_va.vpn())
+                .expect("[kernel] User space address not mapped!");
+            let end_va = core::cmp::min(VirtAddr(end), VirtPageNum(start_va.vpn().0 + 1).addr());
+            data_segments
+                .push(&ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()]);
+            current_start = end_va.0;
+        }
+        data_segments
     }
 }
