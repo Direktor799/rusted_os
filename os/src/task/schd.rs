@@ -11,11 +11,6 @@ struct MultilevelFeedbackQueue {
 
 impl MultilevelFeedbackQueue {
     pub fn new() -> Self {
-        let tcb = TaskControlBlock {
-            task_status: TaskStatus::UnInit,
-            task_cx: TaskContext::zero_init(),
-            task_pos: TaskPos::Fcfs1,
-        };
         MultilevelFeedbackQueue {
             fcfs1_queue: VecDeque::new(),
             fcfs2_queue: VecDeque::new(),
@@ -46,18 +41,14 @@ impl MultilevelFeedbackQueue {
     }
     pub fn get_task(&mut self) -> Option<TaskControlBlock> {
         let task = self.fcfs1_queue.pop_front();
-        if let Some(ref task) = task {
-            return Option::from(*task);
+        if task.is_some() {
+            return task;
         }
         let task = self.fcfs2_queue.pop_front();
-        if let Some(ref task) = task {
-            return Option::from(*task);
+        if task.is_some() {
+            return task;
         }
-        let task = self.rr_queue.pop_front();
-        if let Some(ref task) = task {
-            return Option::from(*task);
-        }
-        None
+        self.rr_queue.pop_front()
     }
 }
 
@@ -78,20 +69,12 @@ impl SchdMaster {
         &mut self,
         mut current_task_cb: TaskControlBlock,
     ) -> Option<TaskControlBlock> {
+        if current_task_cb.task_status != TaskStatus::Exited {
+            current_task_cb.task_status = TaskStatus::Ready;
+            self.mlfq.requeue(current_task_cb);
+        }
         let mut next_task_info = self.mlfq.get_task(); // get a new task
-        if let Some(ref mut task_info) = next_task_info {
-            let next_task_cb = *task_info;
-            if current_task_cb.task_status != TaskStatus::Exited {
-                current_task_cb.task_status = TaskStatus::Ready;
-                self.mlfq.requeue(current_task_cb);
-            }
-            return Option::from(next_task_cb);
-        }
-        if current_task_cb.task_status == TaskStatus::Exited {
-            None
-        } else {
-            Option::from(current_task_cb)
-        }
+        return next_task_info;
     }
 
     pub fn add_new_task(&mut self, tcb: TaskControlBlock) {

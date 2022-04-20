@@ -15,7 +15,6 @@ pub enum TaskPos {
     Rr,
 }
 
-#[derive(Copy, Clone)]
 pub struct TaskControlBlock {
     pub task_status: TaskStatus,
     pub task_cx: TaskContext,
