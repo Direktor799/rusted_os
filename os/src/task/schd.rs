@@ -1,101 +1,59 @@
 use super::task::*;
 use super::TaskContext;
-use crate::config::{
-    TASK_QUEUE_FCFS1_SLICE, TASK_QUEUE_FCFS2_SLICE, TASK_QUEUE_RR_SLICE, TASK_QUEUE_SIZE,
-};
-
-struct WaitingQueue<T> {
-    queue: [T; TASK_QUEUE_SIZE],
-    head: usize,
-    tail: usize,
-}
-
-impl<T: Copy> WaitingQueue<T> {
-    pub fn push(&mut self, item: T) -> bool {
-        if self.size() == TASK_QUEUE_SIZE - 1 {
-            return false;
-        }
-        let tail = self.tail;
-        self.tail = (self.tail + 1 + TASK_QUEUE_SIZE) % TASK_QUEUE_SIZE;
-        self.queue[tail] = item;
-        true
-    }
-    pub fn pop(&mut self) -> Option<T> {
-        if self.size() == 0 {
-            return None;
-        }
-        let head = self.head;
-        self.head = (self.head + 1 + TASK_QUEUE_SIZE) % TASK_QUEUE_SIZE;
-        Option::from(self.queue[head])
-    }
-    pub fn size(&mut self) -> usize {
-        (self.tail + TASK_QUEUE_SIZE - self.head) % TASK_QUEUE_SIZE
-    }
-}
+use crate::config::{TASK_QUEUE_FCFS1_SLICE, TASK_QUEUE_FCFS2_SLICE, TASK_QUEUE_RR_SLICE};
+use alloc::collections::VecDeque;
 
 struct MultilevelFeedbackQueue {
-    fcfs1_queue: WaitingQueue<TaskControlBlock>,
-    fcfs2_queue: WaitingQueue<TaskControlBlock>,
-    rr_queue: WaitingQueue<TaskControlBlock>,
+    fcfs1_queue: VecDeque<TaskControlBlock>,
+    fcfs2_queue: VecDeque<TaskControlBlock>,
+    rr_queue: VecDeque<TaskControlBlock>,
 }
 
 impl MultilevelFeedbackQueue {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         let tcb = TaskControlBlock {
             task_status: TaskStatus::UnInit,
             task_cx: TaskContext::zero_init(),
             task_pos: TaskPos::Fcfs1,
         };
         MultilevelFeedbackQueue {
-            fcfs1_queue: WaitingQueue {
-                queue: [tcb; TASK_QUEUE_SIZE],
-                head: 0,
-                tail: 0,
-            },
-            fcfs2_queue: WaitingQueue {
-                queue: [tcb; TASK_QUEUE_SIZE],
-                head: 0,
-                tail: 0,
-            },
-            rr_queue: WaitingQueue {
-                queue: [tcb; TASK_QUEUE_SIZE],
-                head: 0,
-                tail: 0,
-            },
+            fcfs1_queue: VecDeque::new(),
+            fcfs2_queue: VecDeque::new(),
+            rr_queue: VecDeque::new(),
         }
     }
     pub fn requeue(&mut self, mut task: TaskControlBlock) -> bool {
         match task.task_pos {
             TaskPos::Fcfs1 => {
                 task.task_pos = TaskPos::Fcfs2;
-                self.fcfs2_queue.push(task);
+                self.fcfs2_queue.push_back(task);
                 true
             }
             TaskPos::Fcfs2 => {
                 task.task_pos = TaskPos::Rr;
-                self.rr_queue.push(task);
+                self.rr_queue.push_back(task);
                 true
             }
             TaskPos::Rr => {
                 task.task_pos = TaskPos::Rr;
-                self.rr_queue.push(task);
+                self.rr_queue.push_back(task);
                 true
             }
         }
     }
-    pub fn enqueue(&mut self, task: TaskControlBlock) -> bool {
-        self.fcfs1_queue.push(task)
+    pub fn enqueue(&mut self, task: TaskControlBlock) {
+        self.fcfs1_queue.push_back(task)
     }
     pub fn get_task(&mut self) -> Option<TaskControlBlock> {
-        let task = self.fcfs1_queue.pop();
+        let task = self.fcfs1_queue.pop_front();
         if let Some(ref task) = task {
             return Option::from(*task);
         }
-        let task = self.fcfs2_queue.pop();
+        let task = self.fcfs2_queue.pop_front();
         if let Some(ref task) = task {
             return Option::from(*task);
         }
-        let task = self.rr_queue.pop();
+        let task = self.rr_queue.pop_front();
         if let Some(ref task) = task {
             return Option::from(*task);
         }
@@ -108,13 +66,13 @@ pub struct SchdMaster {
 }
 
 impl SchdMaster {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         SchdMaster {
             mlfq: MultilevelFeedbackQueue::new(),
         }
     }
-    /// push current task control block into MLFQ and return the next task to be executed
-    /// 
+    /// push_back current task control block into MLFQ and return the next task to be executed
+    ///
     /// next task can be None
     pub fn get_next_and_requeue_current(
         &mut self,

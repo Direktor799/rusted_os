@@ -8,9 +8,6 @@ pub const PAGE_SIZE_BITS: usize = 12;
 /// QEMU内存结束地址
 pub const MEMORY_END_ADDR: PhysAddr = PhysAddr(0x8800_0000);
 
-/// 任务队列大小
-pub const TASK_QUEUE_SIZE: usize = 0x1000;
-
 /// 第一级队列时间片
 pub const TASK_QUEUE_FCFS1_SLICE: usize = 4000;
 /// 第二级队列时间片

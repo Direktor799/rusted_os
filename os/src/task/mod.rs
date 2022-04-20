@@ -12,7 +12,7 @@ use schd::{get_default_time_slice, get_time_slice, SchdMaster};
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskPos, TaskStatus};
 
-pub struct TaskManager(RefCell<TaskManagerInner>);
+pub struct TaskManager(Option<RefCell<TaskManagerInner>>);
 
 struct TaskManagerInner {
     current_task: Option<TaskControlBlock>,
@@ -28,16 +28,16 @@ impl TaskManager {
                     APP_MANAGER.borrow_mut().init_app_context(i) as *mut Context as usize
                 );
                 if i == 0 {
-                    self.0.borrow_mut().current_task = Some(tcb);
+                    self.0.as_ref().unwrap().borrow_mut().current_task = Some(tcb);
                 } else {
-                    self.0.borrow_mut().schd.add_new_task(tcb);
+                    self.0.as_ref().unwrap().borrow_mut().schd.add_new_task(tcb);
                 }
             }
         }
     }
 
     fn switch_to_next_task(&self) {
-        let mut inner = self.0.borrow_mut();
+        let mut inner = self.0.as_ref().unwrap().borrow_mut();
         let current_task = inner.current_task;
         if let None = current_task {
             timer::set_next_timeout(get_default_time_slice())
@@ -64,17 +64,14 @@ impl TaskManager {
         unreachable!();
     }
     fn set_current_task_status(&self, stat: TaskStatus) {
-        let mut inner = self.0.borrow_mut();
+        let mut inner = self.0.as_ref().unwrap().borrow_mut();
         if let Some(current_task) = inner.current_task.as_mut() {
             (*current_task).task_status = stat;
         }
     }
 }
 
-pub static mut TASK_MANAGER: TaskManager = TaskManager(RefCell::new(TaskManagerInner {
-    current_task: None,
-    schd: SchdMaster::new(),
-}));
+pub static mut TASK_MANAGER: TaskManager = TaskManager(None);
 
 fn set_current_task_status(stat: TaskStatus) {
     unsafe {
@@ -106,6 +103,10 @@ pub fn schedule_callback() {
 
 pub fn init() {
     unsafe {
+        TASK_MANAGER = TaskManager(Some(RefCell::new(TaskManagerInner {
+            current_task: None,
+            schd: SchdMaster::new(),
+        })));
         TASK_MANAGER.init();
         println!("mod task initialized!");
     }
@@ -113,7 +114,7 @@ pub fn init() {
 
 pub fn run() {
     unsafe {
-        let task_manager = TASK_MANAGER.0.borrow_mut();
+        let task_manager = TASK_MANAGER.0.as_ref().unwrap().borrow_mut();
         let current_task = task_manager.current_task.as_ref().unwrap().clone();
         drop(task_manager);
         let mut _unused = TaskContext::zero_init();

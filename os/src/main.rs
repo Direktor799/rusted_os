@@ -29,14 +29,14 @@ pub extern "C" fn rust_main() -> ! {
     memory::init();
     loader::init();
     task::init();
-    let mut cur_time = timer::get_time_ms() / 1000;
-    loop {
-        let new_time = timer::get_time_ms() / 1000;
-        if new_time != cur_time {
-            cur_time = new_time;
-            println!("{}", new_time);
-        }
-    }
-    // task::run();
+    // let mut cur_time = timer::get_time_ms() / 1000;
+    // loop {
+    //     let new_time = timer::get_time_ms() / 1000;
+    //     if new_time != cur_time {
+    //         cur_time = new_time;
+    //         println!("{}", new_time);
+    //     }
+    // }
+    task::run();
     panic!("Dummy as fuck");
 }
