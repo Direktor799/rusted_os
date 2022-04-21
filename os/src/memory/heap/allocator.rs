@@ -1,3 +1,5 @@
+//! BuddySystem分配器
+
 use super::linked_list::LinkedList;
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::cell::RefCell;
@@ -6,6 +8,7 @@ use core::mem::size_of;
 use core::ops::Deref;
 use core::ptr::{null_mut, NonNull};
 
+/// ORDER阶的BuddySystem分配器
 #[derive(Debug)]
 pub struct BuddySystemAllocator<const ORDER: usize> {
     free_list: [LinkedList; ORDER],
@@ -14,6 +17,7 @@ pub struct BuddySystemAllocator<const ORDER: usize> {
 }
 
 impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
+    /// 创建空分配器
     pub const fn new() -> Self {
         Self {
             free_list: [LinkedList::new(); ORDER],
@@ -22,10 +26,12 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
         }
     }
 
+    /// 根据传入地址初始化分配器
     pub unsafe fn init(&mut self, start_addr: usize, size: usize) {
         self.add(start_addr, start_addr + size);
     }
 
+    /// 向分配器中添加空闲地址
     pub unsafe fn add(&mut self, start_addr: usize, end_addr: usize) {
         // assume its size_of::<usize>() aligned
         let mut total = 0;
@@ -40,6 +46,7 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
         self.total += total;
     }
 
+    /// 分配内存
     unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
         let size = Self::get_size(layout);
         let order = size.trailing_zeros() as usize;
@@ -63,6 +70,7 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
         null_mut()
     }
 
+    /// 回收内存
     unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
         let size = Self::get_size(layout);
         let order = size.trailing_zeros() as usize;
@@ -90,6 +98,7 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
         }
     }
 
+    /// 根据内存布局计算实际分配大小
     fn get_size(layout: Layout) -> usize {
         // 因为管理地址空间时，内存块的大小与对齐一致，所以分配时亦然，取其最大者
         max(

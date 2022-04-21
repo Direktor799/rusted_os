@@ -4,10 +4,10 @@ use frame::FRAME_ALLOCATOR;
 use memory_set::MemorySet;
 
 pub mod address;
-mod frame;
+pub mod frame;
 pub mod memory_set;
-mod page_table;
-mod segment;
+pub mod page_table;
+pub mod segment;
 
 pub use page_table::{PageTable, R, W};
 pub static mut KERNEL_MEMORY_SET: Option<MemorySet> = None;

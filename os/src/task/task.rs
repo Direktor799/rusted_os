@@ -1,8 +1,8 @@
 use super::context::TaskContext;
 use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT};
 use crate::interrupt::{context::Context, handler::interrupt_handler};
-use crate::memory::address::*;
-use crate::memory::{MemorySet, KERNEL_MEMORY_SET, R, W};
+use crate::memory::frame::address::*;
+use crate::memory::frame::{memory_set::MemorySet, KERNEL_MEMORY_SET, R, W};
 use alloc::collections::VecDeque;
 
 #[derive(Copy, Clone, PartialEq)]

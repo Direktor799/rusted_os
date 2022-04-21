@@ -1,36 +1,40 @@
-//! Linked list for memory management
+//! 用于堆内存管理的裸单向链表
 use core::marker::Copy;
 use core::{fmt, ptr};
 
+/// 链表节点，其数据为下一个节点
 #[derive(Copy, Clone)]
 pub struct LinkedList {
     head: *mut usize,
 }
 
 impl LinkedList {
+    /// 创建空链表
     pub const fn new() -> LinkedList {
         LinkedList {
             head: ptr::null_mut(),
         }
     }
+
     /// 返回该链表是否为空
     pub fn is_empty(&self) -> bool {
         self.head.is_null()
     }
 
+    /// 在链表头处添加节点
     pub unsafe fn push(&mut self, item: *mut usize) {
         *item = self.head as usize;
         self.head = item;
     }
 
+    /// 弹出链表头处的节点
     pub fn pop(&mut self) -> Option<*mut usize> {
-        match self.is_empty() {
-            true => None,
-            false => {
-                let item = self.head;
-                self.head = unsafe { *item as *mut usize };
-                Some(item)
-            }
+        if self.is_empty() {
+            None
+        } else {
+            let item = self.head;
+            self.head = unsafe { *item as *mut usize };
+            Some(item)
         }
     }
 
