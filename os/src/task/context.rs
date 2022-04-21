@@ -1,6 +1,6 @@
 //! Implementation of [`TaskContext`]
 
-use crate::interrupt::interrupt_return;
+use crate::interrupt::handler::interrupt_return;
 
 /// Task Context
 #[derive(Copy, Clone, Debug)]

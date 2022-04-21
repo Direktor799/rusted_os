@@ -13,7 +13,7 @@ build: $(BIN_FILE)
 
 # 通过 Rust 文件中的注释生成 os 的文档
 doc:
-	@cargo doc --document-private-items
+	@cargo doc --document-private-items --no-deps --open
 
 # 编译 kernel
 kernel:

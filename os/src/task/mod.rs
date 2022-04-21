@@ -3,9 +3,9 @@ mod schd;
 mod switch;
 mod task;
 
-use crate::interrupt::Context;
-use crate::loader::APP_MANAGER;
-use crate::timer;
+use crate::interrupt::context::Context;
+use crate::interrupt::timer;
+use crate::loader::app_manager::APP_MANAGER;
 pub use context::TaskContext;
 use core::cell::RefCell;
 use schd::{get_default_time_slice, get_time_slice, SchdMaster};

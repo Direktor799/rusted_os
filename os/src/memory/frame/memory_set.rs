@@ -4,7 +4,7 @@ use super::segment::{MemorySegment, SegFlags};
 use crate::config::{
     MEMORY_END_ADDR, PAGE_SIZE, PAGE_SIZE_BITS, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE,
 };
-use crate::loader::ElfFile;
+use crate::loader::elf_decoder::ElfFile;
 use alloc::{vec, vec::Vec};
 
 extern "C" {

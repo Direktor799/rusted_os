@@ -1,10 +1,12 @@
-mod app_manager;
-mod elf_decoder;
+//! 用户程序加载模块
 
-pub use app_manager::APP_MANAGER;
-pub use elf_decoder::ElfFile;
+pub mod app_manager;
+pub mod elf_decoder;
 
-/// init loader subsystem
+use app_manager::APP_MANAGER;
+
+/// 初始化用户程序管理器
+/// - [`app_manager::AppManager::init`]
 pub fn init() {
     unsafe {
         APP_MANAGER.borrow_mut().init();

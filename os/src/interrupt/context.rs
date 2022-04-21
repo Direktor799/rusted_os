@@ -1,3 +1,5 @@
+//! 中断上下文子模块
+
 use riscv::register::sstatus::{self, Sstatus, SPP};
 
 /// 中断切换上下文
@@ -13,9 +15,12 @@ pub struct Context {
 }
 
 impl Context {
+    /// 设置上下文恢复后的sp地址
     pub fn set_sp(&mut self, sp: usize) {
         self.x[2] = sp;
     }
+
+    /// 初始化App首次运行的上下文
     pub fn app_init_context(
         entry: usize,
         sp: usize,

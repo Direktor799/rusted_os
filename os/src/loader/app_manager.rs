@@ -1,12 +1,11 @@
-//! loader subsystem
-use crate::config::{
-    APP_BASE_ADDRESS, APP_SIZE_LIMIT, KERNEL_STACK_SIZE, MAX_APP_NUM, USER_STACK_SIZE,
-};
-use crate::interrupt::Context;
+//! 用户程序管理子模块
+use crate::config::{KERNEL_STACK_SIZE, MAX_APP_NUM, USER_STACK_SIZE};
+use crate::interrupt::context::Context;
 use core::arch::asm;
 use core::cell::RefCell;
 use core::ops::Deref;
 
+/// 用户程序管理器
 pub struct AppManager {
     app_num: usize,
     current_app: usize,
@@ -14,6 +13,7 @@ pub struct AppManager {
 }
 
 impl AppManager {
+    ///创建空管理器
     pub const fn new() -> Self {
         Self {
             app_num: 0,
@@ -22,6 +22,7 @@ impl AppManager {
         }
     }
 
+    /// 根据汇编中的symbol初始化用户程序信息
     pub fn init(&mut self) {
         extern "C" {
             fn _app_num();
@@ -35,21 +36,10 @@ impl AppManager {
             app_start[..=app_num].copy_from_slice(app_start_raw);
             self.app_num = app_num;
             self.app_start = app_start;
-            asm!("fence.i");
-            for app_id in 0..self.app_num {
-                let app_addr = self.get_app_addr(app_id);
-                // println!("loading app_{} to 0x{:x}", app_id, app_addr);
-                core::slice::from_raw_parts_mut(app_addr as *mut u8, APP_SIZE_LIMIT).fill(0);
-                let app_src = core::slice::from_raw_parts(
-                    self.app_start[app_id] as *const u8,
-                    self.app_start[app_id + 1] - self.app_start[app_id],
-                );
-                let app_dst = core::slice::from_raw_parts_mut(app_addr as *mut u8, app_src.len());
-                app_dst.copy_from_slice(app_src);
-            }
         }
     }
 
+    /// 输出用户程序信息
     pub fn print_app_info(&self) {
         println!("[kernel] app_num = {}", self.app_num);
         for i in 0..self.app_num {
@@ -62,10 +52,7 @@ impl AppManager {
         }
     }
 
-    pub fn get_app_addr(&self, app_id: usize) -> usize {
-        APP_BASE_ADDRESS + app_id * APP_SIZE_LIMIT
-    }
-
+    /// 获取用户程序数据
     pub fn get_app_data(&self, app_id: usize) -> &[u8] {
         unsafe {
             core::slice::from_raw_parts(
@@ -75,14 +62,17 @@ impl AppManager {
         }
     }
 
+    /// 获取用户程序数量
     pub fn get_app_num(&self) -> usize {
         self.app_num
     }
 }
 
+/// 单线程的用户程序管理器
 pub struct OutsideAppManager(RefCell<AppManager>);
 
 impl OutsideAppManager {
+    /// 创建新的单线程用户程序管理器
     pub const fn new() -> Self {
         Self(RefCell::new(AppManager::new()))
     }
@@ -95,4 +85,5 @@ impl Deref for OutsideAppManager {
     }
 }
 
+/// 全局用户程序管理器实例
 pub static mut APP_MANAGER: OutsideAppManager = OutsideAppManager::new();
