@@ -2,7 +2,8 @@
 use core::marker::Copy;
 use core::{fmt, ptr};
 
-/// 链表节点，其数据为下一个节点
+/// 链表头，head指向第一个结点
+/// 其指针即为数据
 #[derive(Copy, Clone)]
 pub struct LinkedList {
     head: *mut usize,
@@ -21,13 +22,13 @@ impl LinkedList {
         self.head.is_null()
     }
 
-    /// 在链表头处添加节点
+    /// 在链表头处添加结点
     pub unsafe fn push(&mut self, item: *mut usize) {
         *item = self.head as usize;
         self.head = item;
     }
 
-    /// 弹出链表头处的节点
+    /// 弹出链表头处的结点
     pub fn pop(&mut self) -> Option<*mut usize> {
         if self.is_empty() {
             None
@@ -38,6 +39,7 @@ impl LinkedList {
         }
     }
 
+    /// 返回链表的不可变迭代器
     pub fn iter(&self) -> Iter {
         Iter {
             curr: self.head,
@@ -45,6 +47,7 @@ impl LinkedList {
         }
     }
 
+    /// 返回链表的可变迭代器
     pub fn iter_mut(&mut self) -> IterMut {
         IterMut {
             prev: &mut self.head as *mut *mut usize as *mut usize,
@@ -60,8 +63,10 @@ impl fmt::Debug for LinkedList {
     }
 }
 
+/// 链表的不可变迭代器
 pub struct Iter<'a> {
     curr: *mut usize,
+    // _list用于传递生命周期参数
     _list: &'a LinkedList,
 }
 
@@ -80,6 +85,7 @@ impl<'a> Iterator for Iter<'a> {
     }
 }
 
+/// 用于可变迭代器的抽象ListNode
 pub struct ListNode {
     prev: *mut usize,
     curr: *mut usize,
@@ -98,10 +104,12 @@ impl ListNode {
     }
 }
 
+/// 链表的可变迭代器
 pub struct IterMut<'a> {
-    _list: &'a mut LinkedList,
     prev: *mut usize,
     curr: *mut usize,
+    // _list用于传递生命周期参数
+    _list: &'a mut LinkedList,
 }
 
 impl<'a> Iterator for IterMut<'a> {

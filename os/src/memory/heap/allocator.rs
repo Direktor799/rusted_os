@@ -108,6 +108,7 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
     }
 }
 
+/// 类似next_power_of_two
 fn prev_power_of_two(num: usize) -> usize {
     1 << (8 * size_of::<usize>() - num.leading_zeros() as usize - 1)
 }
