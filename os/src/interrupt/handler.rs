@@ -5,13 +5,13 @@ use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::syscall::sys_call;
 use crate::task::{exit_current_and_run_next, schedule_callback, TASK_MANAGER};
 use core::arch::global_asm;
-use riscv::register::{
-    mtvec::TrapMode,
-    scause::{self, Exception, Interrupt, Trap},
-    stval, stvec,
-};
 
 global_asm!(include_str!("./interrupt.S"));
+
+const ILLEGAL_INSTRUCTION: usize = 2;
+const BREAKPOINT: usize = 3;
+const ENVIRONMENT_CALL: usize = 8;
+const SUPERVISOR_TIMER_INTERRUPT: usize = (1 << 63) + 5;
 
 /// 初始化中断向量
 pub fn init() {
@@ -23,21 +23,29 @@ pub fn init() {
 
 /// 设置内核态中断地址
 fn set_kernel_interrupt() {
-    unsafe { stvec::write(interrupt_kernel as usize, TrapMode::Direct) };
+    unsafe {
+        core::arch::asm!("csrw stvec, {}", in(reg) interrupt_kernel as usize);
+    };
 }
 
 /// 设置用户态中断地址
 fn set_user_trap_entry() {
-    unsafe { stvec::write(TRAMPOLINE as usize, TrapMode::Direct) };
+    unsafe {
+        core::arch::asm!("csrw stvec, {}", in(reg) TRAMPOLINE as usize);
+    };
 }
 
 /// 内核态中断处理程序
 #[no_mangle]
 pub fn interrupt_kernel() -> ! {
+    let mut scause: usize;
+    let mut stval: usize;
+    unsafe {
+        core::arch::asm!("csrr {}, scause","csrr {}, stval", out(reg) scause, out(reg) stval);
+    }
     panic!(
-        "[kernel] Multi-interrupt: {:?}\nstval: {:x}",
-        scause::read().cause(),
-        stval::read()
+        "[kernel] Multi-interrupt:\nscause: {:?} stval: {:x}",
+        scause, stval
     )
 }
 
@@ -46,17 +54,16 @@ pub fn interrupt_kernel() -> ! {
 pub fn interrupt_handler() -> ! {
     set_kernel_interrupt();
     let context = unsafe { TASK_MANAGER.get_current_trap_cx() };
-    let scause = scause::read();
-    let stval = stval::read();
-    match scause.cause() {
-        Trap::Exception(Exception::Breakpoint) => breakpoint(context),
-        Trap::Interrupt(Interrupt::SupervisorTimer) => supervisor_timer(context),
-        Trap::Exception(Exception::UserEnvCall) => user_env_call(context),
-        Trap::Exception(Exception::StoreFault) => {
-            println!("[kernel] StoreFault in application, kernel killed it.");
-            exit_current_and_run_next(-1);
-        }
-        Trap::Exception(Exception::IllegalInstruction) => {
+    let mut scause: usize;
+    let mut stval: usize;
+    unsafe {
+        core::arch::asm!("csrr {}, scause","csrr {}, stval", out(reg) scause, out(reg) stval);
+    }
+    match scause {
+        BREAKPOINT => breakpoint(context),
+        SUPERVISOR_TIMER_INTERRUPT => supervisor_timer(context),
+        ENVIRONMENT_CALL => user_env_call(context),
+        ILLEGAL_INSTRUCTION => {
             println!(
                 "[kernel] IllegalInstruction at {:x}: {:x}, kernel killed it.",
                 context.sepc,
@@ -67,9 +74,7 @@ pub fn interrupt_handler() -> ! {
         _ => {
             panic!(
                 "Unresolved interrupt: {:?}\n{:x?}\nstval: {:x}",
-                scause.cause(),
-                context,
-                stval
+                scause, context, stval
             );
         }
     }
