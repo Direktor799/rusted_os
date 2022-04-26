@@ -9,8 +9,7 @@ use app_manager::APP_MANAGER;
 /// - [`app_manager::AppManager::init`]
 pub fn init() {
     unsafe {
-        APP_MANAGER.borrow_mut().init();
-        // APP_MANAGER.borrow_mut().print_app_info();
+        APP_MANAGER.init();
     }
     println!("mod loader initialized!");
 }

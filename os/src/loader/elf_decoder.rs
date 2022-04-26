@@ -139,31 +139,6 @@ impl ProgramHeader {
     }
 }
 
-/// 节头表
-#[repr(C)]
-pub struct SectionHeader {
-    /// Section name, index in string tbl
-    sh_name: Elf64Word,
-    /// Type of section
-    sh_type: Elf64Word,
-    /// Miscellaneous section attributes
-    sh_flags: Elf64Xword,
-    /// Section virtual addr at execution
-    sh_addr: Elf64Addr,
-    /// Section file offset
-    sh_offset: Elf64Off,
-    /// Size of section in bytes
-    sh_size: Elf64Xword,
-    /// Index of another section
-    sh_link: Elf64Word,
-    /// Additional section information
-    sh_info: Elf64Word,
-    /// Section alignment
-    sh_addralign: Elf64Xword,
-    /// Entry size if section holds table
-    sh_entsize: Elf64Xword,
-}
-
 /// Elf文件解析内容
 pub struct ElfFile {
     pub header: ElfHeader,

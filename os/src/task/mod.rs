@@ -1,5 +1,5 @@
 mod context;
-mod schd;
+pub mod schd;
 mod switch;
 mod task;
 
@@ -8,7 +8,7 @@ use crate::interrupt::timer;
 use crate::loader::app_manager::APP_MANAGER;
 pub use context::TaskContext;
 use core::cell::RefCell;
-use schd::{get_default_time_slice, get_time_slice, SchdMaster};
+use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskPos, TaskStatus};
 
@@ -22,9 +22,9 @@ struct TaskManagerInner {
 impl TaskManager {
     fn init(&mut self) {
         unsafe {
-            let app_num = APP_MANAGER.borrow_mut().get_app_num();
+            let app_num = APP_MANAGER.get_app_num();
             for i in 0..app_num {
-                let tcb = TaskControlBlock::new(APP_MANAGER.borrow_mut().get_app_data(i), i);
+                let tcb = TaskControlBlock::new(APP_MANAGER.get_app_data(i), i);
                 if i == 0 {
                     self.0.as_ref().unwrap().borrow_mut().current_task = Some(tcb);
                 } else {

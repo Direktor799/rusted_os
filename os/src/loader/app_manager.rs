@@ -1,14 +1,9 @@
 //! 用户程序管理子模块
-use crate::config::{KERNEL_STACK_SIZE, MAX_APP_NUM, USER_STACK_SIZE};
-use crate::interrupt::context::Context;
-use core::arch::asm;
-use core::cell::RefCell;
-use core::ops::Deref;
+use crate::config::MAX_APP_NUM;
 
 /// 用户程序管理器
 pub struct AppManager {
     app_num: usize,
-    current_app: usize,
     app_start: [usize; MAX_APP_NUM + 1],
 }
 
@@ -17,7 +12,6 @@ impl AppManager {
     pub const fn new() -> Self {
         Self {
             app_num: 0,
-            current_app: 0,
             app_start: [0; MAX_APP_NUM + 1],
         }
     }
@@ -39,19 +33,6 @@ impl AppManager {
         }
     }
 
-    /// 输出用户程序信息
-    pub fn print_app_info(&self) {
-        println!("[kernel] app_num = {}", self.app_num);
-        for i in 0..self.app_num {
-            println!(
-                "[kernel] app_{} [{:#x}, {:#x})",
-                i,
-                self.app_start[i],
-                self.app_start[i + 1]
-            );
-        }
-    }
-
     /// 获取用户程序数据
     pub fn get_app_data(&self, app_id: usize) -> &[u8] {
         unsafe {
@@ -68,22 +49,5 @@ impl AppManager {
     }
 }
 
-/// 单线程的用户程序管理器
-pub struct OutsideAppManager(RefCell<AppManager>);
-
-impl OutsideAppManager {
-    /// 创建新的单线程用户程序管理器
-    pub const fn new() -> Self {
-        Self(RefCell::new(AppManager::new()))
-    }
-}
-
-impl Deref for OutsideAppManager {
-    type Target = RefCell<AppManager>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 /// 全局用户程序管理器实例
-pub static mut APP_MANAGER: OutsideAppManager = OutsideAppManager::new();
+pub static mut APP_MANAGER: AppManager = AppManager::new();

@@ -24,18 +24,6 @@ impl TaskContext {
         }
     }
 
-    /// set task context {__restore ASM funciton, kernel stack, s_0..12 }
-    pub fn goto_restore(kstack_ptr: usize) -> Self {
-        extern "C" {
-            fn __restore();
-        }
-        Self {
-            ra: __restore as usize,
-            sp: kstack_ptr,
-            s: [0; 12],
-        }
-    }
-
     pub fn goto_trap_return(kernel_sp: usize) -> Self {
         Self {
             ra: interrupt_return as usize,

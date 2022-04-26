@@ -7,7 +7,7 @@ use crate::task::{exit_current_and_run_next, schedule_callback, TASK_MANAGER};
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
-    scause::{self, Exception, Interrupt, Scause, Trap},
+    scause::{self, Exception, Interrupt, Trap},
     stval, stvec,
 };
 
@@ -96,7 +96,6 @@ pub fn interrupt_return() -> ! {
             options(noreturn)
         );
     }
-    unreachable!("Unreachable in back_to_user!");
 }
 
 /// breakpoint处理

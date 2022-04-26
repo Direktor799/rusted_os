@@ -1,9 +1,8 @@
+//! 地址空间子模块
 use super::address::*;
 use super::page_table::{PageTable, R, U, W, X};
 use super::segment::{MemorySegment, SegFlags};
-use crate::config::{
-    MEMORY_END_ADDR, PAGE_SIZE, PAGE_SIZE_BITS, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE,
-};
+use crate::config::{MEMORY_END_ADDR, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE};
 use crate::loader::elf_decoder::ElfFile;
 use alloc::{vec, vec::Vec};
 
@@ -21,12 +20,17 @@ extern "C" {
     fn kernel_end();
 }
 
+/// 内核地址空间
+pub static mut KERNEL_MEMORY_SET: Option<MemorySet> = None;
+
+/// 地址空间
 pub struct MemorySet {
     page_table: PageTable,
     segments: Vec<MemorySegment>,
 }
 
 impl MemorySet {
+    /// 创建空地址空间
     pub fn new() -> Self {
         Self {
             page_table: PageTable::new(),
@@ -34,6 +38,7 @@ impl MemorySet {
         }
     }
 
+    /// 创建新内核地址空间
     pub fn new_kernel() -> Self {
         println!("kernel start at {:x}", kernel_start as usize);
         println!(".text [{:x}, {:x})", text_start as usize, text_end as usize);
@@ -79,7 +84,8 @@ impl MemorySet {
         memory_set
     }
 
-    /// 返回工作集，用户栈地址，程序入口
+    /// 创建新用户程序地址空间
+    /// 返回用户地址空间，用户栈地址，用户程序入口
     pub fn from_elf(elf_data: &[u8]) -> (Self, usize, usize) {
         let mut memory_set = Self::new();
         let elf = ElfFile::new(elf_data).expect("[kernel] Invalid elf file!");
@@ -127,6 +133,7 @@ impl MemorySet {
         )
     }
 
+    /// 在此地址空间中为虚拟页号分配物理页
     pub fn insert_segment(
         &mut self,
         start_vpn: VirtPageNum,
@@ -134,10 +141,9 @@ impl MemorySet {
         seg_flags: SegFlags,
         data: Option<&[u8]>,
     ) {
-        let vpn_range = VPNRange::new(start_vpn, end_vpn);
-        let segment = MemorySegment::new(vpn_range, seg_flags);
+        let segment = MemorySegment::new(VPNRange::new(start_vpn, end_vpn), seg_flags);
         if let Some(data) = data {
-            segment.copy_data(vpn_range, data);
+            segment.copy_data(data);
         }
         for (&vpn, frame) in &segment.data_frames {
             self.page_table.map(vpn, frame.ppn(), seg_flags);
@@ -145,6 +151,7 @@ impl MemorySet {
         self.segments.push(segment);
     }
 
+    /// 映射跳板页
     pub fn map_trampoline(&mut self) {
         self.page_table.map(
             VirtAddr(TRAMPOLINE).vpn(),
@@ -153,14 +160,17 @@ impl MemorySet {
         );
     }
 
+    /// 查找虚拟页号对应的物理页号
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PhysPageNum> {
         self.page_table.translate(vpn)
     }
 
+    /// 获取该地址空间token（用于写入satp寄存器）
     pub fn satp_token(&self) -> usize {
         self.page_table.satp_token()
     }
 
+    /// 切换到此地址空间
     pub fn activate(&self) {
         let satp = self.page_table.satp_token();
         // self.test();

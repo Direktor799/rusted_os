@@ -1,5 +1,4 @@
 use super::task::*;
-use super::TaskContext;
 use crate::config::{TASK_QUEUE_FCFS1_SLICE, TASK_QUEUE_FCFS2_SLICE, TASK_QUEUE_RR_SLICE};
 use alloc::collections::VecDeque;
 
@@ -73,8 +72,7 @@ impl SchdMaster {
             current_task_cb.task_status = TaskStatus::Ready;
             self.mlfq.requeue(current_task_cb);
         }
-        let mut next_task_info = self.mlfq.get_task(); // get a new task
-        return next_task_info;
+        self.mlfq.get_task()
     }
 
     pub fn add_new_task(&mut self, tcb: TaskControlBlock) {

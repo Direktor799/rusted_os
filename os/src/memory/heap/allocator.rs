@@ -1,4 +1,4 @@
-//! BuddySystem分配器
+//! BuddySystem堆内存分配器
 
 use super::linked_list::LinkedList;
 use alloc::alloc::{GlobalAlloc, Layout};
@@ -138,4 +138,15 @@ impl<const ORDER: usize> Deref for OutsideBuddySystemAllocator<ORDER> {
     fn deref(&self) -> &Self::Target {
         &self.0
     }
+}
+
+/// 全局堆内存分配器
+#[global_allocator]
+pub static mut HEAP_ALLOCATOR: OutsideBuddySystemAllocator<32> =
+    OutsideBuddySystemAllocator::<32>::new();
+
+/// 全局堆内存分配失败处理
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("Allocation error: {:?}", layout);
 }

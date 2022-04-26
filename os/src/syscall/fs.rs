@@ -1,12 +1,12 @@
 //! 文件相关系统调用子模块
-use crate::memory::frame::PageTable;
+use crate::memory::frame::page_table::PageTable;
 use crate::task::TASK_MANAGER;
 
 const FD_STDOUT: usize = 1;
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let data_segments = PageTable::get_buffer_in_kernel(user_satp_token, buf, len);
+    let data_segments = PageTable::get_user_buffer_in_kernel(user_satp_token, buf, len);
     match fd {
         FD_STDOUT => {
             for data_segment in data_segments {
