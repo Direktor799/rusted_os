@@ -83,12 +83,11 @@ fn set_current_task_status(stat: TaskStatus) {
     }
 }
 
-pub fn exit_current_and_run_next(exit_code: i32) {
+pub fn exit_current_and_run_next() {
     set_current_task_status(TaskStatus::Exited);
     unsafe {
         TASK_MANAGER.switch_to_next_task();
     }
-    // TODO set exit code in the task context
 }
 
 pub fn suspend_current_and_run_next() {

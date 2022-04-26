@@ -69,7 +69,7 @@ pub fn interrupt_handler() -> ! {
                 context.sepc,
                 unsafe { *(context.sepc as *const usize) }
             );
-            exit_current_and_run_next(-1);
+            exit_current_and_run_next();
         }
         _ => {
             panic!(
