@@ -32,7 +32,7 @@ clean:
 	@cargo clean
 
 # 运行 QEMU
-qemu: build
+qemu:
 	@qemu-system-riscv64 \
 			-machine virt \
 			-nographic \
@@ -53,3 +53,23 @@ qemudbg:
 run: build qemu
 
 debug: build qemudbg
+
+utest:
+	@cargo test --no-run
+	@$(OBJCOPY) target/riscv64gc-unknown-none-elf/debug/deps/rusted_os-de323c8ea6968b7e --strip-all -O binary target/riscv64gc-unknown-none-elf/debug/deps/utest
+	@qemu-system-riscv64 \
+			-machine virt \
+			-nographic \
+			-bios default \
+			-kernel target/riscv64gc-unknown-none-elf/debug/deps/utest\
+			-device loader,file=target/riscv64gc-unknown-none-elf/debug/deps/utest,addr=0x80200000
+
+stest:
+	@cargo build --features system_test
+	@$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
+	@qemu-system-riscv64 \
+			-machine virt \
+			-nographic \
+			-bios default \
+			-kernel $(BIN_FILE)\
+			-device loader,file=$(BIN_FILE),addr=0x80200000

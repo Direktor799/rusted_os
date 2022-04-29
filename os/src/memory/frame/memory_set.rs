@@ -40,15 +40,15 @@ impl MemorySet {
 
     /// 创建新内核地址空间
     pub fn new_kernel() -> Self {
-        println!("kernel start at {:x}", kernel_start as usize);
-        println!(".text [{:x}, {:x})", text_start as usize, text_end as usize);
-        println!(
-            ".rodata [{:x}, {:x})",
-            rodata_start as usize, rodata_end as usize
-        );
-        println!(".data [{:x}, {:x})", data_start as usize, data_end as usize);
-        println!(".bss [{:x}, {:x})", bss_start as usize, bss_end as usize);
-        println!("kernel end at {:x}", kernel_end as usize);
+        // println!("kernel start at {:x}", kernel_start as usize);
+        // println!(".text [{:x}, {:x})", text_start as usize, text_end as usize);
+        // println!(
+        //     ".rodata [{:x}, {:x})",
+        //     rodata_start as usize, rodata_end as usize
+        // );
+        // println!(".data [{:x}, {:x})", data_start as usize, data_end as usize);
+        // println!(".bss [{:x}, {:x})", bss_start as usize, bss_end as usize);
+        // println!("kernel end at {:x}", kernel_end as usize);
         let mut memory_set = Self::new();
         memory_set.map_trampoline();
         for vpn in VPNRange::new(
