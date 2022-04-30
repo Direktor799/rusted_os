@@ -91,7 +91,7 @@ impl Inode {
         disk_inode.increase_size(new_size, v, &self.block_device);
     }
 
-    pub fn create(&self, name: &str) -> Option<Arc<Inode>> {
+    pub fn create(&self, name: &str, filetype: DiskInodeType) -> Option<Arc<Inode>> {
         let mut fs = self.fs.lock();
         let op = |root_inode: &DiskInode| {
             // assert it is a directory
@@ -110,8 +110,8 @@ impl Inode {
         get_block_cache(new_inode_block_id as usize, Arc::clone(&self.block_device))
             .lock()
             .modify(new_inode_block_offset, |new_inode: &mut DiskInode| {
-                new_inode.initialize(DiskInodeType::File);
-            });
+            new_inode.initialize(filetype);
+        });
         self.modify_disk_inode(|root_inode| {
             // append file in the dirent
             let file_count = (root_inode.size as usize) / DIRENT_SZ;
