@@ -1,12 +1,11 @@
+//! 进程相关系统调用子模块
+use crate::interrupt::timer::get_time_ms;
 use crate::task::{exit_current_and_run_next, suspend_current_and_run_next};
-use crate::timer::get_time_ms;
 
 pub fn sys_exit(exit_code: i32) -> ! {
     println!("[kernel] Application exit with code {}", exit_code);
-    exit_current_and_run_next(exit_code);
-    // panic!("Unreachable in sys_exit!");
-    println!("waiting");
-    loop {}
+    exit_current_and_run_next();
+    panic!("Unreachable in sys_exit!");
 }
 
 pub fn sys_yield() -> isize {

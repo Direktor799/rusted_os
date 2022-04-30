@@ -1,9 +1,12 @@
 use super::context::TaskContext;
 use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT};
-use crate::interrupt::{interrupt_handler, Context};
-use crate::memory::address::*;
-use crate::memory::{MemorySet, KERNEL_MEMORY_SET, R, W};
-use alloc::collections::VecDeque;
+use crate::interrupt::{context::Context, handler::interrupt_handler};
+use crate::memory::frame::address::*;
+use crate::memory::frame::{
+    memory_set::MemorySet,
+    memory_set::KERNEL_MEMORY_SET,
+    page_table::{R, W},
+};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {

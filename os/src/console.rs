@@ -1,6 +1,9 @@
+//! 控制台相关操作封装
+
 use crate::sbi::console_putchar;
 use core::fmt::{self, Write};
 
+/// 空Stdout结构体，用以实现Write trait
 struct Stdout;
 
 impl Write for Stdout {
@@ -12,10 +15,12 @@ impl Write for Stdout {
     }
 }
 
+/// 打印格式化字符串
 pub fn print(args: fmt::Arguments) {
     Stdout.write_fmt(args).unwrap();
 }
 
+/// 同std::print
 #[macro_export]
 macro_rules! print {
     ($fmt: literal $(, $($arg: tt)+)?) => {
@@ -23,6 +28,7 @@ macro_rules! print {
     }
 }
 
+/// 同std::println
 #[macro_export]
 macro_rules! println {
     ($fmt: literal $(, $($arg: tt)+)?) => {

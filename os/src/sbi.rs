@@ -1,3 +1,5 @@
+//! SBI调用封装
+
 #![allow(unused)]
 
 use core::arch::asm;

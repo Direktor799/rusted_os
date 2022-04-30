@@ -1,19 +1,11 @@
 //! 内存管理模块
-//!
-//!
 
-mod frame;
-mod heap;
+pub mod frame;
+pub mod heap;
 
-pub use frame::address;
-pub use frame::memory_set::MemorySet;
-pub use frame::PageTable;
-pub use frame::KERNEL_MEMORY_SET;
-pub use frame::{R, W};
-
-/// 内存管理相关的子模块
-///
+/// 初始化内存管理相关的子模块
 /// - [`heap::init`]
+/// - [`frame::init`]
 pub fn init() {
     heap::init();
     frame::init();

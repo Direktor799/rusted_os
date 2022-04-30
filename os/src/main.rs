@@ -2,11 +2,16 @@
 #![no_main]
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
+#![feature(custom_test_frameworks)]
+#![test_runner(test::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
 #[macro_use]
 mod console;
+#[macro_use]
+mod test;
 mod config;
 mod interrupt;
 mod loader;
@@ -15,7 +20,6 @@ mod panic;
 mod sbi;
 mod syscall;
 mod task;
-mod timer;
 
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
@@ -24,6 +28,8 @@ global_asm!(include_str!("link_app.S"));
 /// This is where we start.
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
+    #[cfg(test)]
+    test_main();
     println!("[kernel] Hello rusted_os!");
     memory::init();
     interrupt::init();

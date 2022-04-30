@@ -1,3 +1,4 @@
+//! 系统调用模块
 use fs::*;
 use proc::*;
 
@@ -13,6 +14,7 @@ const SYS_CALL_CLOSE: usize = 57;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
 
+/// 系统调用处理函数
 pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
     match which {
         SYS_CALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
