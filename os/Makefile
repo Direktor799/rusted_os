@@ -2,6 +2,7 @@ TARGET	    := riscv64gc-unknown-none-elf
 MODE		:= debug
 KERNEL_FILE := target/$(TARGET)/$(MODE)/rusted_os
 BIN_FILE	:= target/$(TARGET)/$(MODE)/kernel.bin
+FS_IMG		:= fs.img
 
 OBJDUMP	 := rust-objdump --arch-name=riscv64
 OBJCOPY	 := rust-objcopy --binary-architecture=riscv64
@@ -38,6 +39,8 @@ qemu:
 			-nographic \
 			-bios default \
 			-kernel $(BIN_FILE)\
+			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
+			-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0\
 			-device loader,file=$(BIN_FILE),addr=0x80200000
 
 qemudbg: 
@@ -67,9 +70,4 @@ utest:
 stest:
 	@cargo build --features system_test
 	@$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
-	@qemu-system-riscv64 \
-			-machine virt \
-			-nographic \
-			-bios default \
-			-kernel $(BIN_FILE)\
-			-device loader,file=$(BIN_FILE),addr=0x80200000
+	qemu
