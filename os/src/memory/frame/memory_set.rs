@@ -2,7 +2,7 @@
 use super::address::*;
 use super::page_table::{PageTable, R, U, W, X};
 use super::segment::{MemorySegment, SegFlags};
-use crate::config::{MEMORY_END_ADDR, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE};
+use crate::config::{MEMORY_END_ADDR, MMIO, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE};
 use crate::loader::elf_decoder::ElfFile;
 use alloc::{vec, vec::Vec};
 
@@ -80,6 +80,11 @@ impl MemorySet {
             VirtAddr(MEMORY_END_ADDR).vpn(),
         ) {
             memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R | W);
+        }
+        for pair in MMIO {
+            for vpn in VPNRange::new(VirtAddr(pair.0).vpn(), VirtAddr(pair.0 + pair.1).vpn()) {
+                memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R | W);
+            }
         }
         memory_set
     }

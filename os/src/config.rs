@@ -36,3 +36,6 @@ pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
 
 /// 用户空间上下文地址
 pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
+
+/// VirtIO总线地址区间
+pub const MMIO: &[(usize, usize)] = &[(0x1000_1000, 0x1000)];

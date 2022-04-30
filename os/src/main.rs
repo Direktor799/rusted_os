@@ -13,6 +13,8 @@ mod console;
 #[macro_use]
 mod test;
 mod config;
+mod drivers;
+mod fs;
 mod interrupt;
 mod loader;
 mod memory;

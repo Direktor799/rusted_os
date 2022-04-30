@@ -1,10 +1,13 @@
-#![no_std]
-
-extern crate alloc;
+// pub trait File: Send + Sync {
+//     fn readable(&self) -> bool;
+//     fn writable(&self) -> bool;
+//     fn read(&self, buf: UserBuffer) -> usize;
+//     fn write(&self, buf: UserBuffer) -> usize;
+// }
 
 mod bitmap;
 mod block_cache;
-mod block_dev;
+pub mod block_dev;
 mod efs;
 mod layout;
 mod vfs;

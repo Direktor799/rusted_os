@@ -9,3 +9,6 @@ edition = "2018"
 system_test = []
 
 [dependencies]
+virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers" }
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+spin = "0.7.0"
