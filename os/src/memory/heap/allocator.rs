@@ -27,12 +27,12 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
     }
 
     /// 根据传入地址初始化分配器
-    pub unsafe fn init(&mut self, start_addr: usize, size: usize) {
+    pub fn init(&mut self, start_addr: usize, size: usize) {
         self.add(start_addr, start_addr + size);
     }
 
     /// 向分配器中添加空闲地址
-    pub unsafe fn add(&mut self, start_addr: usize, end_addr: usize) {
+    pub fn add(&mut self, start_addr: usize, end_addr: usize) {
         // assume its size_of::<usize>() aligned
         let mut total = 0;
         let mut curr_addr = start_addr;
@@ -47,8 +47,8 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
     }
 
     /// 分配内存
-    unsafe fn alloc(&mut self, layout: Layout) -> *mut u8 {
-        let size = Self::get_size(layout);
+    fn alloc(&mut self, layout: Layout) -> *mut u8 {
+        let size = get_size(layout);
         let order = size.trailing_zeros() as usize;
         for curr_order in order..ORDER {
             // get smallest block which big enough
@@ -71,8 +71,8 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
     }
 
     /// 回收内存
-    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
-        let size = Self::get_size(layout);
+    fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+        let size = get_size(layout);
         let order = size.trailing_zeros() as usize;
         let mut curr_addr = ptr as usize;
         // 合并内存碎片
@@ -97,20 +97,20 @@ impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
             }
         }
     }
-
-    /// 根据内存布局计算实际分配大小
-    fn get_size(layout: Layout) -> usize {
-        // 因为管理地址空间时，内存块的大小与对齐一致，所以分配时亦然，取其最大者
-        max(
-            layout.size().next_power_of_two(),
-            max(layout.align(), size_of::<usize>()),
-        )
-    }
 }
 
 /// 类似next_power_of_two
 fn prev_power_of_two(num: usize) -> usize {
     1 << (8 * size_of::<usize>() - num.leading_zeros() as usize - 1)
+}
+
+/// 根据内存布局计算实际分配大小
+fn get_size(layout: Layout) -> usize {
+    // 因为管理地址空间时，内存块的大小与对齐一致，所以分配时亦然，取其最大者
+    max(
+        layout.size().next_power_of_two(),
+        max(layout.align(), size_of::<usize>()),
+    )
 }
 
 /// 由于GlobalAlloc的限制导致无法使用mut方法，使用RefCell包装
@@ -150,3 +150,50 @@ pub static mut HEAP_ALLOCATOR: OutsideBuddySystemAllocator<32> =
 fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("Allocation error: {:?}", layout);
 }
+
+unit_test!(test_heap_allocator, {
+    let mut allocator = BuddySystemAllocator::<32>::new();
+    let start_addr = 0x8100_0000;
+    let end_addr = 0x8200_0000;
+    allocator.init(start_addr, end_addr - start_addr);
+    utest_assert!(
+        allocator.total == end_addr - start_addr && allocator.allocated == 0,
+        "Init failed"
+    );
+    let size = get_size(Layout::new::<usize>());
+    utest_assert!(
+        allocator.free_list[size.trailing_zeros() as usize].is_empty(),
+        "Allocator internel failure"
+    );
+    let addr = allocator.alloc(Layout::new::<usize>());
+    for order in 0..32 {
+        if (size.trailing_zeros() as usize..(end_addr - start_addr).trailing_zeros() as usize)
+            .contains(&order)
+        {
+            utest_assert!(
+                allocator.free_list[order].iter().count() == 1,
+                "Allocator internel failure"
+            );
+        } else {
+            utest_assert!(
+                allocator.free_list[order].is_empty(),
+                "Allocator internel failure"
+            );
+        }
+    }
+    allocator.dealloc(addr, Layout::new::<usize>());
+    for order in 0..32 {
+        if order == (end_addr - start_addr).trailing_zeros() as usize {
+            utest_assert!(
+                allocator.free_list[order].iter().count() == 1,
+                "Allocator internel failure"
+            );
+        } else {
+            utest_assert!(
+                allocator.free_list[order].is_empty(),
+                "Allocator internel failure"
+            );
+        }
+    }
+    Ok("passed")
+});

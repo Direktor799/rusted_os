@@ -23,8 +23,10 @@ impl LinkedList {
     }
 
     /// 在链表头处添加结点
-    pub unsafe fn push(&mut self, item: *mut usize) {
-        *item = self.head as usize;
+    pub fn push(&mut self, item: *mut usize) {
+        unsafe {
+            *item = self.head as usize;
+        }
         self.head = item;
     }
 
@@ -129,3 +131,30 @@ impl<'a> Iterator for IterMut<'a> {
         }
     }
 }
+
+unit_test!(test_linked_list, {
+    let mut linked_list = LinkedList::new();
+    utest_assert!(linked_list.is_empty(), "New LinkedList is not empty!");
+    let addrs: [*mut usize; 3] = [
+        0x8100_0000 as *mut usize,
+        0x8100_1000 as *mut usize,
+        0x8100_2000 as *mut usize,
+    ];
+    for addr in addrs {
+        linked_list.push(addr);
+    }
+    for (i, addr) in linked_list.iter().enumerate() {
+        utest_assert!(addr == addrs[2 - i], "Iteration failed");
+    }
+    let mut mut_iter = linked_list.iter_mut();
+    let first = mut_iter.next();
+    utest_assert!(
+        first.is_some() && first.unwrap().pop() == addrs[2],
+        "Modify via iter_mut failed"
+    );
+    for i in (0..2).rev() {
+        let addr = linked_list.pop();
+        utest_assert!(addr.is_some() && addr.unwrap() == addrs[i], "Pop failed");
+    }
+    Ok("passed")
+});
