@@ -35,7 +35,6 @@ pub extern "C" fn rust_main() -> ! {
     interrupt::init();
     loader::init();
     task::init();
-    system_test!(_test_a_plus_b);
     // let mut cur_time = timer::get_time_ms() / 1000;
     // loop {
     //     let new_time = timer::get_time_ms() / 1000;
@@ -46,9 +45,4 @@ pub extern "C" fn rust_main() -> ! {
     // }
     task::run();
     panic!("Dummy as fuck");
-}
-
-fn _test_a_plus_b() {
-    assert_eq!(1 + 1, 2);
-    println!("Correct!");
 }

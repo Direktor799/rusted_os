@@ -28,8 +28,26 @@ macro_rules! unit_test {
     ($func_name: ident, $func: block) => {
         #[test_case]
         fn $func_name() -> Result<&'static str, &'static str> {
-            print!("{}...", stringify!($func_name));
+            print!(
+                "\x1b[4;37m{}\x1b[0m:\t{}...",
+                file!(),
+                stringify!($func_name)
+            );
             $func
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! utest_assert {
+    ($assert_expr: expr, $info: literal) => {
+        if !$assert_expr {
+            return Err($info);
+        }
+    };
+    ($assert_expr: expr) => {
+        if !$assert_expr {
+            return Err(stringify!($assert_expr));
         }
     };
 }
@@ -45,17 +63,3 @@ macro_rules! system_test {
         }
     };
 }
-
-unit_test!(test_do_math, {
-    let mut a = 0;
-    for i in 1..=10 {
-        a += i;
-    }
-    if a == 55 {
-        Ok("Genius")
-    } else {
-        Err("What's wrong with you")
-    }
-});
-
-unit_test!(test_fucked_up, { Err("Sorry that I fucked it up") });
