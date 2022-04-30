@@ -38,9 +38,6 @@ pub extern "C" fn rust_main() -> ! {
     loader::init();
     task::init();
     let device = alloc::sync::Arc::new(drivers::virtio_block::VirtIOBlock::new());
-    let cur_cache = fs::BlockCache::new(1, device.clone());
-    let a: &usize = cur_cache.get_ref(0);
-    println!("Im ok!");
     fs::EasyFileSystem::create(device.clone(), 4096, 1);
     let fs_tmp = fs::EasyFileSystem::open(device.clone());
     let root_inode = fs::EasyFileSystem::root_inode(&fs_tmp);

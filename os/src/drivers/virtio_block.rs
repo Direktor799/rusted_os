@@ -1,28 +1,33 @@
 use crate::config::MMIO;
 use crate::fs::block_dev::BlockDevice;
-use core::ops::Deref;
+use core::cell::RefCell;
+use core::marker::Sync;
 use virtio_drivers::{VirtIOBlk, VirtIOHeader};
-pub struct VirtIOBlock(VirtIOBlk<'static>);
+
+pub struct VirtIOBlock(RefCell<VirtIOBlk<'static>>);
 
 impl VirtIOBlock {
     pub fn new() -> Self {
-        Self(VirtIOBlk::new(unsafe { &mut *(MMIO[0].0 as *mut VirtIOHeader) }).unwrap())
+        Self(RefCell::new(
+            VirtIOBlk::new(unsafe { &mut *(MMIO[0].0 as *mut VirtIOHeader) }).unwrap(),
+        ))
     }
 }
 
-impl Deref for VirtIOBlock {
-    type Target = VirtIOBlk<'static>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+unsafe impl Sync for VirtIOBlock {}
 
 impl BlockDevice for VirtIOBlock {
     fn read_block(&self, block_id: usize, buf: &mut [u8]) {
-        self.read_block(block_id, buf);
+        self.0
+            .borrow_mut()
+            .read_block(block_id, buf)
+            .expect("read error");
     }
     fn write_block(&self, block_id: usize, buf: &[u8]) {
-        self.write_block(block_id, buf);
+        self.0
+            .borrow_mut()
+            .write_block(block_id, buf)
+            .expect("write error");
     }
 }
 
