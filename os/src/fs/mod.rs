@@ -15,8 +15,18 @@ mod vfs;
 pub const BLOCK_SZ: usize = 512;
 use bitmap::Bitmap;
 pub use block_cache::BlockCache;
+use block_cache::BlockCacheManager;
+use block_cache::BLOCK_CACHE_MANAGER;
 use block_cache::{block_cache_sync_all, get_block_cache};
 pub use block_dev::BlockDevice;
 pub use efs::EasyFileSystem;
 use layout::*;
+use spin::Mutex;
 pub use vfs::Inode;
+
+pub fn init() {
+    unsafe {
+        BLOCK_CACHE_MANAGER = Some(Mutex::new(BlockCacheManager::new()));
+    }
+    println!("mod fs initialized!");
+}

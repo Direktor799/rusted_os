@@ -1,5 +1,5 @@
 use super::{
-    block_cache_sync_all, get_block_cache, BlockDevice, DirEntry, DiskInode, DiskInodeType,
+    block_cache_sync_all, get_block_cache, BlockDevice, Dirent, DiskInode, DiskInodeType,
     EasyFileSystem, DIRENT_SZ,
 };
 use alloc::string::String;
@@ -46,7 +46,7 @@ impl Inode {
         // assert it is a directory
         assert!(disk_inode.is_dir());
         let file_count = (disk_inode.size as usize) / DIRENT_SZ;
-        let mut dirent = DirEntry::empty();
+        let mut dirent = Dirent::empty();
         for i in 0..file_count {
             assert_eq!(
                 disk_inode.read_at(DIRENT_SZ * i, dirent.as_bytes_mut(), &self.block_device,),
@@ -83,7 +83,7 @@ impl Inode {
         if new_size < disk_inode.size {
             return;
         }
-        let blocks_needed = disk_inode.blocks_num_needed(new_size);
+        let blocks_needed = disk_inode.blocks_needed(new_size);
         let mut v: Vec<u32> = Vec::new();
         for _ in 0..blocks_needed {
             v.push(fs.alloc_data());
@@ -110,7 +110,7 @@ impl Inode {
         get_block_cache(new_inode_block_id as usize, Arc::clone(&self.block_device))
             .lock()
             .modify(new_inode_block_offset, |new_inode: &mut DiskInode| {
-                new_inode.initialize(DiskInodeType::File);
+                new_inode.init(DiskInodeType::File);
             });
         self.modify_disk_inode(|root_inode| {
             // append file in the dirent
@@ -119,7 +119,7 @@ impl Inode {
             // increase size
             self.increase_size(new_size as u32, root_inode, &mut fs);
             // write dirent
-            let dirent = DirEntry::new(name, new_inode_id);
+            let dirent = Dirent::new(name, new_inode_id);
             root_inode.write_at(
                 file_count * DIRENT_SZ,
                 dirent.as_bytes(),
@@ -145,7 +145,7 @@ impl Inode {
             let file_count = (disk_inode.size as usize) / DIRENT_SZ;
             let mut v: Vec<String> = Vec::new();
             for i in 0..file_count {
-                let mut dirent = DirEntry::empty();
+                let mut dirent = Dirent::empty();
                 assert_eq!(
                     disk_inode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device,),
                     DIRENT_SZ,

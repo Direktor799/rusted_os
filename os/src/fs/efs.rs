@@ -56,7 +56,7 @@ impl EasyFileSystem {
         get_block_cache(0, Arc::clone(&block_device)).lock().modify(
             0,
             |super_block: &mut SuperBlock| {
-                super_block.initialize(
+                super_block.init(
                     total_blocks,
                     inode_bitmap_blocks,
                     inode_area_blocks,
@@ -72,7 +72,7 @@ impl EasyFileSystem {
         get_block_cache(root_inode_block_id as usize, Arc::clone(&block_device))
             .lock()
             .modify(root_inode_offset, |disk_inode: &mut DiskInode| {
-                disk_inode.initialize(DiskInodeType::Directory);
+                disk_inode.init(DiskInodeType::Directory);
             });
         block_cache_sync_all();
         Arc::new(Mutex::new(efs))
@@ -84,8 +84,7 @@ impl EasyFileSystem {
             .lock()
             .read(0, |super_block: &SuperBlock| {
                 assert!(super_block.is_valid(), "Error loading EFS!");
-                let inode_total_blocks =
-                    super_block.inode_bitmap_blocks + super_block.inode_area_blocks;
+                let inode_total_blocks = super_block.inode_bitmap_blocks + super_block.inode_blocks;
                 let efs = Self {
                     block_device,
                     inode_bitmap: Bitmap::new(1, super_block.inode_bitmap_blocks as usize),

@@ -1,35 +1,35 @@
 use super::{BlockDevice, BLOCK_SZ};
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
-use lazy_static::*;
 use spin::Mutex;
 
+/// 内存中的块缓存
 pub struct BlockCache {
-    //位于内存的缓冲区
     cache: [u8; BLOCK_SZ],
-    block_id: usize,
-    block_device: Arc<dyn BlockDevice>,
     modified: bool,
+    device: Arc<dyn BlockDevice>,
+    block_id: usize,
 }
 
 impl BlockCache {
-    /// Load a new BlockCache from disk.
-    pub fn new(block_id: usize, block_device: Arc<dyn BlockDevice>) -> Self {
+    /// 从磁盘块读到缓存中
+    pub fn new(block_id: usize, device: Arc<dyn BlockDevice>) -> Self {
         let mut cache = [0u8; BLOCK_SZ];
-        //从磁盘块读到内存中
-        block_device.read_block(block_id, &mut cache);
+        device.read_block(block_id, &mut cache);
         Self {
             cache,
-            block_id,
-            block_device,
             modified: false,
+            device,
+            block_id,
         }
     }
 
+    /// 块内偏移对应到内存中的地址
     fn addr_of_offset(&self, offset: usize) -> usize {
         &self.cache[offset] as *const _ as usize
     }
-    //以只读的形式返回
+
+    /// 获取只读的缓存引用
     pub fn get_ref<T>(&self, offset: usize) -> &T
     where
         T: Sized,
@@ -40,6 +40,7 @@ impl BlockCache {
         unsafe { &*(addr as *const T) }
     }
 
+    /// 获取可变的的缓存引用
     pub fn get_mut<T>(&mut self, offset: usize) -> &mut T
     where
         T: Sized,
@@ -51,90 +52,95 @@ impl BlockCache {
         unsafe { &mut *(addr as *mut T) }
     }
 
+    /// 对缓存引用的只读操作
     pub fn read<T, V>(&self, offset: usize, f: impl FnOnce(&T) -> V) -> V {
         f(self.get_ref(offset))
     }
 
+    /// 对缓存引用的可变操作
     pub fn modify<T, V>(&mut self, offset: usize, f: impl FnOnce(&mut T) -> V) -> V {
         f(self.get_mut(offset))
     }
-    // 写回磁盘
+
+    /// 将对缓存的操作写回磁盘
     pub fn sync(&mut self) {
         if self.modified {
             self.modified = false;
-            self.block_device.write_block(self.block_id, &self.cache);
+            self.device.write_block(self.block_id, &self.cache);
         }
     }
 }
-//块从缓存中替换出时写回到磁盘
+
 impl Drop for BlockCache {
     fn drop(&mut self) {
         self.sync()
     }
 }
 
+/// 磁盘块缓冲区数量
 const BLOCK_CACHE_SIZE: usize = 16;
 
+/// 块缓存管理器
 pub struct BlockCacheManager {
     queue: VecDeque<(usize, Arc<Mutex<BlockCache>>)>,
 }
 
 impl BlockCacheManager {
+    /// 新建块缓存管理器
     pub fn new() -> Self {
         Self {
             queue: VecDeque::new(),
         }
     }
-    //关于cache替换算法这里可以优化，现在采用的是FIFO
+
+    /// 加载对应块到缓存
     pub fn get_block_cache(
         &mut self,
         block_id: usize,
-        block_device: Arc<dyn BlockDevice>,
+        device: Arc<dyn BlockDevice>,
     ) -> Arc<Mutex<BlockCache>> {
         if let Some(pair) = self.queue.iter().find(|pair| pair.0 == block_id) {
             Arc::clone(&pair.1)
         } else {
-            // substitute
+            // 需要替换
             if self.queue.len() == BLOCK_CACHE_SIZE {
-                // from front to tail
+                // 删除当前未被使用的块
                 if let Some((idx, _)) = self
                     .queue
                     .iter()
                     .enumerate()
                     .find(|(_, pair)| Arc::strong_count(&pair.1) == 1)
                 {
-                    self.queue.drain(idx..=idx);
+                    self.queue.remove(idx);
                 } else {
                     panic!("Run out of BlockCache!");
                 }
             }
-            // load block into mem and push back
-            let block_cache = Arc::new(Mutex::new(BlockCache::new(
-                block_id,
-                Arc::clone(&block_device),
-            )));
+            // 加载新的缓存
+            let block_cache = Arc::new(Mutex::new(BlockCache::new(block_id, Arc::clone(&device))));
             self.queue.push_back((block_id, Arc::clone(&block_cache)));
             block_cache
         }
     }
 }
 
-lazy_static! {
-    pub static ref BLOCK_CACHE_MANAGER: Mutex<BlockCacheManager> =
-        Mutex::new(BlockCacheManager::new());
+/// 全局块缓存管理器
+pub static mut BLOCK_CACHE_MANAGER: Option<Mutex<BlockCacheManager>> = None;
+
+/// 获取块缓存
+pub fn get_block_cache(block_id: usize, device: Arc<dyn BlockDevice>) -> Arc<Mutex<BlockCache>> {
+    unsafe {
+        BLOCK_CACHE_MANAGER
+            .as_ref()
+            .unwrap()
+            .lock()
+            .get_block_cache(block_id, device)
+    }
 }
 
-pub fn get_block_cache(
-    block_id: usize,
-    block_device: Arc<dyn BlockDevice>,
-) -> Arc<Mutex<BlockCache>> {
-    BLOCK_CACHE_MANAGER
-        .lock()
-        .get_block_cache(block_id, block_device)
-}
-
+/// 同步所有块缓存
 pub fn block_cache_sync_all() {
-    let manager = BLOCK_CACHE_MANAGER.lock();
+    let manager = unsafe { BLOCK_CACHE_MANAGER.as_ref().unwrap().lock() };
     for (_, cache) in manager.queue.iter() {
         cache.lock().sync();
     }
