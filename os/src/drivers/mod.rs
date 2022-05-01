@@ -4,10 +4,15 @@ use crate::memory::frame::address::*;
 use crate::memory::frame::frame::*;
 use crate::sync::mutex::Mutex;
 use alloc::vec::Vec;
-
 pub mod virtio_block;
+use alloc::sync::Arc;
+use crate::fs::block_dev::BlockDevice;
+use virtio_block::VirtIOBlock;
 
 static QUEUE_FRAMES: Mutex<Vec<FrameTracker>> = Mutex::new(Vec::new());
+
+pub static mut BLOCK_DEVICE: Option<Arc<dyn BlockDevice>> = None;
+
 
 #[no_mangle]
 pub extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {
@@ -41,4 +46,11 @@ pub extern "C" fn virtio_phys_to_virt(paddr: PhysAddr) -> VirtAddr {
 #[no_mangle]
 pub extern "C" fn virtio_virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
     PhysAddr(vaddr.0)
+}
+
+pub fn init() {
+    unsafe {
+        BLOCK_DEVICE = Some(Arc::new(VirtIOBlock::new()));
+    }
+    println!("mod drivers initialized!");
 }
