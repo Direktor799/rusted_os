@@ -84,6 +84,7 @@ impl SuperBlock {
 pub enum InodeType {
     File,
     Directory,
+    SoftLink
 }
 
 /// 间接块

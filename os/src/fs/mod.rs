@@ -7,6 +7,7 @@
 
 mod bitmap;
 mod block_cache;
+pub mod inode;
 pub mod block_dev;
 pub mod efs;
 pub mod layout;
