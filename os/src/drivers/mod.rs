@@ -2,8 +2,8 @@
 
 use crate::memory::frame::address::*;
 use crate::memory::frame::frame::*;
+use crate::sync::mutex::Mutex;
 use alloc::vec::Vec;
-use spin::Mutex;
 
 pub mod virtio_block;
 

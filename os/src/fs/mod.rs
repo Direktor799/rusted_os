@@ -18,9 +18,9 @@ pub const BLOCK_SZ: usize = 512;
 /// 数据块
 type DataBlock = [u8; BLOCK_SZ];
 
+use crate::sync::mutex::Mutex;
 use block_cache::BlockCacheManager;
 use block_cache::BLOCK_CACHE_MANAGER;
-use spin::Mutex;
 
 pub fn init() {
     unsafe {

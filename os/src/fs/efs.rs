@@ -8,9 +8,9 @@ use super::{
     vfs::InodeHandler,
 };
 use super::{DataBlock, BLOCK_SZ};
+use crate::sync::mutex::Mutex;
 use alloc::sync::Arc;
 use core::mem::size_of;
-use spin::Mutex;
 
 /// 块内Inode数量
 const INODES_PER_BLOCK: u32 = (BLOCK_SZ / size_of::<Inode>()) as u32;
