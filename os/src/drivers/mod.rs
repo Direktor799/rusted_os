@@ -3,14 +3,11 @@
 use crate::memory::frame::address::*;
 use crate::memory::frame::frame::*;
 use alloc::vec::Vec;
-use lazy_static::*;
 use spin::Mutex;
 
 pub mod virtio_block;
 
-lazy_static! {
-    static ref QUEUE_FRAMES: Mutex<Vec<FrameTracker>> = Mutex::new(Vec::new());
-}
+static QUEUE_FRAMES: Mutex<Vec<FrameTracker>> = Mutex::new(Vec::new());
 
 #[no_mangle]
 pub extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {

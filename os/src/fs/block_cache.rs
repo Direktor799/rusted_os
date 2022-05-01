@@ -1,4 +1,6 @@
-use super::{BlockDevice, BLOCK_SZ};
+//! 块缓存管理子模块
+
+use super::{block_dev::BlockDevice, BLOCK_SZ};
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
 use spin::Mutex;

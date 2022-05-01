@@ -1,4 +1,6 @@
-use super::{get_block_cache, BlockDevice, BLOCK_SZ};
+//! Bitmap操作子模块。
+
+use super::{block_cache::get_block_cache, block_dev::BlockDevice, BLOCK_SZ};
 use alloc::sync::Arc;
 
 /// 方便分组读写的BitmapBlock定义
@@ -70,7 +72,7 @@ impl Bitmap {
             });
     }
 
-    /// 最多可管理的块数量
+    /// 最多可管理的资源数量
     pub fn maximum(&self) -> usize {
         self.blocks * BLOCK_BITS
     }

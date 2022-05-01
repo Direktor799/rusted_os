@@ -1,4 +1,6 @@
-use super::{get_block_cache, BlockDevice, BLOCK_SZ};
+//! 磁盘布局子模块
+
+use super::{block_cache::get_block_cache, block_dev::BlockDevice, DataBlock, BLOCK_SZ};
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter, Result};
@@ -79,7 +81,7 @@ impl SuperBlock {
 
 /// Inode类型
 #[derive(PartialEq)]
-pub enum DiskInodeType {
+pub enum InodeType {
     File,
     Directory,
 }
@@ -87,22 +89,19 @@ pub enum DiskInodeType {
 /// 间接块
 type IndirectBlock = [u32; BLOCK_SZ / 4];
 
-/// 数据块
-type DataBlock = [u8; BLOCK_SZ];
-
 /// Inode
 #[repr(C)]
-pub struct DiskInode {
+pub struct Inode {
     pub size: u32,
     pub direct: [u32; INODE_DIRECT_COUNT],
     pub indirect1: u32,
     pub indirect2: u32,
-    type_: DiskInodeType,
+    type_: InodeType,
 }
 
-impl DiskInode {
+impl Inode {
     /// 初始化当前Inode
-    pub fn init(&mut self, type_: DiskInodeType) {
+    pub fn init(&mut self, type_: InodeType) {
         self.size = 0;
         self.direct.iter_mut().for_each(|v| *v = 0);
         self.indirect1 = 0;
@@ -112,12 +111,12 @@ impl DiskInode {
 
     /// 判断当前Inode是否为目录
     pub fn is_dir(&self) -> bool {
-        self.type_ == DiskInodeType::Directory
+        self.type_ == InodeType::Directory
     }
 
     /// 判断当前Inode是否为文件
     pub fn is_file(&self) -> bool {
-        self.type_ == DiskInodeType::File
+        self.type_ == InodeType::File
     }
 
     /// 用于存储Inode数据的块数量

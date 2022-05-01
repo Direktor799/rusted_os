@@ -8,21 +8,19 @@
 mod bitmap;
 mod block_cache;
 pub mod block_dev;
-mod efs;
+pub mod efs;
 mod layout;
 mod vfs;
 
+/// 磁盘块大小
 pub const BLOCK_SZ: usize = 512;
-use bitmap::Bitmap;
-pub use block_cache::BlockCache;
+
+/// 数据块
+type DataBlock = [u8; BLOCK_SZ];
+
 use block_cache::BlockCacheManager;
 use block_cache::BLOCK_CACHE_MANAGER;
-use block_cache::{block_cache_sync_all, get_block_cache};
-pub use block_dev::BlockDevice;
-pub use efs::EasyFileSystem;
-use layout::*;
 use spin::Mutex;
-pub use vfs::Inode;
 
 pub fn init() {
     unsafe {
