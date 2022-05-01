@@ -31,26 +31,31 @@ global_asm!(include_str!("link_app.S"));
 /// This is where we start.
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
+    memory::init();
     #[cfg(test)]
     test_main();
     println!("[kernel] Hello rusted_os!");
-    memory::init();
     interrupt::init();
     loader::init();
     task::init();
+    drivers::init();
     fs::init();
-    let device = alloc::sync::Arc::new(drivers::virtio_block::VirtIOBlock::new());
-    fs::efs::EasyFileSystem::format(device.clone(), 4096, 1);
-    let fs = fs::efs::EasyFileSystem::open(device.clone());
-    let root_inode = fs::efs::EasyFileSystem::root_inode(&fs);
-    root_inode.create("a", fs::layout::InodeType::Directory);
-    root_inode.create("b", fs::layout::InodeType::File);
-    for name in root_inode.ls() {
-        println!("{}", name);
-    }
-    root_inode.clear();
-    for name in root_inode.ls() {
-        println!("{}", name);
+    unsafe{
+        fs::inode::ROOT_INODE
+            .as_ref()
+            .unwrap()
+            .create("a", fs::layout::InodeType::Directory);
+        fs::inode::ROOT_INODE
+            .as_ref()
+            .unwrap()
+            .create("b", fs::layout::InodeType::File);
+        for name in fs::inode::ROOT_INODE.as_ref().unwrap().ls() {
+            println!("{}", name);
+        }
+        fs::inode::ROOT_INODE.as_ref().unwrap().clear();
+        for name in fs::inode::ROOT_INODE.as_ref().unwrap().ls() {
+            println!("{}", name);
+        }
     }
     // task::run();
     panic!("Dummy as fuck");
