@@ -39,11 +39,15 @@ pub extern "C" fn rust_main() -> ! {
     task::init();
     fs::init();
     let device = alloc::sync::Arc::new(drivers::virtio_block::VirtIOBlock::new());
-    // fs::efs::EasyFileSystem::format(device.clone(), 4096, 1);
+    fs::efs::EasyFileSystem::format(device.clone(), 4096, 1);
     let fs = fs::efs::EasyFileSystem::open(device.clone());
     let root_inode = fs::efs::EasyFileSystem::root_inode(&fs);
-    // root_inode.create("a");
-    // root_inode.create("b");
+    root_inode.create("a");
+    root_inode.create("b");
+    for name in root_inode.ls() {
+        println!("{}", name);
+    }
+    root_inode.clear();
     for name in root_inode.ls() {
         println!("{}", name);
     }

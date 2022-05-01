@@ -9,16 +9,16 @@ use alloc::sync::Arc;
 use alloc::vec::Vec;
 use spin::{Mutex, MutexGuard};
 
-/// 抽象Inode
+/// Inode句柄
 pub struct InodeHandler {
-    block_id: usize,
+    block_id: u32,
     block_offset: usize,
     fs: Arc<Mutex<EasyFileSystem>>,
     block_device: Arc<dyn BlockDevice>,
 }
 
 impl InodeHandler {
-    /// 创建新的抽象Inode
+    /// 创建新的Inode句柄
     pub fn new(
         block_id: u32,
         block_offset: usize,
@@ -26,21 +26,23 @@ impl InodeHandler {
         block_device: Arc<dyn BlockDevice>,
     ) -> Self {
         Self {
-            block_id: block_id as usize,
+            block_id: block_id,
             block_offset,
             fs,
             block_device,
         }
     }
 
+    /// 读取对应的Inode
     fn read_disk_inode<V>(&self, f: impl FnOnce(&Inode) -> V) -> V {
-        get_block_cache(self.block_id, Arc::clone(&self.block_device))
+        get_block_cache(self.block_id as usize, Arc::clone(&self.block_device))
             .lock()
             .read(self.block_offset, f)
     }
 
+    /// 修改对应的Inode
     fn modify_disk_inode<V>(&self, f: impl FnOnce(&mut Inode) -> V) -> V {
-        get_block_cache(self.block_id, Arc::clone(&self.block_device))
+        get_block_cache(self.block_id as usize, Arc::clone(&self.block_device))
             .lock()
             .modify(self.block_offset, f)
     }
@@ -174,12 +176,13 @@ impl InodeHandler {
         size
     }
 
+    /// 清空所有数据并回收块
     pub fn clear(&self) {
         let mut fs = self.fs.lock();
+        let inode_id = fs.get_disk_inode_id(self.block_id as u32, self.block_offset);
         self.modify_disk_inode(|disk_inode| {
-            let size = disk_inode.size;
             let data_blocks_dealloc = disk_inode.clear_size(&self.block_device);
-            assert!(data_blocks_dealloc.len() == Inode::total_blocks(size) as usize);
+            fs.dealloc_inode(inode_id);
             for data_block in data_blocks_dealloc.into_iter() {
                 fs.dealloc_data(data_block);
             }

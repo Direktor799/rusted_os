@@ -117,13 +117,19 @@ impl EasyFileSystem {
         InodeHandler::new(block_id, block_offset, Arc::clone(efs), block_device)
     }
 
-    /// 获取Inode在磁盘上的块号和偏移
+    /// 根据Inode编号获取在磁盘上的块号和偏移
     pub fn get_disk_inode_pos(&self, inode_id: u32) -> (u32, usize) {
         let block_id = self.inode_start_block + inode_id / INODES_PER_BLOCK;
         (
             block_id,
             (inode_id % INODES_PER_BLOCK) as usize * size_of::<Inode>(),
         )
+    }
+
+    /// 根据在磁盘上的块号和偏移获取Inode编号
+    pub fn get_disk_inode_id(&self, block_id: u32, block_offset: usize) -> u32 {
+        (block_id - self.inode_start_block) * INODES_PER_BLOCK
+            + block_offset as u32 / size_of::<Inode>() as u32
     }
 
     /// 获取数据块对应的磁盘块号
@@ -136,17 +142,10 @@ impl EasyFileSystem {
         self.inode_bitmap.alloc(&self.block_device).unwrap() as u32
     }
 
-    /// TODO:回收Inode
+    /// 回收Inode
     pub fn dealloc_inode(&mut self, inode_id: u32) {
-        let (block_id, block_offset) = self.get_disk_inode_pos(inode_id);
-        let recycled_blocks = get_block_cache(block_id as usize, Arc::clone(&self.block_device))
-            .lock()
-            .modify(block_offset, |inode: &mut Inode| {
-                inode.clear_size(&self.block_device)
-            });
-        for block in recycled_blocks {}
         self.inode_bitmap
-            .dealloc(&self.block_device, inode_id as usize);
+            .dealloc(&self.block_device, inode_id as usize)
     }
 
     /// 分配数据块
