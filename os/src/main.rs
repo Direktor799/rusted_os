@@ -20,6 +20,7 @@ mod loader;
 mod memory;
 mod panic;
 mod sbi;
+mod sync;
 mod syscall;
 mod task;
 

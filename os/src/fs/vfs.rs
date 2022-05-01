@@ -4,10 +4,10 @@ use super::{
     efs::EasyFileSystem,
     layout::{Dirent, Inode, InodeType, DIRENT_SZ},
 };
+use crate::sync::mutex::{Mutex, MutexGuard};
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use spin::{Mutex, MutexGuard};
 
 /// Inode句柄
 pub struct InodeHandler {
