@@ -6,8 +6,8 @@ use super::{
 };
 use crate::sync::mutex::{Mutex, MutexGuard};
 use alloc::string::String;
-use alloc::vec::Vec;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 
 pub struct OSInode {
     readable: bool,
@@ -29,15 +29,14 @@ impl OSInode {
         }
     }
     // pub fn read_all(&self) -> Vec<u8> {
-    //     let mut inner = self.inner.exclusive_access();
     //     let mut buffer = [0u8; 512];
     //     let mut v: Vec<u8> = Vec::new();
     //     loop {
-    //         let len = inner.inode.read_at(inner.offset, &mut buffer);
+    //         let len = self.inner.lock().inode.read_at(self.inner.lock().offset, &mut buffer);
     //         if len == 0 {
     //             break;
     //         }
-    //         inner.offset += len;
+    //         self.inner.lock().offset += len;
     //         v.extend_from_slice(&buffer[..len]);
     //     }
     //     v
@@ -45,8 +44,9 @@ impl OSInode {
 }
 pub static mut ROOT_INODE: Option<Arc<InodeHandler>> = None;
 
-pub fn get_tree_node(path: &str) -> Vec<&str> {
-    path.split('/').collect()
+pub fn get_tree_node(full_path: &str) -> Vec<&str> {
+    full_path[1..].split('/').collect()
+    // 由于路径由'/'开始，spilt的结果的第1个元素为空字符串,这是我们不需要的
 }
 
 pub fn get_path(tree_node: &Vec<&str>) -> String {
@@ -56,11 +56,17 @@ pub fn get_path(tree_node: &Vec<&str>) -> String {
         name1
     })
 }
-
+pub fn find_inode_by_full_path(full_path: &str) -> Option<Arc<InodeHandler>> {
+    let nodes_name = get_tree_node(&full_path);
+    let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
+    nodes_name
+        .into_iter()
+        .fold(Some(root_inode), |node, name| node.unwrap().find(name))
+}
 unit_test!(test_node_to_str, {
     let ss = "/root/1/2/123";
     utest_assert!(
-        get_tree_node(&ss) == alloc::vec!["","root", "1", "2", "123"],
+        get_tree_node(&ss) == alloc::vec!["", "root", "1", "2", "123"],
         "Cannot get appropriate tree node from path"
     );
     Ok("passed!")

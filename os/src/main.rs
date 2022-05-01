@@ -40,22 +40,22 @@ pub extern "C" fn rust_main() -> ! {
     task::init();
     drivers::init();
     fs::init();
-    unsafe{
-        fs::inode::ROOT_INODE
-            .as_ref()
-            .unwrap()
-            .create("a", fs::layout::InodeType::Directory);
-        fs::inode::ROOT_INODE
-            .as_ref()
-            .unwrap()
-            .create("b", fs::layout::InodeType::File);
-        for name in fs::inode::ROOT_INODE.as_ref().unwrap().ls() {
-            println!("{}", name);
-        }
-        fs::inode::ROOT_INODE.as_ref().unwrap().clear();
-        for name in fs::inode::ROOT_INODE.as_ref().unwrap().ls() {
-            println!("{}", name);
-        }
+    let root_inode = unsafe { fs::inode::ROOT_INODE.as_ref().unwrap() };
+    root_inode.clear();
+    let nodea = root_inode.create("a", fs::layout::InodeType::Directory).unwrap();
+    let nodeb = nodea.create("b",fs::layout::InodeType::File).unwrap();
+    nodeb.write_at(0, "1234".as_bytes());
+
+    let nodec = fs::inode::find_inode_by_full_path("/a/b").unwrap();
+    let mut buffer = [0u8; 233];
+    let len = nodec.read_at(0, &mut buffer);
+    println!("{}",core::str::from_utf8(&buffer[..len]).unwrap());
+    for name in root_inode.ls() {
+        println!("{}", name);
+    }
+    root_inode.clear();
+    for name in root_inode.ls() {
+        println!("{}", name);
     }
     // task::run();
     panic!("Dummy as fuck");
