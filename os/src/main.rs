@@ -21,7 +21,7 @@ mod memory;
 mod panic;
 mod sbi;
 mod sync;
-mod syscall;
+mod sys_call;
 mod task;
 
 use core::arch::global_asm;
@@ -40,23 +40,42 @@ pub extern "C" fn rust_main() -> ! {
     task::init();
     drivers::init();
     fs::init();
-    let root_inode = unsafe { fs::inode::ROOT_INODE.as_ref().unwrap() };
-    root_inode.clear();
-    let nodea = root_inode.create("a", fs::layout::InodeType::Directory).unwrap();
-    let nodeb = nodea.create("b",fs::layout::InodeType::File).unwrap();
-    nodeb.write_at(0, "1234".as_bytes());
-
-    let nodec = fs::inode::find_inode_by_full_path("/a/b").unwrap();
-    let mut buffer = [0u8; 233];
-    let len = nodec.read_at(0, &mut buffer);
-    println!("{}",core::str::from_utf8(&buffer[..len]).unwrap());
-    for name in root_inode.ls() {
-        println!("{}", name);
-    }
-    root_inode.clear();
-    for name in root_inode.ls() {
-        println!("{}", name);
-    }
+    let root_inode = unsafe { fs::ROOT_INODE.as_ref().unwrap() };
+    // let nodea = root_inode
+    //     .create("a", fs::layout::InodeType::Directory)
+    //     .unwrap();
+    // let nodeb = nodea.create("b", fs::layout::InodeType::File).unwrap();
+    // nodeb.write_at(0, "1234".as_bytes());
     // task::run();
+    kernel_test_shell();
     panic!("Dummy as fuck");
+}
+
+pub fn kernel_test_shell() {
+    let mut cur = alloc::string::String::new();
+    loop {
+        if cur == "ls" {
+            println!("lsing");
+            let root_inode = unsafe { fs::ROOT_INODE.as_ref().unwrap() };
+            for name in root_inode.ls() {
+                println!("{}", name);
+            }
+            cur.clear();
+        }
+        let ch = get_char();
+        if ch == '`' {
+            sbi::shutdown();
+        }
+        println!("{}", ch);
+        cur.push(ch);
+    }
+}
+
+pub fn get_char() -> char {
+    loop {
+        let ch = sbi::console_getchar() as u8;
+        if ch != 255 {
+            return ch as char;
+        }
+    }
 }

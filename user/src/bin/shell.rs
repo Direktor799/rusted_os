@@ -6,8 +6,7 @@ extern crate user_lib;
 
 #[no_mangle]
 fn main() -> i32 {
-    for _ in 0..200 {
-        print!("{}", 2);
+    loop {
+        println!("{}", user_lib::console::get_char());
     }
-    2
 }
