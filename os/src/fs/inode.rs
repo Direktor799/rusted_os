@@ -1,94 +1,20 @@
-use super::{
-    block_dev::BlockDevice,
-    efs::EasyFileSystem,
-    layout::{Dirent, Inode, InodeType, DIRENT_SZ},
-    vfs::InodeHandler,
-};
-use crate::sync::mutex::{Mutex, MutexGuard};
-use alloc::string::String;
+use super::vfs::InodeHandler;
 use alloc::sync::Arc;
-use alloc::vec::Vec;
+// block_dev::BlockDevice,
+// efs::EasyFileSystem,
+// layout::{Dirent, Inode, InodeType, DIRENT_SZ},
+// use crate::sync::mutex::{Mutex, MutexGuard};
+// use alloc::string::String;
+// use alloc::vec::Vec;
 
-pub struct OSInode {
-    readable: bool,
-    writable: bool,
-    inner: Mutex<OSInodeInner>,
-}
-
-pub struct OSInodeInner {
-    offset: usize,
-    inode: Arc<InodeHandler>,
-}
-
-impl OSInode {
-    pub fn new(readable: bool, writable: bool, inode: Arc<InodeHandler>) -> Self {
-        Self {
-            readable,
-            writable,
-            inner: unsafe { Mutex::new(OSInodeInner { offset: 0, inode }) },
-        }
-    }
-    // pub fn read_all(&self) -> Vec<u8> {
-    //     let mut buffer = [0u8; 512];
-    //     let mut v: Vec<u8> = Vec::new();
-    //     loop {
-    //         let len = self.inner.lock().inode.read_at(self.inner.lock().offset, &mut buffer);
-    //         if len == 0 {
-    //             break;
-    //         }
-    //         self.inner.lock().offset += len;
-    //         v.extend_from_slice(&buffer[..len]);
-    //     }
-    //     v
-    // }
-}
 pub static mut ROOT_INODE: Option<Arc<InodeHandler>> = None;
 
-pub fn get_tree_node(full_path: &str) -> Vec<&str> {
-    full_path[1..].split('/').collect()
-    // 由于路径由'/'开始，spilt的结果的第1个元素为空字符串,这是我们不需要的
-}
-
-pub fn get_path(tree_node: &Vec<&str>) -> String {
-    tree_node.iter().fold(String::new(), |mut name1, name2| {
-        name1.push_str("/");
-        name1.push_str(&name2);
-        name1
-    })
-}
 pub fn find_inode_by_full_path(full_path: &str) -> Option<Arc<InodeHandler>> {
-    let nodes_name = get_tree_node(&full_path);
     let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
-    nodes_name
-        .into_iter()
+    full_path[1..]
+        .split('/')
         .fold(Some(root_inode), |node, name| node.unwrap().find(name))
 }
-unit_test!(test_node_to_str, {
-    let ss = "/root/1/2/123";
-    utest_assert!(
-        get_tree_node(&ss) == alloc::vec!["", "root", "1", "2", "123"],
-        "Cannot get appropriate tree node from path"
-    );
-    Ok("passed!")
-});
-
-unit_test!(test_get_path, {
-    let ss = alloc::vec!["root", "1", "2", "123"];
-    utest_assert!(
-        get_path(&ss) == "/root/1/2/123",
-        "Cannot get appropriate path from vector"
-    );
-    Ok("passed!")
-});
-// pub fn list_apps() {
-//     println!("/**** APPS ****");
-//     unsafe{
-//         for app in ROOT_INODE.ls() {
-//             println!("{}", app);
-//         }
-//     }
-//     println!("**************/");
-// }
 
 // pub enum OpenFlags {
 //     RDONLY = 0,
