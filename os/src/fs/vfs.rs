@@ -98,11 +98,11 @@ impl InodeHandler {
 
     pub fn create(&self, name: &str, filetype: InodeType) -> Option<Arc<InodeHandler>> {
         let mut fs = self.fs.lock();
-        let op = |root_inode: &Inode| {
+        let op = |dir_inode: &Inode| {
             // assert it is a directory
-            assert!(root_inode.is_dir());
+            assert!(dir_inode.is_dir());
             // has the file been created?
-            self.find_inode_id(name, root_inode)
+            self.find_inode_id(name, dir_inode)
         };
         if self.read_disk_inode(op).is_some() {
             return None;
@@ -117,15 +117,15 @@ impl InodeHandler {
             .modify(new_inode_block_offset, |new_inode: &mut Inode| {
             new_inode.init(filetype);
         });
-        self.modify_disk_inode(|root_inode| {
+        self.modify_disk_inode(|dir_inode| {
             // append file in the dirent
-            let file_count = (root_inode.size as usize) / DIRENT_SZ;
+            let file_count = (dir_inode.size as usize) / DIRENT_SZ;
             let new_size = (file_count + 1) * DIRENT_SZ;
             // increase size
-            self.increase_size(new_size as u32, root_inode, &mut fs);
+            self.increase_size(new_size as u32, dir_inode, &mut fs);
             // write dirent
             let dirent = Dirent::new(name, new_inode_id);
-            root_inode.write_at(
+            dir_inode.write_at(
                 file_count * DIRENT_SZ,
                 dirent.as_bytes(),
                 &self.block_device,
