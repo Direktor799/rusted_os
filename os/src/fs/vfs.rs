@@ -95,6 +95,26 @@ impl InodeHandler {
         }
         disk_inode.increase_size(new_size, v, &self.block_device);
     }
+    fn decrease_size(
+        &self,
+        new_size: u32,
+        disk_inode: &mut Inode,
+        fs: &mut MutexGuard<EasyFileSystem>,
+    ) {
+        if new_size >= disk_inode.size {
+            return;
+        }
+        let blocks_unneeded = disk_inode.blocks_unneeded(new_size);
+        let mut v: Vec<u32> = Vec::new();
+        let total_blocks = disk_inode.data_blocks();
+        for num in 0..blocks_unneeded {
+            //回收数据块
+            let discard_block_id = disk_inode.get_block_id(total_blocks - num, &fs.block_device);
+            fs.dealloc_data(discard_block_id);
+            v.push(discard_block_id);
+        }
+        disk_inode.decrease_size(new_size, v, &self.block_device);
+    }
 
     pub fn create(&self, name: &str, filetype: InodeType) -> Option<Arc<InodeHandler>> {
         let mut fs = self.fs.lock();
@@ -115,8 +135,8 @@ impl InodeHandler {
         get_block_cache(new_inode_block_id as usize, Arc::clone(&self.block_device))
             .lock()
             .modify(new_inode_block_offset, |new_inode: &mut Inode| {
-            new_inode.init(filetype);
-        });
+                new_inode.init(filetype);
+            });
         self.modify_disk_inode(|dir_inode| {
             // append file in the dirent
             let file_count = (dir_inode.size as usize) / DIRENT_SZ;
@@ -141,7 +161,50 @@ impl InodeHandler {
             self.fs.clone(),
             self.block_device.clone(),
         )))
-        // release efs lock automatically by compiler
+    }
+    pub fn delete(&self, name: &str) {
+        let mut fs = self.fs.lock();
+        let op = |dir_inode: &Inode| {
+            // assert it is a directory
+            assert!(dir_inode.is_dir());
+            // has the file been created?
+            let find_result = self.find_inode_id(name, dir_inode);
+            if find_result.is_some() {
+                let (block_id, block_offset) = fs.get_disk_inode_pos(find_result.unwrap());
+                //释放文件的Inode
+                let discard_inode_handle = Self::new(
+                    block_id,
+                    block_offset,
+                    self.fs.clone(),
+                    self.block_device.clone(),
+                );
+                discard_inode_handle.clear();
+            }
+            find_result
+        };
+
+        //找到该文件条目的id
+        let discard_block_id = self.read_disk_inode(op).unwrap() as usize;
+
+        self.modify_disk_inode(|dir_inode| {
+            // delete file in the dirent
+            let file_count = (dir_inode.size as usize) / DIRENT_SZ;
+            // write dirent
+            let mut dirent = Dirent::new("", 0);
+            dir_inode.read_at(
+                dir_inode.size as usize - DIRENT_SZ,
+                dirent.as_bytes_mut(),
+                &self.block_device,
+            );
+            dir_inode.write_at(
+                discard_block_id * DIRENT_SZ,
+                dirent.as_bytes(),
+                &self.block_device,
+            );
+            // decrease size
+            let new_size = (file_count - 1) * DIRENT_SZ;
+            self.decrease_size(new_size as u32, dir_inode, &mut fs);
+        });
     }
 
     pub fn ls(&self) -> Vec<String> {

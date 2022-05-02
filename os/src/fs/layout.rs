@@ -149,7 +149,11 @@ impl Inode {
         assert!(new_size <= INODE_INDIRECT2_BOUND as u32 * BLOCK_SZ as u32);
         Self::total_blocks(new_size) - Self::total_blocks(self.size)
     }
-
+    pub fn blocks_unneeded(&self, new_size: u32) -> u32 {
+        assert!(new_size <= self.size);
+        assert!(new_size <= 0);
+        Self::total_blocks(self.size) - Self::total_blocks(new_size)
+    }
     /// 根据内部块id获取在设备上的块id
     pub fn get_block_id(&self, inner_id: u32, block_device: &Arc<dyn BlockDevice>) -> u32 {
         let inner_id = inner_id as usize;
@@ -248,6 +252,35 @@ impl Inode {
             });
     }
 
+    //回收文件
+    pub fn decrease_size(
+        &mut self,
+        new_size: u32,
+        discard_blocks: Vec<u32>,
+        block_device: &Arc<dyn BlockDevice>,
+    ) {
+        // 修改大小前的块数
+        let mut current_blocks = self.data_blocks() as usize;
+        self.size = new_size;
+        // 修改大小后的块数
+        let total_blocks = self.data_blocks() as usize;
+
+        if current_blocks < total_blocks {
+            panic!("decrease failed!Invalid new size!");
+        }
+        // 如果不需要删除块
+        if current_blocks == total_blocks {
+            return;
+        }
+        
+        // 回收直接块
+        current_blocks = current_blocks.min(INODE_DIRECT_BOUND);
+        while  total_blocks < current_blocks {
+            self.direct[current_blocks as usize] = 0;
+            current_blocks -= 1;
+        }
+
+    }
     /// 清空该Inode
     pub fn clear_size(&mut self, block_device: &Arc<dyn BlockDevice>) -> Vec<u32> {
         let mut v: Vec<u32> = Vec::new();
