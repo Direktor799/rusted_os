@@ -9,6 +9,7 @@ pub mod frame;
 pub mod memory_set;
 pub mod page_table;
 pub mod segment;
+pub mod user_buffer;
 
 /// 初始化页式内存分配器和内核地址空间
 /// - [`frame::FrameAllocator::init`]

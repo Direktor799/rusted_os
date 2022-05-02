@@ -1,20 +1,9 @@
-use super::vfs::InodeHandler;
-use alloc::sync::Arc;
 // block_dev::BlockDevice,
 // efs::EasyFileSystem,
 // layout::{Dirent, Inode, InodeType, DIRENT_SZ},
 // use crate::sync::mutex::{Mutex, MutexGuard};
 // use alloc::string::String;
 // use alloc::vec::Vec;
-
-pub static mut ROOT_INODE: Option<Arc<InodeHandler>> = None;
-
-pub fn find_inode_by_full_path(full_path: &str) -> Option<Arc<InodeHandler>> {
-    let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
-    full_path[1..]
-        .split('/')
-        .fold(Some(root_inode), |node, name| node.unwrap().find(name))
-}
 
 // pub enum OpenFlags {
 //     RDONLY = 0,
