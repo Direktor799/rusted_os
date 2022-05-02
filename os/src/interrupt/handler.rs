@@ -2,7 +2,7 @@
 
 use super::context::Context;
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
-use crate::syscall::sys_call;
+use crate::sys_call::sys_call;
 use crate::task::{exit_current_and_run_next, schedule_callback, TASK_MANAGER};
 use core::arch::global_asm;
 
