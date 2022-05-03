@@ -179,7 +179,7 @@ impl Inode {
         }
     }
 
-    /// 扩充该Inode
+    /// 扩充Inode管理的空间大小
     pub fn increase_size(
         &mut self,
         new_size: u32,
@@ -248,137 +248,50 @@ impl Inode {
             });
     }
 
-    //回收文件
+    /// 减少Inode管理的空间大小
     pub fn decrease_size(
         &mut self,
         new_size: u32,
         block_device: &Arc<dyn BlockDevice>,
     ) -> Vec<u32> {
-        // 修改大小前的块数
         let mut v: Vec<u32> = Vec::new();
-        let mut current_blocks = self.data_blocks() as usize;
+        let current_blocks = self.data_blocks() as usize;
         self.size = new_size;
-        // 修改大小后的块数
-        let total_blocks = self.data_blocks() as usize;
-
-        if current_blocks < total_blocks {
-            panic!("decrease failed!Invalid new size!");
-        }
-        // 如果不需要删除块
-        if current_blocks == total_blocks {
-            return v;
-        }
-
-        // 回收二级块
-
-        // 判断是否需要回收二级间接块
-        if current_blocks <= INODE_INDIRECT1_BOUND {
-            return v;
-        }
-
-        // 回收二级间接块
-        get_block_cache(self.indirect2 as usize, Arc::clone(block_device))
-            .lock()
-            .modify(0, |indirect2: &mut IndirectBlock| {
-                while total_blocks.max(INODE_INDIRECT1_BOUND) < current_blocks {
-                    let curr_sub_indirect1 =
-                        (current_blocks - INODE_INDIRECT1_BOUND) / INODE_INDIRECT1_COUNT;
-                    let curr_sub_direct =
-                        (current_blocks - INODE_INDIRECT1_BOUND) % INODE_INDIRECT1_COUNT;
-                    // 当前sub一级间接块的第一次写入时分配sub一级间接块
-                    if curr_sub_direct == 0 {
-                        let value = indirect2[curr_sub_indirect1];
-                        v.push(value);
-                        indirect2[curr_sub_indirect1] = 0;
-                    }
-                    // 扩充sub一级间接块中的直接块
-                    get_block_cache(
-                        indirect2[curr_sub_indirect1] as usize,
-                        Arc::clone(block_device),
-                    )
-                    .lock()
-                    .modify(0, |indirect1: &mut IndirectBlock| {
-                        v.push(indirect1[curr_sub_direct]);
-                        indirect1[curr_sub_direct] = 0;
-                    });
-                    current_blocks -= 1;
-                }
-            });
-        // 如果回收了所有的二级间接块
-        if current_blocks == INODE_INDIRECT1_COUNT {
-            v.push(self.indirect2);
-            self.indirect2 = 0;
-        }
-
-        // 判断是否需要继续回收一级间接块
-        if total_blocks >= INODE_DIRECT_BOUND {
-            return v;
-        }
-        // 回收一级间接块
-        get_block_cache(self.indirect1 as usize, Arc::clone(block_device))
-            .lock()
-            .modify(0, |indirect1: &mut IndirectBlock| {
-                while total_blocks.max(INODE_DIRECT_BOUND) < current_blocks {
-                    let indirect1_block_id = current_blocks as usize - INODE_DIRECT_BOUND;
-                    v.push(indirect1[indirect1_block_id]);
-                    indirect1[indirect1_block_id] = 0;
-                    current_blocks -= 1;
-                }
-            });
-        // 若已经不需要一级间接块
-        if current_blocks == INODE_DIRECT_BOUND {
-            v.push(self.indirect1);
-            self.indirect1 = 0;
-        }
+        let mut recycled_blocks = self.data_blocks() as usize;
         // 回收直接块
-        while total_blocks < current_blocks {
-            v.push(self.direct[current_blocks as usize]);
-            self.direct[current_blocks as usize] = 0;
-            current_blocks -= 1;
-        }
-        self.size = new_size;
-        v
-    }
-    /// 清空该Inode
-    pub fn clear_size(&mut self, block_device: &Arc<dyn BlockDevice>) -> Vec<u32> {
-        let mut v: Vec<u32> = Vec::new();
-        let data_blocks = self.data_blocks() as usize;
-        self.size = 0;
-        let mut current_blocks = 0usize;
-        // 回收直接块
-        while current_blocks < data_blocks.min(INODE_DIRECT_BOUND) {
-            v.push(self.direct[current_blocks]);
-            self.direct[current_blocks] = 0;
-            current_blocks += 1;
+        while recycled_blocks < current_blocks.min(INODE_DIRECT_BOUND) {
+            v.push(self.direct[recycled_blocks]);
+            self.direct[recycled_blocks] = 0;
+            recycled_blocks += 1;
         }
         // 判断是否需要继续回收一级间接块
-        if data_blocks <= INODE_DIRECT_BOUND {
+        if current_blocks <= INODE_DIRECT_BOUND {
             return v;
         }
         // 回收一级间接块
         get_block_cache(self.indirect1 as usize, Arc::clone(block_device))
             .lock()
             .read(0, |indirect1: &IndirectBlock| {
-                while current_blocks < data_blocks.min(INODE_INDIRECT1_BOUND) {
-                    v.push(indirect1[current_blocks - INODE_DIRECT_BOUND]);
-                    current_blocks += 1;
+                while recycled_blocks < current_blocks.min(INODE_INDIRECT1_BOUND) {
+                    v.push(indirect1[recycled_blocks - INODE_DIRECT_BOUND]);
+                    recycled_blocks += 1;
                 }
             });
         v.push(self.indirect1);
         self.indirect1 = 0;
         // 判断是否需要继续回收二级间接块
-        if data_blocks <= INODE_INDIRECT1_BOUND {
+        if current_blocks <= INODE_INDIRECT1_BOUND {
             return v;
         }
         // 回收二级间接块
         get_block_cache(self.indirect2 as usize, Arc::clone(block_device))
             .lock()
             .read(0, |indirect2: &IndirectBlock| {
-                while current_blocks < data_blocks {
+                while recycled_blocks < current_blocks {
                     let curr_sub_indirect1 =
-                        (current_blocks - INODE_INDIRECT1_BOUND) / INODE_INDIRECT1_COUNT;
+                        (recycled_blocks - INODE_INDIRECT1_BOUND) / INODE_INDIRECT1_COUNT;
                     let curr_sub_direct =
-                        (current_blocks - INODE_INDIRECT1_BOUND) % INODE_INDIRECT1_COUNT;
+                        (recycled_blocks - INODE_INDIRECT1_BOUND) % INODE_INDIRECT1_COUNT;
                     // 当前sub一级间接块中内容第一次回收时回收sub一级间接块
                     if curr_sub_direct == 0 {
                         v.push(indirect2[curr_sub_indirect1]);
@@ -392,7 +305,7 @@ impl Inode {
                     .read(0, |indirect1: &IndirectBlock| {
                         v.push(indirect1[curr_sub_direct]);
                     });
-                    current_blocks += 1;
+                    recycled_blocks += 1;
                 }
             });
         v.push(self.indirect2);

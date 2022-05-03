@@ -88,11 +88,10 @@ impl InodeHandler {
         if new_size < disk_inode.size {
             return;
         }
-        let blocks_needed = disk_inode.blocks_needed(new_size);
-        let mut v: Vec<u32> = Vec::new();
-        for _ in 0..blocks_needed {
-            v.push(fs.alloc_data());
-        }
+        let v = (0..disk_inode.blocks_needed(new_size))
+            .into_iter()
+            .map(|_| fs.alloc_data())
+            .collect();
         disk_inode.increase_size(new_size, v, &self.block_device);
     }
     fn decrease_size(
@@ -104,14 +103,10 @@ impl InodeHandler {
         if new_size >= disk_inode.size {
             return;
         }
-        // let blocks_unneeded = disk_inode.blocks_unneeded(new_size);
-
-        disk_inode.size = new_size;
-        let v = disk_inode.decrease_size(new_size, &self.block_device);
-        for i in v{
-            fs.dealloc_data(i);
-        }
-        
+        disk_inode
+            .decrease_size(new_size, &self.block_device)
+            .into_iter()
+            .for_each(|block_id| fs.dealloc_data(block_id));
     }
     pub fn create(&self, name: &str, filetype: InodeType) -> Option<Arc<InodeHandler>> {
         let mut fs = self.fs.lock();
@@ -178,7 +173,6 @@ impl InodeHandler {
                 dirent.as_bytes_mut(),
                 &self.block_device,
             );
-            
             // 查找到当前目录项,并用最后一个目录项的内容替换当前目录项
             let file_count = (dir_inode.size as usize) / DIRENT_SZ;
             for i in 0..file_count {
@@ -188,11 +182,7 @@ impl InodeHandler {
                     DIRENT_SZ,
                 );
                 if dirent.name() == name {
-                    dir_inode.write_at(
-                        i * DIRENT_SZ,
-                        dirent.as_bytes(),
-                        &self.block_device,
-                    );
+                    dir_inode.write_at(i * DIRENT_SZ, dirent.as_bytes(), &self.block_device);
                     break;
                 }
             }
@@ -239,7 +229,7 @@ impl InodeHandler {
         let mut fs = self.fs.lock();
         let inode_id = fs.get_disk_inode_id(self.block_id as u32, self.block_offset);
         self.modify_disk_inode(|disk_inode| {
-            let data_blocks_dealloc = disk_inode.clear_size(&self.block_device);
+            let data_blocks_dealloc = disk_inode.decrease_size(0, &self.block_device);
             fs.dealloc_inode(inode_id);
             for data_block in data_blocks_dealloc.into_iter() {
                 fs.dealloc_data(data_block);
