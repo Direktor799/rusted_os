@@ -39,45 +39,55 @@ pub extern "C" fn rust_main() -> ! {
     loader::init();
     task::init();
     drivers::init();
-    fs::init();
-    
-    let root_inode = unsafe { fs::ROOT_INODE.as_ref().unwrap() };
-    // root_inode.clear();
-    
-    let test2 = root_inode.create("test2", fs::layout::InodeType::Directory).unwrap();
-    let a = test2.create("a", fs::layout::InodeType::File);
-
-    test2.create("b", fs::layout::InodeType::File);
-    for name in root_inode.ls() 
-    {
-        println!("{}",name);
-    }
-    test2.delete("a");
-    for name in test2.ls() 
-    {
-        println!("{}",name);
-    }
-    // kernel_test_shell();
+    fs::format();
+    kernel_test_shell();
     panic!("Dummy as fuck");
 }
 
 pub fn kernel_test_shell() {
     let mut cur = alloc::string::String::new();
+    let mut current_path = alloc::string::String::from("/");
+    print!("kernel@rusted_os:{}# ", current_path);
     loop {
-        if cur == "ls" {
-            println!("lsing");
-            let root_inode = unsafe { fs::ROOT_INODE.as_ref().unwrap() };
-            for name in root_inode.ls() {
-                println!("{}", name);
+        let ch = get_char();
+        print!("{}", ch);
+        if ch == '\x7f' {
+            if !cur.is_empty() {
+                print!("\x08 \x08");
+                cur.pop();
+            }
+            continue;
+        }
+        cur.push(ch);
+        if ch == '\r' {
+            println!("");
+            let args = cur.split_whitespace().collect::<alloc::vec::Vec<_>>();
+            if args[0] == "ls" {
+                if args.len() >= 2 {
+                    fs::ls_by_path(args[1]);
+                } else {
+                    fs::ls_by_path(&current_path);
+                }
+            } else if args[0] == "rm" {
+                fs::delete_by_path(args[1]);
+            } else if args[0] == "mkdir" {
+                fs::mkdir_by_path(args[1])
+            } else if args[0] == "touch" {
+                fs::touch_by_path(args[1]);
+            } else if args[0] == "cd" {
+                if fs::check_valid_by_path(args[1]) {
+                    current_path = alloc::string::String::from(args[1]);
+                } else {
+                    println!("{}: No such file or directory", args[1]);
+                }
+            } else {
+                println!("Unknown command");
             }
             cur.clear();
-        }
-        let ch = get_char();
-        if ch == '`' {
+            print!("kernel@rusted_os:{}# ", current_path);
+        } else if ch == '`' {
             sbi::shutdown();
         }
-        println!("{}", ch);
-        cur.push(ch);
     }
 }
 

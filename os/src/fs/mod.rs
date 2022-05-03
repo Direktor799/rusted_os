@@ -22,19 +22,52 @@ use vfs::InodeHandler;
 
 pub static mut ROOT_INODE: Option<Arc<InodeHandler>> = None;
 
-fn find_inode_by_full_path(full_path: &str) -> Option<Arc<InodeHandler>> {
+fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
     let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
-    full_path[1..]
-        .split('/')
-        .fold(Some(root_inode), |node, name| node.unwrap().find(name))
+    path.split('/').fold(Some(root_inode), |node, name| {
+        if name.len() > 0 {
+            node.unwrap().find(name)
+        } else {
+            node
+        }
+    })
 }
 
-pub fn delete_by_full_path(full_path: &str) {
-    let (parent_path, target) = full_path.rsplit_once('/').expect("Invalid path");
-    let current_inode = find_inode_by_full_path(full_path).expect("Invalid target");
+pub fn ls_by_path(path: &str) {
+    let inode = find_inode_by_path(path).expect("Invaild target");
+    inode
+        .ls()
+        .into_iter()
+        .skip(2)
+        .for_each(|str| println!("{}", str));
+}
+
+pub fn delete_by_path(path: &str) {
+    let (parent_path, target) = path.rsplit_once('/').expect("Invalid path");
+    let current_inode = find_inode_by_path(path).expect("Invalid target");
     current_inode.clear();
-    let parent_inode = find_inode_by_full_path(parent_path).expect("Invalid parent directory");
+    let parent_inode = find_inode_by_path(parent_path).expect("Invalid parent directory");
     parent_inode.delete(target);
+}
+
+pub fn mkdir_by_path(path: &str) {
+    let (parent_path, target) = path.rsplit_once('/').expect("Invalid path");
+    let parent_inode = find_inode_by_path(parent_path).expect("Invalid parent directory");
+    if let Some(child_inode) = parent_inode.create(target, layout::InodeType::Directory) {
+        child_inode.set_default_dirent(parent_inode.get_inode_id());
+    } else {
+        println!("cannot create directory '{}': File exists", target);
+    };
+}
+
+pub fn touch_by_path(path: &str) {
+    let (parent_path, target) = path.rsplit_once('/').expect("Invalid path");
+    let parent_inode = find_inode_by_path(parent_path).expect("Invalid parent directory");
+    parent_inode.create(target, layout::InodeType::File);
+}
+
+pub fn check_valid_by_path(path: &str) -> bool {
+    find_inode_by_path(path).is_some()
 }
 
 pub trait File: Send + Sync {
@@ -47,8 +80,17 @@ pub fn init() {
         BLOCK_CACHE_MANAGER = Some(Mutex::new(BlockCacheManager::new()));
         let efs = EasyFileSystem::open(BLOCK_DEVICE.as_ref().unwrap().clone());
         ROOT_INODE = Some(Arc::new(EasyFileSystem::root_inode(&efs)));
-        let root_inode = ROOT_INODE.as_ref().unwrap();
-        root_inode.create_default_for_dir(0, 0);
     }
     println!("mod fs initialized!");
+}
+
+pub fn format() {
+    unsafe {
+        BLOCK_CACHE_MANAGER = Some(Mutex::new(BlockCacheManager::new()));
+        let efs = EasyFileSystem::format(BLOCK_DEVICE.as_ref().unwrap().clone(), 4096, 1);
+        ROOT_INODE = Some(Arc::new(EasyFileSystem::root_inode(&efs)));
+        let root_inode = ROOT_INODE.as_ref().unwrap();
+        root_inode.set_default_dirent(root_inode.get_inode_id());
+    }
+    println!("mod fs formated!");
 }

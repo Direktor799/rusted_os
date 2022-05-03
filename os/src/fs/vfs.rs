@@ -47,6 +47,12 @@ impl InodeHandler {
             .modify(self.block_offset, f)
     }
 
+    pub fn get_inode_id(&self) -> u32 {
+        self.fs
+            .lock()
+            .get_disk_inode_id(self.block_id, self.block_offset)
+    }
+
     fn find_inode_id(&self, name: &str, disk_inode: &Inode) -> Option<u32> {
         // assert it is a directory
         assert!(disk_inode.is_dir());
@@ -162,33 +168,33 @@ impl InodeHandler {
                 self.block_device.clone(),
             );
             let mut dirent_self = Dirent::new("", 0);
-            self.read_disk_inode(|disk_inode| disk_inode.read_at(0, dirent_self.as_bytes_mut(), &self.block_device));
+            self.read_disk_inode(|disk_inode| {
+                disk_inode.read_at(0, dirent_self.as_bytes_mut(), &self.block_device)
+            });
             // new_inode_handler.create_default_for_dir(dirent_self.inode_number(), new_inode_id);
             Some(Arc::new(new_inode_handler))
         }
     }
-    pub fn create_default_for_dir(&self, parent_dir_inode_number: u32, new_dir_inode_number: u32) {
+    pub fn set_default_dirent(&self, parent_inode_id: u32) {
         let mut fs = self.fs.lock();
         self.modify_disk_inode(|cur_dir_inode| {
             // increase size
             self.increase_size(2 * DIRENT_SZ as u32, cur_dir_inode, &mut fs);
             // write . dirent
-            let dirent_self = Dirent::new(".", new_dir_inode_number);
+            let dirent_self =
+                Dirent::new(".", fs.get_disk_inode_id(self.block_id, self.block_offset));
             cur_dir_inode.write_at(0, dirent_self.as_bytes(), &self.block_device);
 
             // write .. dirent
-            let dirent_parent = Dirent::new("..", parent_dir_inode_number);
+            let dirent_parent = Dirent::new("..", parent_inode_id);
             cur_dir_inode.write_at(DIRENT_SZ, dirent_parent.as_bytes(), &self.block_device);
         });
     }
     pub fn delete(&self, name: &str) {
         let mut fs = self.fs.lock();
-        // let inode_id = fs.get_disk_inode_id(self.block_id as u32, self.block_offset);
-        // fs.dealloc_inode(inode_id);
         self.modify_disk_inode(|dir_inode| {
             assert!(dir_inode.is_dir());
             self.find_inode_id(name, dir_inode).expect("No target");
-            // delete file in the dirent
             // 读取最后一个目录项
             let mut last_dirent = Dirent::new("", 0);
             dir_inode.read_at(
@@ -200,11 +206,9 @@ impl InodeHandler {
             let file_count = (dir_inode.size as usize) / DIRENT_SZ;
             for i in 0..file_count {
                 let mut dirent = Dirent::empty();
-                assert_eq!(
-                    dir_inode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device,),
-                    DIRENT_SZ,
-                );
+                dir_inode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device);
                 if dirent.name() == name {
+                    fs.dealloc_inode(dirent.inode_number());
                     dir_inode.write_at(i * DIRENT_SZ, last_dirent.as_bytes(), &self.block_device);
                     break;
                 }
