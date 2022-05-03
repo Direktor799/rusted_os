@@ -47,6 +47,8 @@ pub fn init() {
         BLOCK_CACHE_MANAGER = Some(Mutex::new(BlockCacheManager::new()));
         let efs = EasyFileSystem::open(BLOCK_DEVICE.as_ref().unwrap().clone());
         ROOT_INODE = Some(Arc::new(EasyFileSystem::root_inode(&efs)));
+        let root_inode = ROOT_INODE.as_ref().unwrap();
+        root_inode.create_default_for_dir(0, 0);
     }
     println!("mod fs initialized!");
 }

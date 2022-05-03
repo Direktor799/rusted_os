@@ -45,9 +45,10 @@ pub extern "C" fn rust_main() -> ! {
     // root_inode.clear();
     
     let test2 = root_inode.create("test2", fs::layout::InodeType::Directory).unwrap();
-    test2.create("a", fs::layout::InodeType::File);
+    let a = test2.create("a", fs::layout::InodeType::File);
+
     test2.create("b", fs::layout::InodeType::File);
-    for name in test2.ls() 
+    for name in root_inode.ls() 
     {
         println!("{}",name);
     }

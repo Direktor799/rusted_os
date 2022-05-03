@@ -80,7 +80,7 @@ impl SuperBlock {
 }
 
 /// Inode类型
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum InodeType {
     File,
     Directory,

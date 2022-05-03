@@ -147,12 +147,39 @@ impl InodeHandler {
         let (block_id, block_offset) = fs.get_disk_inode_pos(new_inode_id);
         block_cache_sync_all();
         // return inode
-        Some(Arc::new(Self::new(
-            block_id,
-            block_offset,
-            self.fs.clone(),
-            self.block_device.clone(),
-        )))
+        if filetype != InodeType::Directory {
+            return Some(Arc::new(Self::new(
+                block_id,
+                block_offset,
+                self.fs.clone(),
+                self.block_device.clone(),
+            )));
+        } else {
+            let new_inode_handler = Self::new(
+                block_id,
+                block_offset,
+                self.fs.clone(),
+                self.block_device.clone(),
+            );
+            let mut dirent_self = Dirent::new("", 0);
+            self.read_disk_inode(|disk_inode| disk_inode.read_at(0, dirent_self.as_bytes_mut(), &self.block_device));
+            // new_inode_handler.create_default_for_dir(dirent_self.inode_number(), new_inode_id);
+            Some(Arc::new(new_inode_handler))
+        }
+    }
+    pub fn create_default_for_dir(&self, parent_dir_inode_number: u32, new_dir_inode_number: u32) {
+        let mut fs = self.fs.lock();
+        self.modify_disk_inode(|cur_dir_inode| {
+            // increase size
+            self.increase_size(2 * DIRENT_SZ as u32, cur_dir_inode, &mut fs);
+            // write . dirent
+            let dirent_self = Dirent::new(".", new_dir_inode_number);
+            cur_dir_inode.write_at(0, dirent_self.as_bytes(), &self.block_device);
+
+            // write .. dirent
+            let dirent_parent = Dirent::new("..", parent_dir_inode_number);
+            cur_dir_inode.write_at(DIRENT_SZ, dirent_parent.as_bytes(), &self.block_device);
+        });
     }
     pub fn delete(&self, name: &str) {
         let mut fs = self.fs.lock();
