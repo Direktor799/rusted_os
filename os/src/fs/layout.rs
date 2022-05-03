@@ -84,7 +84,7 @@ impl SuperBlock {
 pub enum InodeType {
     File,
     Directory,
-    SoftLink
+    SoftLink,
 }
 
 /// 间接块
@@ -151,7 +151,7 @@ impl Inode {
     }
     pub fn blocks_unneeded(&self, new_size: u32) -> u32 {
         assert!(new_size <= self.size);
-        assert!(new_size <= 0);
+        assert!(new_size >= 0);
         Self::total_blocks(self.size) - Self::total_blocks(new_size)
     }
     /// 根据内部块id获取在设备上的块id
@@ -256,7 +256,7 @@ impl Inode {
     pub fn decrease_size(
         &mut self,
         new_size: u32,
-        discard_blocks: Vec<u32>,
+        discard_blocks: &Vec<u32>,
         block_device: &Arc<dyn BlockDevice>,
     ) {
         // 修改大小前的块数
@@ -272,14 +272,77 @@ impl Inode {
         if current_blocks == total_blocks {
             return;
         }
+
+        // 回收二级块
+
+        // 判断是否需要回收二级间接块
+        if current_blocks <= INODE_INDIRECT1_BOUND {
+            return;
+        }
+
+        // 回收二级间接块
+        get_block_cache(self.indirect2 as usize, Arc::clone(block_device))
+            .lock()
+            .modify(0, |indirect2: &mut IndirectBlock| {
+                while total_blocks.max(INODE_INDIRECT1_BOUND) < current_blocks {
+                    let curr_sub_indirect1 =
+                        (current_blocks - INODE_INDIRECT1_BOUND) / INODE_INDIRECT1_COUNT;
+                    let curr_sub_direct =
+                        (current_blocks - INODE_INDIRECT1_BOUND) % INODE_INDIRECT1_COUNT;
+                    // 当前sub一级间接块的第一次写入时分配sub一级间接块
+                    if curr_sub_direct == 0 {
+                        discard_blocks.push(indirect2[curr_sub_indirect1]);
+                        indirect2[curr_sub_indirect1] = 0;
+                    }
+                    // 扩充sub一级间接块中的直接块
+                    get_block_cache(
+                        indirect2[curr_sub_indirect1] as usize,
+                        Arc::clone(block_device),
+                    )
+                    .lock()
+                    .modify(0, |indirect1: &mut IndirectBlock| {
+                        discard_blocks.push(indirect1[curr_sub_direct]);
+                        indirect1[curr_sub_direct] = 0;
+                    });
+                    current_blocks -= 1;
+                }
+            });
+        // 如果回收了所有的二级间接块
+        if current_blocks == INODE_INDIRECT1_COUNT {
+            discard_blocks.push(self.indirect2);
+            self.indirect2 = 0;
+        }
+
+        // 判断是否需要继续回收一级间接块
+        if total_blocks >= INODE_DIRECT_BOUND {
+            return;
+        }
+        
+        // 回收一级间接块
+        get_block_cache(self.indirect1 as usize, Arc::clone(block_device))
+            .lock()
+            .modify(0, |indirect1: &mut IndirectBlock| {
+                while total_blocks.max(INODE_DIRECT_BOUND) < current_blocks {
+                    let indirect1_block_id = current_blocks as usize - INODE_DIRECT_BOUND;
+                    discard_blocks.push(indirect1[indirect1_block_id]);
+                    indirect1[indirect1_block_id] = 0;
+                    current_blocks -= 1;
+                }
+            });
+        
+        // 若已经不需要一级间接块
+        if current_blocks == INODE_DIRECT_BOUND {
+            discard_blocks.push(self.indirect1);
+            self.indirect1 = 0;
+        }
         
         // 回收直接块
-        current_blocks = current_blocks.min(INODE_DIRECT_BOUND);
-        while  total_blocks < current_blocks {
+        while total_blocks < current_blocks {
+            discard_blocks.push(self.direct[current_blocks as usize]);
             self.direct[current_blocks as usize] = 0;
             current_blocks -= 1;
         }
-
+        self.size = new_size;
     }
     /// 清空该Inode
     pub fn clear_size(&mut self, block_device: &Arc<dyn BlockDevice>) -> Vec<u32> {
