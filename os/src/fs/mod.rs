@@ -22,11 +22,19 @@ use vfs::InodeHandler;
 
 pub static mut ROOT_INODE: Option<Arc<InodeHandler>> = None;
 
-pub fn find_inode_by_full_path(full_path: &str) -> Option<Arc<InodeHandler>> {
+fn find_inode_by_full_path(full_path: &str) -> Option<Arc<InodeHandler>> {
     let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
     full_path[1..]
         .split('/')
         .fold(Some(root_inode), |node, name| node.unwrap().find(name))
+}
+
+pub fn delete_by_full_path(full_path: &str) {
+    let (parent_path, target) = full_path.rsplit_once('/').expect("Invalid path");
+    let current_inode = find_inode_by_full_path(full_path).expect("Invalid target");
+    current_inode.clear();
+    let parent_inode = find_inode_by_full_path(parent_path).expect("Invalid parent directory");
+    parent_inode.delete(target);
 }
 
 pub trait File: Send + Sync {

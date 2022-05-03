@@ -156,21 +156,17 @@ impl InodeHandler {
     }
     pub fn delete(&self, name: &str) {
         let mut fs = self.fs.lock();
-        let op = |dir_inode: &Inode| {
-            // assert it is a directory
-            assert!(dir_inode.is_dir());
-            // has the file been created?
-            self.find_inode_id(name, dir_inode)
-        };
-        //找到该文件条目的id
-        self.read_disk_inode(op);
+        // let inode_id = fs.get_disk_inode_id(self.block_id as u32, self.block_offset);
+        // fs.dealloc_inode(inode_id);
         self.modify_disk_inode(|dir_inode| {
+            assert!(dir_inode.is_dir());
+            self.find_inode_id(name, dir_inode).expect("No target");
             // delete file in the dirent
             // 读取最后一个目录项
-            let mut dirent = Dirent::new("", 0);
+            let mut last_dirent = Dirent::new("", 0);
             dir_inode.read_at(
                 dir_inode.size as usize - DIRENT_SZ,
-                dirent.as_bytes_mut(),
+                last_dirent.as_bytes_mut(),
                 &self.block_device,
             );
             // 查找到当前目录项,并用最后一个目录项的内容替换当前目录项
@@ -182,7 +178,7 @@ impl InodeHandler {
                     DIRENT_SZ,
                 );
                 if dirent.name() == name {
-                    dir_inode.write_at(i * DIRENT_SZ, dirent.as_bytes(), &self.block_device);
+                    dir_inode.write_at(i * DIRENT_SZ, last_dirent.as_bytes(), &self.block_device);
                     break;
                 }
             }
@@ -227,10 +223,8 @@ impl InodeHandler {
     /// 清空所有数据并回收块
     pub fn clear(&self) {
         let mut fs = self.fs.lock();
-        let inode_id = fs.get_disk_inode_id(self.block_id as u32, self.block_offset);
         self.modify_disk_inode(|disk_inode| {
             let data_blocks_dealloc = disk_inode.decrease_size(0, &self.block_device);
-            fs.dealloc_inode(inode_id);
             for data_block in data_blocks_dealloc.into_iter() {
                 fs.dealloc_data(data_block);
             }
