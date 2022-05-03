@@ -105,13 +105,16 @@ impl InodeHandler {
             return;
         }
         // let blocks_unneeded = disk_inode.blocks_unneeded(new_size);
-        let mut v: Vec<u32> = Vec::new();
 
         disk_inode.size = new_size;
-        disk_inode.decrease_size(new_size, &v, &self.block_device);
+        println!("begin decrease_size");
+        let v = disk_inode.decrease_size(new_size, &self.block_device);
+        println!("end decrease_size");
         for i in v{
             fs.dealloc_data(i);
+            println!("data_block_id:{}" ,i);
         }
+        
     }
     pub fn create(&self, name: &str, filetype: InodeType) -> Option<Arc<InodeHandler>> {
         let mut fs = self.fs.lock();
@@ -182,7 +185,7 @@ impl InodeHandler {
 
         //找到该文件条目的id
         let discard_block_id = self.read_disk_inode(op).unwrap() as usize;
-
+        println!("discard_block_id:{}",discard_block_id);
         self.modify_disk_inode(|dir_inode| {
             // delete file in the dirent
             let file_count = (dir_inode.size as usize) / DIRENT_SZ;
@@ -200,6 +203,7 @@ impl InodeHandler {
             );
             // decrease size
             let new_size = (file_count - 1) * DIRENT_SZ;
+            println!("new_size:{}",discard_block_id);
             self.decrease_size(new_size as u32, dir_inode, &mut fs);
         });
     }
