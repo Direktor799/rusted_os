@@ -40,14 +40,23 @@ pub extern "C" fn rust_main() -> ! {
     task::init();
     drivers::init();
     fs::init();
+    
     let root_inode = unsafe { fs::ROOT_INODE.as_ref().unwrap() };
-    // let nodea = root_inode
-    //     .create("a", fs::layout::InodeType::Directory)
-    //     .unwrap();
-    // let nodeb = nodea.create("b", fs::layout::InodeType::File).unwrap();
-    // nodeb.write_at(0, "1234".as_bytes());
-    // task::run();
-    kernel_test_shell();
+    // root_inode.clear();
+    
+    let test2 = root_inode.create("test2", fs::layout::InodeType::Directory).unwrap();
+    test2.create("a", fs::layout::InodeType::File);
+    test2.create("b", fs::layout::InodeType::File);
+    for name in test2.ls() 
+    {
+        println!("{}",name);
+    }
+    test2.delete("a");
+    for name in test2.ls() 
+    {
+        println!("{}",name);
+    }
+    // kernel_test_shell();
     panic!("Dummy as fuck");
 }
 

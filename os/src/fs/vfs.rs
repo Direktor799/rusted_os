@@ -107,12 +107,9 @@ impl InodeHandler {
         // let blocks_unneeded = disk_inode.blocks_unneeded(new_size);
 
         disk_inode.size = new_size;
-        println!("begin decrease_size");
         let v = disk_inode.decrease_size(new_size, &self.block_device);
-        println!("end decrease_size");
         for i in v{
             fs.dealloc_data(i);
-            println!("data_block_id:{}" ,i);
         }
         
     }
@@ -168,42 +165,39 @@ impl InodeHandler {
             // assert it is a directory
             assert!(dir_inode.is_dir());
             // has the file been created?
-            let find_result = self.find_inode_id(name, dir_inode);
-            if find_result.is_some() {
-                let (block_id, block_offset) = fs.get_disk_inode_pos(find_result.unwrap());
-                //释放文件的Inode
-                let discard_inode_handle = Self::new(
-                    block_id,
-                    block_offset,
-                    self.fs.clone(),
-                    self.block_device.clone(),
-                );
-                discard_inode_handle.clear();
-            }
-            find_result
+            self.find_inode_id(name, dir_inode)
         };
-
         //找到该文件条目的id
-        let discard_block_id = self.read_disk_inode(op).unwrap() as usize;
-        println!("discard_block_id:{}",discard_block_id);
+        self.read_disk_inode(op);
         self.modify_disk_inode(|dir_inode| {
             // delete file in the dirent
-            let file_count = (dir_inode.size as usize) / DIRENT_SZ;
-            // write dirent
+            // 读取最后一个目录项
             let mut dirent = Dirent::new("", 0);
             dir_inode.read_at(
                 dir_inode.size as usize - DIRENT_SZ,
                 dirent.as_bytes_mut(),
                 &self.block_device,
             );
-            dir_inode.write_at(
-                discard_block_id * DIRENT_SZ,
-                dirent.as_bytes(),
-                &self.block_device,
-            );
+            
+            // 查找到当前目录项,并用最后一个目录项的内容替换当前目录项
+            let file_count = (dir_inode.size as usize) / DIRENT_SZ;
+            for i in 0..file_count {
+                let mut dirent = Dirent::empty();
+                assert_eq!(
+                    dir_inode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device,),
+                    DIRENT_SZ,
+                );
+                if dirent.name() == name {
+                    dir_inode.write_at(
+                        i * DIRENT_SZ,
+                        dirent.as_bytes(),
+                        &self.block_device,
+                    );
+                    break;
+                }
+            }
             // decrease size
             let new_size = (file_count - 1) * DIRENT_SZ;
-            println!("new_size:{}",discard_block_id);
             self.decrease_size(new_size as u32, dir_inode, &mut fs);
         });
     }

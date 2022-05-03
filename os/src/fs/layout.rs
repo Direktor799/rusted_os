@@ -149,11 +149,7 @@ impl Inode {
         assert!(new_size <= INODE_INDIRECT2_BOUND as u32 * BLOCK_SZ as u32);
         Self::total_blocks(new_size) - Self::total_blocks(self.size)
     }
-    pub fn blocks_unneeded(&self, new_size: u32) -> u32 {
-        assert!(new_size <= self.size);
-        assert!(new_size >= 0);
-        Self::total_blocks(self.size) - Self::total_blocks(new_size)
-    }
+
     /// 根据内部块id获取在设备上的块id
     pub fn get_block_id(&self, inner_id: u32, block_device: &Arc<dyn BlockDevice>) -> u32 {
         let inner_id = inner_id as usize;
