@@ -52,6 +52,9 @@ impl InodeHandler {
         self.read_disk_inode(|disk_inode| {
             disk_inode.read_at(0, dirent_self.as_bytes_mut(), &self.block_device)
         });
+        if self.block_id == 0 && self.block_offset == 0 {
+            return 0;
+        }
         dirent_self.inode_number()
     }
 
