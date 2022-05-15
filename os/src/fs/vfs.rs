@@ -240,7 +240,11 @@ impl InodeHandler {
             v
         })
     }
-
+    pub fn is_link(&self) -> bool {
+        self.read_disk_inode(|disk_inode|{
+            disk_inode.is_link()
+        })
+    }
     pub fn read_at(&self, offset: usize, buf: &mut [u8]) -> usize {
         let _fs = self.fs.lock();
         self.read_disk_inode(|disk_inode| disk_inode.read_at(offset, buf, &self.block_device))
@@ -254,6 +258,9 @@ impl InodeHandler {
         });
         block_cache_sync_all();
         size
+    }
+    pub fn get_file_size(&self) -> u32{
+        self.read_disk_inode(|disk_inode| disk_inode.size)
     }
 
     /// 清空所有数据并回收块

@@ -23,8 +23,11 @@ mod sbi;
 mod sync;
 mod sys_call;
 mod task;
-
 use core::arch::global_asm;
+
+use alloc::string::ToString;
+
+use crate::fs::{create_link_by_path, find_inode, touch_by_path, ROOT_INODE};
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("link_app.S"));
 
@@ -40,7 +43,21 @@ pub extern "C" fn rust_main() -> ! {
     task::init();
     drivers::init();
     fs::format();
-    kernel_test_shell();
+    touch_by_path("/a");
+    create_link_by_path("/b", "/a");
+    find_inode("/a")
+        .as_ref()
+        .unwrap()
+        .write_at(0, "123".as_bytes());
+    let mut read_buffer = [0u8; 127];
+    let mut read_str = alloc::string::String::new();
+    find_inode("/b")
+        .as_ref()
+        .unwrap()
+        .read_at(0, &mut read_buffer);
+    read_str = core::str::from_utf8(&read_buffer[..127]).unwrap().to_string();
+    print!("{}",read_str);
+    // kernel_test_shell();
     panic!("Dummy as fuck");
 }
 

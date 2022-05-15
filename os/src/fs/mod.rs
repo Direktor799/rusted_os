@@ -4,7 +4,7 @@ pub mod block_dev;
 pub mod efs;
 pub mod layout;
 mod vfs;
-
+use core::str;
 /// 磁盘块大小
 pub const BLOCK_SZ: usize = 512;
 
@@ -15,6 +15,7 @@ use crate::drivers::BLOCK_DEVICE;
 use crate::memory::frame::user_buffer::UserBuffer;
 use crate::sync::mutex::Mutex;
 use alloc::sync::Arc;
+use alloc::vec::Vec;
 use block_cache::BlockCacheManager;
 use block_cache::BLOCK_CACHE_MANAGER;
 use efs::EasyFileSystem;
@@ -31,8 +32,32 @@ fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
             node
         }
     })
-}
 
+}
+pub fn find_inode(path: &str) -> Option<Arc<InodeHandler>> {
+    let cur_inode = find_inode_by_path(path);
+    if cur_inode.as_ref().unwrap().is_link()
+    {
+        let inode_handler = cur_inode.as_ref().unwrap();
+        let file_size = cur_inode.as_ref().unwrap().get_file_size();
+        let mut real_path = alloc::vec![Default::default(); file_size as usize];
+        inode_handler.read_at(0, &mut real_path);
+        return find_inode_by_path(str::from_utf8(&real_path).unwrap())
+    }
+    cur_inode
+}
+pub fn find_inode_path(path: &str) -> Vec<u8> {
+    let cur_inode = find_inode_by_path(path);
+    if cur_inode.as_ref().unwrap().is_link()
+    {
+        let inode_handler = cur_inode.as_ref().unwrap();
+        let file_size = cur_inode.as_ref().unwrap().get_file_size();
+        let mut real_path = alloc::vec![Default::default(); file_size as usize];
+        inode_handler.read_at(0, &mut real_path);
+        return real_path;
+    }
+    path.as_bytes().to_vec()
+}
 pub fn ls_by_path(path: &str) {
     let inode = find_inode_by_path(path).expect("Invaild target");
     inode
@@ -64,6 +89,13 @@ pub fn touch_by_path(path: &str) {
     let (parent_path, target) = path.rsplit_once('/').expect("Invalid path");
     let parent_inode = find_inode_by_path(parent_path).expect("Invalid parent directory");
     parent_inode.create(target, layout::InodeType::File);
+}
+pub fn create_link_by_path(path: &str, real_file_path: &str)
+{
+    let (parent_path, target) = path.rsplit_once('/').expect("Invalid path");
+    let parent_inode = find_inode_by_path(parent_path).expect("Invalid parent directory");
+    let source_path = find_inode_path(real_file_path);
+    parent_inode.create(target, layout::InodeType::SoftLink).as_ref().unwrap().write_at(0,&source_path.as_slice());
 }
 
 pub fn check_valid_by_path(path: &str) -> bool {

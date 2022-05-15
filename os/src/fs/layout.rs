@@ -119,6 +119,10 @@ impl Inode {
     pub fn is_file(&self) -> bool {
         self.type_ == InodeType::File
     }
+    /// 判断当前Inode是否为link
+    pub fn is_link(&self) -> bool {
+        self.type_ == InodeType::SoftLink
+    }
 
     /// 用于存储Inode数据的块数量
     pub fn data_blocks(&self) -> u32 {
