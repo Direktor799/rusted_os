@@ -27,7 +27,7 @@ use core::arch::global_asm;
 
 use alloc::string::ToString;
 
-use crate::fs::{create_link_by_path, find_inode, touch_by_path, ROOT_INODE};
+use crate::fs::{create_link_by_path, find_inode_by_path, touch_by_path, ROOT_INODE};
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("link_app.S"));
 
@@ -45,18 +45,33 @@ pub extern "C" fn rust_main() -> ! {
     fs::format();
     touch_by_path("/a");
     create_link_by_path("/b", "/a");
-    find_inode("/a")
-        .as_ref()
-        .unwrap()
-        .write_at(0, "123".as_bytes());
+    create_link_by_path("/c", "/b");
+
+    let inode_a_ = find_inode_by_path("/a");
+    let inode_a = inode_a_.as_ref().unwrap();
+    
+    inode_a.write_at(0, "write_from_a".as_bytes());
+
     let mut read_buffer = [0u8; 127];
     let mut read_str = alloc::string::String::new();
-    find_inode("/b")
-        .as_ref()
+    let inode_b_ = find_inode_by_path("/b");
+    let inode_c_ = find_inode_by_path("/c");
+    let inode_b = inode_b_.as_ref().unwrap();
+    let inode_c = inode_c_.as_ref().unwrap();
+    inode_b.read_at(0, &mut read_buffer);
+    read_str = core::str::from_utf8(&read_buffer[..127])
         .unwrap()
-        .read_at(0, &mut read_buffer);
-    read_str = core::str::from_utf8(&read_buffer[..127]).unwrap().to_string();
-    print!("{}",read_str);
+        .to_string();
+    print!("{}\n",read_str);
+
+    inode_b.write_at(0, "b_write_from_0".as_bytes());
+    inode_c.write_at(0, "c_write_from_0".as_bytes());
+    inode_b.write_at(3, "a_write_from_3".as_bytes());
+    inode_a.read_at(0, &mut read_buffer);
+    read_str = core::str::from_utf8(&read_buffer[..127])
+        .unwrap()
+        .to_string();
+    print!("{}\n",read_str);
     // kernel_test_shell();
     panic!("Dummy as fuck");
 }
