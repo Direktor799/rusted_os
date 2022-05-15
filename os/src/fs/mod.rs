@@ -149,7 +149,7 @@ unit_test!(test_file_link, {
     let inode_c = find_real_inode_by_path("/c").unwrap();
     let mut len = inode_b.read_at(0, &mut read_buffer);
     utest_assert!(
-        core::str::from_utf8(&read_buffer[..len]).unwrap() == "write_from_a",
+        read_buffer[..len] == *"write_from_a".as_bytes(),
         "file link is bad"
     );
 
@@ -158,7 +158,7 @@ unit_test!(test_file_link, {
     inode_b.write_at(3, "a_write_from_3".as_bytes());
     len = inode_a.read_at(0, &mut read_buffer);
     utest_assert!(
-        core::str::from_utf8(&read_buffer[..len]).unwrap() == "c_wa_write_from_3",
+        read_buffer[..len] == *"c_wa_write_from_3".as_bytes(),
         "file link is bad"
     );
     Ok("file link is ok")
@@ -177,6 +177,6 @@ unit_test!(test_dir_link, {
     let mut read_buffer = [0u8; 127];
     let inode_b = find_real_inode_by_path("/link/a");
     let len = inode_b.as_ref().unwrap().read_at(0, &mut read_buffer);
-    utest_assert!(core::str::from_utf8(&read_buffer[..len]).unwrap() == "test link string", "dir link is bad");
+    utest_assert!(read_buffer[..len] == *"test link string".as_bytes(), "dir link is bad");
     Ok("dir link is ok")
 });
