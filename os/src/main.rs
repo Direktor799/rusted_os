@@ -35,21 +35,20 @@ global_asm!(include_str!("link_app.S"));
 #[no_mangle]
 pub extern "C" fn rust_main() -> ! {
     memory::init();
-    #[cfg(test)]
-    test_main();
-    println!("[kernel] Hello rusted_os!");
     interrupt::init();
     loader::init();
     task::init();
     drivers::init();
     fs::format();
+    #[cfg(test)]
+    test_main();
+    println!("[kernel] Hello rusted_os!");
     touch_by_path("/a");
     create_link_by_path("/b", "/a");
     create_link_by_path("/c", "/b");
 
     let inode_a_ = find_inode_by_path("/a");
     let inode_a = inode_a_.as_ref().unwrap();
-    
     inode_a.write_at(0, "write_from_a".as_bytes());
 
     let mut read_buffer = [0u8; 127];
@@ -62,7 +61,7 @@ pub extern "C" fn rust_main() -> ! {
     read_str = core::str::from_utf8(&read_buffer[..127])
         .unwrap()
         .to_string();
-    print!("{}\n",read_str);
+    print!("{}\n", read_str);
 
     inode_b.write_at(0, "b_write_from_0".as_bytes());
     inode_c.write_at(0, "c_write_from_0".as_bytes());
@@ -71,7 +70,7 @@ pub extern "C" fn rust_main() -> ! {
     read_str = core::str::from_utf8(&read_buffer[..127])
         .unwrap()
         .to_string();
-    print!("{}\n",read_str);
+    print!("{}\n", read_str);
     // kernel_test_shell();
     panic!("Dummy as fuck");
 }

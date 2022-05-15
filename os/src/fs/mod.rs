@@ -42,18 +42,6 @@ pub fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
         }
     })
 }
-// pub fn find_inode(path: &str) -> Option<Arc<InodeHandler>> {
-//     let cur_inode = find_inode_by_path(path);
-//     if cur_inode.as_ref().unwrap().is_link() {
-//         let inode_handler = cur_inode.as_ref().unwrap();
-//         let file_size = cur_inode.as_ref().unwrap().get_file_size();
-//         let mut real_path = alloc::vec![Default::default(); file_size as usize];
-//         inode_handler.read_at(0, &mut real_path);
-//         find_inode_by_path(str::from_utf8(&real_path).unwrap())
-//     } else {
-//         cur_inode
-//     }
-// }
 pub fn find_inode_path(path: &str) -> Vec<u8> {
     let cur_inode = find_inode_by_path(path);
     if cur_inode.as_ref().unwrap().is_link() {
@@ -146,7 +134,6 @@ unit_test!(test_file_link, {
 
     let inode_a_ = find_inode_by_path("/a");
     let inode_a = inode_a_.as_ref().unwrap();
-    
     inode_a.write_at(0, "write_from_a".as_bytes());
 
     let mut read_buffer = [0u8; 127];
