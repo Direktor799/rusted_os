@@ -27,6 +27,16 @@ pub fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
     let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
     path.split('/').fold(Some(root_inode), |node, name| {
         if name.len() > 0 {
+            node.unwrap().find(name)
+        } else {
+            node
+        }
+    })
+}
+pub fn find_real_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
+    let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
+    path.split('/').fold(Some(root_inode), |node, name| {
+        if name.len() > 0 {
             let cur_inode = node.unwrap().find(name).unwrap();
             if cur_inode.is_link() {
                 let file_size = cur_inode.get_file_size();
@@ -131,45 +141,42 @@ unit_test!(test_file_link, {
     create_link_by_path("/b", "/a");
     create_link_by_path("/c", "/b");
 
-    let inode_a = find_inode_by_path("/a").unwrap();
+    let inode_a = find_real_inode_by_path("/a").unwrap();
     inode_a.write_at(0, "write_from_a".as_bytes());
 
     let mut read_buffer = [0u8; 127];
-    let inode_b = find_inode_by_path("/b").unwrap();
-    let inode_c = find_inode_by_path("/c").unwrap();
-    let len = inode_b.read_at(0, &mut read_buffer);
+    let inode_b = find_real_inode_by_path("/b").unwrap();
+    let inode_c = find_real_inode_by_path("/c").unwrap();
+    let mut len = inode_b.read_at(0, &mut read_buffer);
     utest_assert!(
         core::str::from_utf8(&read_buffer[..len]).unwrap() == "write_from_a",
         "file link is bad"
     );
 
-    // inode_b.write_at(0, "b_write_from_0".as_bytes());
-    // inode_c.write_at(0, "c_write_from_0".as_bytes());
-    // inode_b.write_at(3, "a_write_from_3".as_bytes());
-    // inode_a.read_at(0, &mut read_buffer);
-    // read_str = core::str::from_utf8(&read_buffer[..127])
-    //     .unwrap()
-    //     .to_string();
-    // utest_assert!(read_str == "c_wa_write_from_3", "file link is bad");
+    inode_b.write_at(0, "b_write_from_0".as_bytes());
+    inode_c.write_at(0, "c_write_from_0".as_bytes());
+    inode_b.write_at(3, "a_write_from_3".as_bytes());
+    len = inode_a.read_at(0, &mut read_buffer);
+    utest_assert!(
+        core::str::from_utf8(&read_buffer[..len]).unwrap() == "c_wa_write_from_3",
+        "file link is bad"
+    );
     Ok("file link is ok")
 });
 
-// unit_test!(test_dir_link, {
-//     mkdir_by_path("/test");
-//     touch_by_path("/test/a");
-//     create_link_by_path("/link", "/test");
-//     let inode_a = find_inode_by_path("/test/a");
-//     inode_a
-//         .as_ref()
-//         .unwrap()
-//         .write_at(0, "test link string".as_bytes());
+unit_test!(test_dir_link, {
+    mkdir_by_path("/test");
+    touch_by_path("/test/a");
+    create_link_by_path("/link", "/test");
+    let inode_a = find_real_inode_by_path("/test/a");
+    inode_a
+        .as_ref()
+        .unwrap()
+        .write_at(0, "test link string".as_bytes());
 
-//     let mut read_buffer = [0u8; 127];
-//     let mut read_str = alloc::string::String::new();
-//     let inode_b = find_inode_by_path("/link/a");
-//     inode_b.as_ref().unwrap().read_at(0, &mut read_buffer);
-//     read_str = core::str::from_utf8(&read_buffer[..127])
-//         .unwrap();
-//     utest_assert!(read_str == "test link string", "dir link is bad");
-//     Ok("dir link is ok")
-// });
+    let mut read_buffer = [0u8; 127];
+    let inode_b = find_real_inode_by_path("/link/a");
+    let len = inode_b.as_ref().unwrap().read_at(0, &mut read_buffer);
+    utest_assert!(core::str::from_utf8(&read_buffer[..len]).unwrap() == "test link string", "dir link is bad");
+    Ok("dir link is ok")
+});
