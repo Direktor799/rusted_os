@@ -3,6 +3,7 @@
 use super::address::*;
 use super::frame::{FrameTracker, FRAME_ALLOCATOR};
 use super::user_buffer::UserBuffer;
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
@@ -163,4 +164,23 @@ pub fn get_user_buffer_in_kernel(user_token: usize, ptr: *const u8, len: usize) 
         current_start = end_va.0;
     }
     UserBuffer(data_segments)
+}
+
+/// 通过指定token获取用户字符串
+pub fn get_user_string_in_kernel(user_token: usize, ptr: *const u8) -> String {
+    let user_page_table = PageTable::from_token(user_token);
+    let mut string = String::new();
+    let mut va = VirtAddr(ptr as usize);
+    loop {
+        let ppn = user_page_table
+            .translate(va.vpn())
+            .expect("[kernel] User space address not mapped!");
+        let ch = *(PhysAddr(ppn.addr().0 + va.page_offset()).get_mut::<u8>());
+        if ch == 0 {
+            break;
+        }
+        string.push(ch as char);
+        va = VirtAddr(va.0 + 1);
+    }
+    string
 }
