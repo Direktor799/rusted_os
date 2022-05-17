@@ -15,9 +15,6 @@ use crate::sync::uninit_cell::UninitCell;
 use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
-use block_cache::BlockCacheManager;
-use block_cache::BLOCK_CACHE_MANAGER;
-use core::cell::RefCell;
 pub use rfs::RustedFileSystem;
 pub use vfs::InodeHandler;
 

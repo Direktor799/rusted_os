@@ -1,7 +1,6 @@
 use super::File;
 use crate::memory::frame::user_buffer::UserBuffer;
 use crate::sbi::console_getchar;
-use crate::task::suspend_current_and_run_next;
 
 pub struct Stdin;
 

@@ -7,10 +7,12 @@ use core::marker::Copy;
 
 /// 物理地址
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct PhysAddr(pub usize);
 
 /// 虚拟地址
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct VirtAddr(pub usize);
 
 /// 物理页号

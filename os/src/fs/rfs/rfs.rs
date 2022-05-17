@@ -108,6 +108,7 @@ impl RustedFileSystem {
             })
     }
 
+    // TODO: method?
     pub fn root_inode(rfs: &Rc<RefCell<Self>>) -> InodeHandler {
         let block_device = Rc::clone(&rfs.borrow().block_device);
         // acquire rfs lock temporarily
