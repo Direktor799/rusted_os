@@ -17,11 +17,12 @@ impl File for Stdin {
     fn read(&self, mut user_buf: UserBuffer) -> usize {
         assert_eq!(user_buf.len(), 1);
         // busy loop
-        let mut c: usize;
+        let mut c: u8;
         loop {
-            c = console_getchar();
-            if c == 0 {
-                suspend_current_and_run_next();
+            c = console_getchar() as u8;
+            if c == 255 {
+                // TODO: non-blocking io
+                // suspend_current_and_run_next();
                 continue;
             } else {
                 break;

@@ -12,10 +12,10 @@ use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskPos, TaskStatus};
 
-pub struct TaskManager(Option<RefCell<TaskManagerInner>>);
+pub struct TaskManager(pub Option<RefCell<TaskManagerInner>>);
 
-struct TaskManagerInner {
-    current_task: Option<TaskControlBlock>,
+pub struct TaskManagerInner {
+    pub current_task: Option<TaskControlBlock>,
     schd: SchdMaster,
 }
 
@@ -78,12 +78,12 @@ impl TaskManager {
     //     let current = inner.current_task.as_ref().unwrap();
     //     current.get_fd_table()
     // }
-    pub fn get_current_task(&mut self) -> &'static mut TaskControlBlock {
+    // pub fn get_current_task(&mut self) -> &'static mut TaskControlBlock {
 
-        let mut inner = self.0.as_ref().unwrap().borrow_mut();
-        inner.current_task.as_mut().unwrap()
-        // self.0.as_ref().unwrap().borrow_mut().current_task.as_mut().unwrap()
-    }
+    //     let mut inner = self.0.as_ref().unwrap().borrow_mut();
+    //     inner.current_task.as_mut().unwrap()
+    //     // self.0.as_ref().unwrap().borrow_mut().current_task.as_mut().unwrap()
+    // }
 }
 
 pub static mut TASK_MANAGER: TaskManager = TaskManager(None);
