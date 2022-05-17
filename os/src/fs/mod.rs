@@ -12,6 +12,7 @@ type DataBlock = [u8; BLOCK_SZ];
 
 use crate::drivers::BLOCK_DEVICE;
 use crate::sync::mutex::Mutex;
+use crate::sync::uninit_cell::UninitCell;
 use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -20,10 +21,10 @@ use block_cache::BLOCK_CACHE_MANAGER;
 pub use efs::EasyFileSystem;
 pub use vfs::InodeHandler;
 
-pub static mut ROOT_INODE: Option<Arc<InodeHandler>> = None;
+pub static mut ROOT_INODE: UninitCell<Arc<InodeHandler>> = UninitCell::uninit();
 
 pub fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
-    let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
+    let root_inode = unsafe { ROOT_INODE.clone() };
     path.split('/').fold(Some(root_inode), |node, name| {
         if name.len() > 0 {
             node.unwrap().find(name)
@@ -33,7 +34,7 @@ pub fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
     })
 }
 pub fn find_real_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
-    let root_inode = unsafe { ROOT_INODE.as_ref().unwrap().clone() };
+    let root_inode = unsafe { ROOT_INODE.clone() };
     path.split('/').fold(Some(root_inode), |node, name| {
         if name.len() > 0 {
             let cur_inode = node.unwrap().find(name).unwrap();
@@ -117,8 +118,8 @@ pub fn check_valid_by_path(path: &str) -> bool {
 pub fn init() {
     unsafe {
         BLOCK_CACHE_MANAGER = Some(Mutex::new(BlockCacheManager::new()));
-        let efs = EasyFileSystem::open(BLOCK_DEVICE.as_ref().unwrap().clone());
-        ROOT_INODE = Some(Arc::new(EasyFileSystem::root_inode(&efs)));
+        let efs = EasyFileSystem::open(BLOCK_DEVICE.clone());
+        ROOT_INODE = UninitCell::init(Arc::new(EasyFileSystem::root_inode(&efs)));
     }
     println!("mod fs initialized!");
 }
@@ -126,10 +127,9 @@ pub fn init() {
 pub fn format() {
     unsafe {
         BLOCK_CACHE_MANAGER = Some(Mutex::new(BlockCacheManager::new()));
-        let efs = EasyFileSystem::format(BLOCK_DEVICE.as_ref().unwrap().clone(), 4096, 1);
-        ROOT_INODE = Some(Arc::new(EasyFileSystem::root_inode(&efs)));
-        let root_inode = ROOT_INODE.as_ref().unwrap();
-        root_inode.set_default_dirent(root_inode.get_inode_id());
+        let efs = EasyFileSystem::format(BLOCK_DEVICE.clone(), 4096, 1);
+        ROOT_INODE = UninitCell::init(Arc::new(EasyFileSystem::root_inode(&efs)));
+        ROOT_INODE.set_default_dirent(ROOT_INODE.get_inode_id());
     }
     println!("mod fs formated!");
 }
