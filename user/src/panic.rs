@@ -1,3 +1,4 @@
+use super::exit;
 use core::panic::PanicInfo;
 
 /// panic处理
@@ -13,5 +14,5 @@ fn panic_handler(info: &PanicInfo) -> ! {
     } else {
         println!("\x1b[1;31mPanicked: '{}'\x1b[0m", info.message().unwrap());
     }
-    loop {}
+    exit(-1);
 }
