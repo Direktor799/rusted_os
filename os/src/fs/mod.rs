@@ -89,7 +89,7 @@ pub fn mkdir_by_path(path: &str) {
     };
 }
 
-pub fn touch_by_path(path: &str) -> Option<Arc<InodeHandler>>  {
+pub fn touch_by_path(path: &str) -> Option<Arc<InodeHandler>> {
     let (parent_path, target) = path.rsplit_once('/').expect("Invalid path");
     let parent_inode = find_inode_by_path(parent_path).expect("Invalid parent directory");
     parent_inode.create(target, layout::InodeType::File)
@@ -133,49 +133,3 @@ pub fn format() {
     }
     println!("mod fs formated!");
 }
-
-unit_test!(test_file_link, {
-    // 创建链接 c->b->a
-    touch_by_path("/a");
-    create_link_by_path("/b", "/a");
-    create_link_by_path("/c", "/b");
-
-    let inode_a = find_real_inode_by_path("/a").unwrap();
-    inode_a.write_at(0, "write_from_a".as_bytes());
-
-    let mut read_buffer = [0u8; 127];
-    let inode_b = find_real_inode_by_path("/b").unwrap();
-    let inode_c = find_real_inode_by_path("/c").unwrap();
-    let mut len = inode_b.read_at(0, &mut read_buffer);
-    utest_assert!(
-        read_buffer[..len] == *"write_from_a".as_bytes(),
-        "file link is bad"
-    );
-
-    inode_b.write_at(0, "b_write_from_0".as_bytes());
-    inode_c.write_at(0, "c_write_from_0".as_bytes());
-    inode_b.write_at(3, "a_write_from_3".as_bytes());
-    len = inode_a.read_at(0, &mut read_buffer);
-    utest_assert!(
-        read_buffer[..len] == *"c_wa_write_from_3".as_bytes(),
-        "file link is bad"
-    );
-    Ok("file link is ok")
-});
-
-unit_test!(test_dir_link, {
-    mkdir_by_path("/test");
-    touch_by_path("/test/a");
-    create_link_by_path("/link", "/test");
-    let inode_a = find_real_inode_by_path("/test/a");
-    inode_a
-        .as_ref()
-        .unwrap()
-        .write_at(0, "test link string".as_bytes());
-
-    let mut read_buffer = [0u8; 127];
-    let inode_b = find_real_inode_by_path("/link/a");
-    let len = inode_b.as_ref().unwrap().read_at(0, &mut read_buffer);
-    utest_assert!(read_buffer[..len] == *"test link string".as_bytes(), "dir link is bad");
-    Ok("dir link is ok")
-});

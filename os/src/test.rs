@@ -3,7 +3,7 @@ use crate::sbi::shutdown;
 
 #[cfg(test)]
 pub fn test_runner(tests: &[&dyn Fn() -> Result<&'static str, &'static str>]) {
-    println!("Running {} unit tests...", tests.len());
+    println!("Running {} tests...", tests.len());
     let mut succeed = 0;
     for test in tests {
         let res = test();
@@ -15,7 +15,7 @@ pub fn test_runner(tests: &[&dyn Fn() -> Result<&'static str, &'static str>]) {
         }
     }
     println!(
-        "{} unit test in total, {} succeed, {} failed",
+        "{} tests in total, {} succeed, {} failed",
         tests.len(),
         succeed,
         tests.len() - succeed
@@ -24,7 +24,7 @@ pub fn test_runner(tests: &[&dyn Fn() -> Result<&'static str, &'static str>]) {
 }
 
 #[macro_export]
-macro_rules! unit_test {
+macro_rules! test {
     ($func_name: ident, $func: block) => {
         #[test_case]
         fn $func_name() -> Result<&'static str, &'static str> {
@@ -39,7 +39,7 @@ macro_rules! unit_test {
 }
 
 #[macro_export]
-macro_rules! utest_assert {
+macro_rules! test_assert {
     ($assert_expr: expr, $info: literal) => {
         if !$assert_expr {
             return Err($info);
@@ -48,18 +48,6 @@ macro_rules! utest_assert {
     ($assert_expr: expr) => {
         if !$assert_expr {
             return Err(stringify!($assert_expr));
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! system_test {
-    ($func_name: ident) => {
-        #[cfg(feature = "system_test")]
-        {
-            print!("\x1b[1;33m");
-            $func_name();
-            print!("\x1b[0m");
         }
     };
 }

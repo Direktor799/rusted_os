@@ -1,5 +1,5 @@
 use super::address::{VPNRange, VirtPageNum};
-use super::frame::{FrameTracker, FRAME_ALLOCATOR};
+use super::frame_allocator::{FrameTracker, FRAME_ALLOCATOR};
 use crate::config::PAGE_SIZE;
 use alloc::collections::BTreeMap;
 use core::cmp::min;

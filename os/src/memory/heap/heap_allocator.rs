@@ -1,6 +1,8 @@
 //! BuddySystem堆内存分配器
 
 use super::linked_list::LinkedList;
+use crate::config::KERNEL_HEAP_SIZE;
+use crate::sync::uninit_cell::UninitCell;
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::cell::RefCell;
 use core::cmp::{max, min};
@@ -17,18 +19,15 @@ pub struct BuddySystemAllocator<const ORDER: usize> {
 }
 
 impl<const ORDER: usize> BuddySystemAllocator<ORDER> {
-    /// 创建空分配器
-    pub const fn new() -> Self {
-        Self {
+    /// 根据传入地址创建空分配器
+    pub fn new(start_addr: usize, size: usize) -> Self {
+        let mut allocator = Self {
             free_list: [LinkedList::new(); ORDER],
             total: 0,
             allocated: 0,
-        }
-    }
-
-    /// 根据传入地址初始化分配器
-    pub fn init(&mut self, start_addr: usize, size: usize) {
-        self.add(start_addr, start_addr + size);
+        };
+        allocator.add(start_addr, start_addr + size);
+        allocator
     }
 
     /// 向分配器中添加空闲地址
@@ -114,36 +113,32 @@ fn get_size(layout: Layout) -> usize {
 }
 
 /// 由于GlobalAlloc的限制导致无法使用mut方法，使用RefCell包装
-pub struct OutsideBuddySystemAllocator<const ORDER: usize>(RefCell<BuddySystemAllocator<ORDER>>);
+pub struct HeapAllocator(RefCell<BuddySystemAllocator<32>>);
 
-impl<const ORDER: usize> OutsideBuddySystemAllocator<ORDER> {
-    pub const fn new() -> Self {
-        OutsideBuddySystemAllocator(RefCell::new(BuddySystemAllocator::<ORDER>::new()))
-    }
-}
-
-unsafe impl<const ORDER: usize> GlobalAlloc for OutsideBuddySystemAllocator<ORDER> {
+unsafe impl GlobalAlloc for UninitCell<HeapAllocator> {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.borrow_mut().alloc(layout)
+        self.0.borrow_mut().alloc(layout)
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.borrow_mut().dealloc(ptr, layout)
+        self.0.borrow_mut().dealloc(ptr, layout)
     }
 }
 
-impl<const ORDER: usize> Deref for OutsideBuddySystemAllocator<ORDER> {
-    type Target = RefCell<BuddySystemAllocator<ORDER>>;
+impl Deref for HeapAllocator {
+    type Target = RefCell<BuddySystemAllocator<32>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
+/// 内核堆
+static mut KERNEL_HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
+
 /// 全局堆内存分配器
 #[global_allocator]
-pub static mut HEAP_ALLOCATOR: OutsideBuddySystemAllocator<32> =
-    OutsideBuddySystemAllocator::<32>::new();
+pub static mut HEAP_ALLOCATOR: UninitCell<HeapAllocator> = UninitCell::uninit();
 
 /// 全局堆内存分配失败处理
 #[alloc_error_handler]
@@ -151,17 +146,24 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("Allocation error: {:?}", layout);
 }
 
-unit_test!(test_heap_allocator, {
-    let mut allocator = BuddySystemAllocator::<32>::new();
+pub fn init() {
+    unsafe {
+        HEAP_ALLOCATOR = UninitCell::init(HeapAllocator(RefCell::new(
+            BuddySystemAllocator::<32>::new(KERNEL_HEAP.as_ptr() as usize, KERNEL_HEAP_SIZE),
+        )));
+    }
+}
+
+test!(test_heap_allocator, {
     let start_addr = 0x8100_0000;
     let end_addr = 0x8200_0000;
-    allocator.init(start_addr, end_addr - start_addr);
-    utest_assert!(
+    let mut allocator = BuddySystemAllocator::<32>::new(start_addr, end_addr - start_addr);
+    test_assert!(
         allocator.total == end_addr - start_addr && allocator.allocated == 0,
         "Init failed"
     );
     let size = get_size(Layout::new::<usize>());
-    utest_assert!(
+    test_assert!(
         allocator.free_list[size.trailing_zeros() as usize].is_empty(),
         "Allocator internel failure"
     );
@@ -170,12 +172,12 @@ unit_test!(test_heap_allocator, {
         if (size.trailing_zeros() as usize..(end_addr - start_addr).trailing_zeros() as usize)
             .contains(&order)
         {
-            utest_assert!(
+            test_assert!(
                 allocator.free_list[order].iter().count() == 1,
                 "Allocator internel failure"
             );
         } else {
-            utest_assert!(
+            test_assert!(
                 allocator.free_list[order].is_empty(),
                 "Allocator internel failure"
             );
@@ -184,16 +186,24 @@ unit_test!(test_heap_allocator, {
     allocator.dealloc(addr, Layout::new::<usize>());
     for order in 0..32 {
         if order == (end_addr - start_addr).trailing_zeros() as usize {
-            utest_assert!(
+            test_assert!(
                 allocator.free_list[order].iter().count() == 1,
                 "Allocator internel failure"
             );
         } else {
-            utest_assert!(
+            test_assert!(
                 allocator.free_list[order].is_empty(),
                 "Allocator internel failure"
             );
         }
     }
+    let v = alloc::vec![u32::MAX;100];
+    for num in v {
+        test_assert!(num == u32::MAX, "Allocation failed");
+    }
+    let s1 = alloc::string::String::from("1234");
+    let s2 = alloc::string::String::from("5678");
+    let s3 = s1 + &s2;
+    test_assert!(s3 == "12345678", "Allocation failed");
     Ok("passed")
 });

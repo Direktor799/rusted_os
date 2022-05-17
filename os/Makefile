@@ -57,19 +57,12 @@ run: build qemu
 
 debug: build qemudbg
 
-utest:
+test:
 	@cargo test --no-run
-	@$(OBJCOPY) target/riscv64gc-unknown-none-elf/debug/deps/rusted_os-de323c8ea6968b7e --strip-all -O binary target/riscv64gc-unknown-none-elf/debug/deps/utest
+	@$(OBJCOPY) target/riscv64gc-unknown-none-elf/debug/deps/rusted_os-de323c8ea6968b7e --strip-all -O binary target/riscv64gc-unknown-none-elf/debug/deps/test
 	@qemu-system-riscv64 \
 			-machine virt \
 			-nographic \
 			-bios default \
-			-kernel target/riscv64gc-unknown-none-elf/debug/deps/utest\
-			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
-			-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0\
-			-device loader,file=target/riscv64gc-unknown-none-elf/debug/deps/utest,addr=0x80200000
-
-stest:
-	@cargo build --features system_test
-	@$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
-	qemu
+			-kernel target/riscv64gc-unknown-none-elf/debug/deps/test\
+			-device loader,file=target/riscv64gc-unknown-none-elf/debug/deps/test,addr=0x80200000

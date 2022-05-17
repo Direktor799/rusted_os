@@ -4,6 +4,7 @@ use super::page_table::{PageTable, R, U, W, X};
 use super::segment::{MemorySegment, SegFlags};
 use crate::config::{MEMORY_END_ADDR, MMIO, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE};
 use crate::loader::elf_decoder::ElfFile;
+use crate::sync::uninit_cell::UninitCell;
 use alloc::{vec, vec::Vec};
 
 extern "C" {
@@ -21,7 +22,7 @@ extern "C" {
 }
 
 /// 内核地址空间
-pub static mut KERNEL_MEMORY_SET: Option<MemorySet> = None;
+pub static mut KERNEL_MEMORY_SET: UninitCell<MemorySet> = UninitCell::uninit();
 
 /// 地址空间
 pub struct MemorySet {
@@ -183,33 +184,13 @@ impl MemorySet {
             core::arch::asm!("csrw satp, {}", "sfence.vma", in(reg) satp);
         }
     }
-
-    // fn test(&self) {
-    //     let mut stack = vec![];
-    //     stack.push((0, self.page_table.root_ppn));
-    //     while !stack.is_empty() {
-    //         let (base, ppn) = stack.pop().unwrap();
-    //         for (i, pte) in ppn.get_pte_array().iter().enumerate() {
-    //             let vpn = (base << 9) + i;
-    //             if pte.flags() == 1 {
-    //                 stack.push((vpn, pte.ppn()));
-    //             } else if pte.flags() != 0 {
-    //                 println!(
-    //                     "{:?} -> {:?} {:b}",
-    //                     VirtPageNum(vpn),
-    //                     pte.ppn(),
-    //                     pte.flags()
-    //                 );
-    //             }
-    //         }
-    //     }
-    //     for vpn in VPNRange::new(
-    //         VirtAddr(kernel_start as usize).vpn(),
-    //         VirtAddr(kernel_end as usize).vpn(),
-    //     ) {
-    //         if let Some(pte) = self.page_table.translate(vpn) {
-    //             println!("{:?} -> {:?}  {:b}", vpn, pte.ppn(), pte.flags());
-    //         }
-    //     }
-    // }
 }
+
+pub fn init() {
+    unsafe {
+        KERNEL_MEMORY_SET = UninitCell::init(MemorySet::new_kernel());
+        KERNEL_MEMORY_SET.activate();
+    }
+}
+
+fn _test_kernel_memory_set() {}

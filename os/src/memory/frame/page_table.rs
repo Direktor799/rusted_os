@@ -1,7 +1,7 @@
 //! 页表子模块
 
 use super::address::*;
-use super::frame::{FrameTracker, FRAME_ALLOCATOR};
+use super::frame_allocator::{FrameTracker, FRAME_ALLOCATOR};
 use super::user_buffer::UserBuffer;
 use alloc::string::String;
 use alloc::vec;

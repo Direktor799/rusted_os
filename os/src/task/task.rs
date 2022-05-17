@@ -43,7 +43,7 @@ impl TaskControlBlock {
         let kernel_stack_end = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
         let kernel_stack_start = kernel_stack_end - KERNEL_STACK_SIZE;
         unsafe {
-            KERNEL_MEMORY_SET.as_mut().unwrap().insert_segment(
+            KERNEL_MEMORY_SET.insert_segment(
                 VirtAddr(kernel_stack_start).vpn(),
                 VirtAddr(kernel_stack_end).vpn(),
                 R | W,
@@ -57,7 +57,7 @@ impl TaskControlBlock {
         *trap_cx = Context::app_init_context(
             entry,
             user_sp,
-            unsafe { KERNEL_MEMORY_SET.as_ref().unwrap().satp_token() },
+            unsafe { KERNEL_MEMORY_SET.satp_token() },
             kernel_stack_end - 1,
             interrupt_handler as usize,
         );

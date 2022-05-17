@@ -6,15 +6,13 @@ mod task;
 use crate::interrupt::context::Context;
 use crate::interrupt::timer;
 use crate::loader::app_manager::APP_MANAGER;
+use crate::sync::uninit_cell::UninitCell;
 pub use context::TaskContext;
-use core::cell::RefCell;
 use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskPos, TaskStatus};
 
-pub struct TaskManager(pub Option<RefCell<TaskManagerInner>>);
-
-pub struct TaskManagerInner {
+pub struct TaskManager {
     pub current_task: Option<TaskControlBlock>,
     schd: SchdMaster,
 }
@@ -26,26 +24,25 @@ impl TaskManager {
             for i in 0..app_num {
                 let tcb = TaskControlBlock::new(APP_MANAGER.get_app_data(i), i);
                 if i == 0 {
-                    self.0.as_ref().unwrap().borrow_mut().current_task = Some(tcb);
+                    self.current_task = Some(tcb);
                 } else {
-                    self.0.as_ref().unwrap().borrow_mut().schd.add_new_task(tcb);
+                    self.schd.add_new_task(tcb);
                 }
             }
         }
     }
 
-    fn switch_to_next_task(&self) {
-        let mut inner = self.0.as_ref().unwrap().borrow_mut();
-        let mut current_task = inner.current_task.take().expect("[kernel] No current task");
+    fn switch_to_next_task(&mut self) {
+        let mut current_task = self.current_task.take().expect("[kernel] No current task");
         let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
-        let mut next_task = inner
+        let mut next_task = self
             .schd
             .get_next_and_requeue_current(current_task)
             .expect("[kernel] All tasks have completed!");
         let next_task_cx = &mut next_task.task_cx as *mut TaskContext;
         timer::set_next_timeout(get_time_slice(next_task.task_pos));
-        inner.current_task = Some(next_task);
-        drop(inner);
+        self.current_task = Some(next_task);
+        drop(self);
         unsafe {
             // println!(
             //     "switching to 0x{:x}",
@@ -56,21 +53,18 @@ impl TaskManager {
         unreachable!();
     }
 
-    fn set_current_task_status(&self, stat: TaskStatus) {
-        let mut inner = self.0.as_ref().unwrap().borrow_mut();
-        if let Some(current_task) = inner.current_task.as_mut() {
+    fn set_current_task_status(&mut self, stat: TaskStatus) {
+        if let Some(current_task) = self.current_task.as_mut() {
             (*current_task).task_status = stat;
         }
     }
 
     pub fn get_current_token(&self) -> usize {
-        let inner = self.0.as_ref().unwrap().borrow();
-        let current = inner.current_task.as_ref().unwrap();
+        let current = self.current_task.as_ref().unwrap();
         current.get_user_token()
     }
     pub fn get_current_trap_cx(&self) -> &mut Context {
-        let inner = self.0.as_ref().unwrap().borrow();
-        let current = inner.current_task.as_ref().unwrap();
+        let current = self.current_task.as_ref().unwrap();
         current.get_trap_cx()
     }
     // pub fn current_fd_table(&self) -> &mut Vec<Option<Arc<dyn File>>> {
@@ -86,7 +80,7 @@ impl TaskManager {
     // }
 }
 
-pub static mut TASK_MANAGER: TaskManager = TaskManager(None);
+pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
 
 fn set_current_task_status(stat: TaskStatus) {
     unsafe {
@@ -117,10 +111,10 @@ pub fn schedule_callback() {
 
 pub fn init() {
     unsafe {
-        TASK_MANAGER = TaskManager(Some(RefCell::new(TaskManagerInner {
+        TASK_MANAGER = UninitCell::init(TaskManager {
             current_task: None,
             schd: SchdMaster::new(),
-        })));
+        });
         TASK_MANAGER.init();
         println!("mod task initialized!");
     }
@@ -128,10 +122,8 @@ pub fn init() {
 
 pub fn run() {
     unsafe {
-        let mut task_manager = TASK_MANAGER.0.as_mut().unwrap().borrow_mut();
-        let current_task = task_manager.current_task.as_mut().unwrap();
+        let current_task = TASK_MANAGER.current_task.as_mut().unwrap();
         let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
-        drop(task_manager);
         let mut _unused = TaskContext::zero_init();
         // println!(
         //     "first time switching to 0x{:x}",
