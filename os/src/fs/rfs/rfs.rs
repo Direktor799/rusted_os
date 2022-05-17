@@ -9,7 +9,7 @@ use super::{
 };
 use super::{DataBlock, BLOCK_SZ};
 use crate::sync::mutex::Mutex;
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 use core::mem::size_of;
 
 /// 块内Inode数量
@@ -17,7 +17,7 @@ const INODES_PER_BLOCK: u32 = (BLOCK_SZ / size_of::<Inode>()) as u32;
 
 /// rfs文件系统
 pub struct RustedFileSystem {
-    pub block_device: Arc<dyn BlockDevice>,
+    pub block_device: Rc<dyn BlockDevice>,
     pub inode_bitmap: Bitmap,
     pub data_bitmap: Bitmap,
     inode_start_block: u32,
@@ -27,10 +27,10 @@ pub struct RustedFileSystem {
 impl RustedFileSystem {
     /// 根据参数在设备上创建新的文件系统
     pub fn format(
-        block_device: Arc<dyn BlockDevice>,
+        block_device: Rc<dyn BlockDevice>,
         total_blocks: u32,
         inode_bitmap_blocks: u32,
-    ) -> Arc<Mutex<Self>> {
+    ) -> Rc<Mutex<Self>> {
         // 计算磁盘布局
         let inode_bitmap = Bitmap::new(1, inode_bitmap_blocks as usize);
         let inode_blocks =
@@ -45,7 +45,7 @@ impl RustedFileSystem {
             data_bitmap_blocks as usize,
         );
         let mut rfs = Self {
-            block_device: Arc::clone(&block_device),
+            block_device: Rc::clone(&block_device),
             inode_bitmap,
             data_bitmap,
             inode_start_block: 1 + inode_bitmap_blocks,
@@ -53,7 +53,7 @@ impl RustedFileSystem {
         };
         // 清空数据
         for i in 0..total_blocks {
-            get_block_cache(i as usize, Arc::clone(&block_device))
+            get_block_cache(i as usize, Rc::clone(&block_device))
                 .lock()
                 .modify(0, |data_block: &mut DataBlock| {
                     for byte in data_block.iter_mut() {
@@ -62,7 +62,7 @@ impl RustedFileSystem {
                 });
         }
         // 初始化超级块
-        get_block_cache(0, Arc::clone(&block_device)).lock().modify(
+        get_block_cache(0, Rc::clone(&block_device)).lock().modify(
             0,
             |super_block: &mut SuperBlock| {
                 super_block.init(
@@ -77,20 +77,20 @@ impl RustedFileSystem {
         // 初始化根Inode
         let root_inode = rfs.alloc_inode();
         let (root_inode_block_id, root_inode_offset) = rfs.get_disk_inode_pos(root_inode);
-        get_block_cache(root_inode_block_id as usize, Arc::clone(&block_device))
+        get_block_cache(root_inode_block_id as usize, Rc::clone(&block_device))
             .lock()
             .modify(root_inode_offset, |disk_inode: &mut Inode| {
                 disk_inode.init(InodeType::Directory);
             });
         // 立刻写回
         block_cache_sync_all();
-        Arc::new(Mutex::new(rfs))
+        Rc::new(Mutex::new(rfs))
     }
 
     /// 打开设备上的文件系统
-    pub fn open(block_device: Arc<dyn BlockDevice>) -> Arc<Mutex<Self>> {
+    pub fn open(block_device: Rc<dyn BlockDevice>) -> Rc<Mutex<Self>> {
         // 根据超级块信息初始化文件系统
-        get_block_cache(0, Arc::clone(&block_device))
+        get_block_cache(0, Rc::clone(&block_device))
             .lock()
             .read(0, |super_block: &SuperBlock| {
                 assert!(super_block.is_valid(), "Error loading RFS!");
@@ -105,16 +105,16 @@ impl RustedFileSystem {
                     inode_start_block: 1 + super_block.inode_bitmap_blocks,
                     data_start_block: 1 + inode_total_blocks + super_block.data_bitmap_blocks,
                 };
-                Arc::new(Mutex::new(rfs))
+                Rc::new(Mutex::new(rfs))
             })
     }
 
-    pub fn root_inode(rfs: &Arc<Mutex<Self>>) -> InodeHandler {
-        let block_device = Arc::clone(&rfs.lock().block_device);
+    pub fn root_inode(rfs: &Rc<Mutex<Self>>) -> InodeHandler {
+        let block_device = Rc::clone(&rfs.lock().block_device);
         // acquire rfs lock temporarily
         let (block_id, block_offset) = rfs.lock().get_disk_inode_pos(0);
         // release rfs lock
-        InodeHandler::new(block_id, block_offset, Arc::clone(rfs), block_device)
+        InodeHandler::new(block_id, block_offset, Rc::clone(rfs), block_device)
     }
 
     /// 根据Inode编号获取在磁盘上的块号和偏移
@@ -155,7 +155,7 @@ impl RustedFileSystem {
 
     /// 回收数据块
     pub fn dealloc_data(&mut self, block_id: u32) {
-        get_block_cache(block_id as usize, Arc::clone(&self.block_device))
+        get_block_cache(block_id as usize, Rc::clone(&self.block_device))
             .lock()
             .modify(0, |data_block: &mut DataBlock| {
                 data_block.iter_mut().for_each(|p| {

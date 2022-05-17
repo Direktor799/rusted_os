@@ -13,7 +13,7 @@ type DataBlock = [u8; BLOCK_SZ];
 use crate::drivers::BLOCK_DEVICE;
 use crate::sync::mutex::Mutex;
 use crate::sync::uninit_cell::UninitCell;
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
 use block_cache::BlockCacheManager;
@@ -21,9 +21,9 @@ use block_cache::BLOCK_CACHE_MANAGER;
 pub use rfs::RustedFileSystem;
 pub use vfs::InodeHandler;
 
-pub static mut ROOT_INODE: UninitCell<Arc<InodeHandler>> = UninitCell::uninit();
+pub static mut ROOT_INODE: UninitCell<Rc<InodeHandler>> = UninitCell::uninit();
 
-pub fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
+pub fn find_inode_by_path(path: &str) -> Option<Rc<InodeHandler>> {
     let root_inode = unsafe { ROOT_INODE.clone() };
     path.split('/').fold(Some(root_inode), |node, name| {
         if name.len() > 0 {
@@ -33,7 +33,7 @@ pub fn find_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
         }
     })
 }
-pub fn find_real_inode_by_path(path: &str) -> Option<Arc<InodeHandler>> {
+pub fn find_real_inode_by_path(path: &str) -> Option<Rc<InodeHandler>> {
     let root_inode = unsafe { ROOT_INODE.clone() };
     path.split('/').fold(Some(root_inode), |node, name| {
         if name.len() > 0 {
@@ -90,7 +90,7 @@ pub fn mkdir_by_path(path: &str) {
     };
 }
 
-pub fn touch_by_path(path: &str) -> Option<Arc<InodeHandler>> {
+pub fn touch_by_path(path: &str) -> Option<Rc<InodeHandler>> {
     let (parent_path, target) = path.rsplit_once('/').expect("Invalid path");
     let parent_inode = find_inode_by_path(parent_path).expect("Invalid parent directory");
     parent_inode.create(target, layout::InodeType::File)
@@ -119,7 +119,7 @@ pub fn init() {
     block_cache::init();
     unsafe {
         let rfs = RustedFileSystem::open(BLOCK_DEVICE.clone());
-        ROOT_INODE = UninitCell::init(Arc::new(RustedFileSystem::root_inode(&rfs)));
+        ROOT_INODE = UninitCell::init(Rc::new(RustedFileSystem::root_inode(&rfs)));
     }
 }
 
@@ -127,7 +127,7 @@ pub fn format() {
     block_cache::init();
     unsafe {
         let rfs = RustedFileSystem::format(BLOCK_DEVICE.clone(), 4096, 1);
-        ROOT_INODE = UninitCell::init(Arc::new(RustedFileSystem::root_inode(&rfs)));
+        ROOT_INODE = UninitCell::init(Rc::new(RustedFileSystem::root_inode(&rfs)));
         ROOT_INODE.set_default_dirent(ROOT_INODE.get_inode_id());
     }
 }

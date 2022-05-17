@@ -1,7 +1,7 @@
 //! 磁盘布局子模块
 
 use super::{block_cache::get_block_cache, block_dev::BlockDevice, DataBlock, BLOCK_SZ};
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter, Result};
 use core::mem::size_of;
@@ -155,14 +155,14 @@ impl Inode {
     }
 
     /// 根据内部块id获取在设备上的块id
-    pub fn get_block_id(&self, inner_id: u32, block_device: &Arc<dyn BlockDevice>) -> u32 {
+    pub fn get_block_id(&self, inner_id: u32, block_device: &Rc<dyn BlockDevice>) -> u32 {
         let inner_id = inner_id as usize;
         if inner_id < INODE_DIRECT_BOUND {
             // 直接块
             self.direct[inner_id]
         } else if inner_id < INODE_INDIRECT1_BOUND {
             // 一级间接块
-            get_block_cache(self.indirect1 as usize, Arc::clone(block_device))
+            get_block_cache(self.indirect1 as usize, Rc::clone(block_device))
                 .lock()
                 .read(0, |indirect_block: &IndirectBlock| {
                     indirect_block[inner_id - INODE_DIRECT_BOUND]
@@ -170,12 +170,12 @@ impl Inode {
         } else {
             // 二级间接块
             let last = inner_id - INODE_INDIRECT1_BOUND;
-            let sub_indirect1 = get_block_cache(self.indirect2 as usize, Arc::clone(block_device))
+            let sub_indirect1 = get_block_cache(self.indirect2 as usize, Rc::clone(block_device))
                 .lock()
                 .read(0, |indirect2: &IndirectBlock| {
                     indirect2[last / INODE_INDIRECT1_COUNT]
                 });
-            get_block_cache(sub_indirect1 as usize, Arc::clone(block_device))
+            get_block_cache(sub_indirect1 as usize, Rc::clone(block_device))
                 .lock()
                 .read(0, |indirect1: &IndirectBlock| {
                     indirect1[last % INODE_INDIRECT1_COUNT]
@@ -188,7 +188,7 @@ impl Inode {
         &mut self,
         new_size: u32,
         new_blocks: Vec<u32>,
-        block_device: &Arc<dyn BlockDevice>,
+        block_device: &Rc<dyn BlockDevice>,
     ) {
         let mut current_blocks = self.data_blocks() as usize;
         self.size = new_size;
@@ -208,7 +208,7 @@ impl Inode {
             self.indirect1 = new_blocks.next().unwrap();
         }
         // 扩充一级间接块
-        get_block_cache(self.indirect1 as usize, Arc::clone(block_device))
+        get_block_cache(self.indirect1 as usize, Rc::clone(block_device))
             .lock()
             .modify(0, |indirect1: &mut IndirectBlock| {
                 while current_blocks < total_blocks.min(INODE_INDIRECT1_BOUND) {
@@ -226,7 +226,7 @@ impl Inode {
             self.indirect2 = new_blocks.next().unwrap();
         }
         // 扩充二级间接块
-        get_block_cache(self.indirect2 as usize, Arc::clone(block_device))
+        get_block_cache(self.indirect2 as usize, Rc::clone(block_device))
             .lock()
             .modify(0, |indirect2: &mut IndirectBlock| {
                 while current_blocks < total_blocks {
@@ -241,7 +241,7 @@ impl Inode {
                     // 扩充sub一级间接块中的直接块
                     get_block_cache(
                         indirect2[curr_sub_indirect1] as usize,
-                        Arc::clone(block_device),
+                        Rc::clone(block_device),
                     )
                     .lock()
                     .modify(0, |indirect1: &mut IndirectBlock| {
@@ -253,11 +253,7 @@ impl Inode {
     }
 
     /// 减少Inode管理的空间大小
-    pub fn decrease_size(
-        &mut self,
-        new_size: u32,
-        block_device: &Arc<dyn BlockDevice>,
-    ) -> Vec<u32> {
+    pub fn decrease_size(&mut self, new_size: u32, block_device: &Rc<dyn BlockDevice>) -> Vec<u32> {
         let mut v: Vec<u32> = Vec::new();
         let current_blocks = self.data_blocks() as usize;
         self.size = new_size;
@@ -273,7 +269,7 @@ impl Inode {
             return v;
         }
         // 回收一级间接块
-        get_block_cache(self.indirect1 as usize, Arc::clone(block_device))
+        get_block_cache(self.indirect1 as usize, Rc::clone(block_device))
             .lock()
             .read(0, |indirect1: &IndirectBlock| {
                 while recycled_blocks < current_blocks.min(INODE_INDIRECT1_BOUND) {
@@ -288,7 +284,7 @@ impl Inode {
             return v;
         }
         // 回收二级间接块
-        get_block_cache(self.indirect2 as usize, Arc::clone(block_device))
+        get_block_cache(self.indirect2 as usize, Rc::clone(block_device))
             .lock()
             .read(0, |indirect2: &IndirectBlock| {
                 while recycled_blocks < current_blocks {
@@ -303,7 +299,7 @@ impl Inode {
                     // 回收sub一级间接块中的直接块
                     get_block_cache(
                         indirect2[curr_sub_indirect1] as usize,
-                        Arc::clone(block_device),
+                        Rc::clone(block_device),
                     )
                     .lock()
                     .read(0, |indirect1: &IndirectBlock| {
@@ -321,7 +317,7 @@ impl Inode {
         &self,
         offset: usize,
         buf: &mut [u8],
-        block_device: &Arc<dyn BlockDevice>,
+        block_device: &Rc<dyn BlockDevice>,
     ) -> usize {
         let mut curr_start = offset;
         let end = (offset + buf.len()).min(self.size as usize);
@@ -338,7 +334,7 @@ impl Inode {
             let dst = &mut buf[read_size..read_size + curr_block_read_size];
             get_block_cache(
                 self.get_block_id(curr_block as u32, block_device) as usize,
-                Arc::clone(block_device),
+                Rc::clone(block_device),
             )
             .lock()
             .read(0, |data_block: &DataBlock| {
@@ -362,7 +358,7 @@ impl Inode {
         &mut self,
         offset: usize,
         buf: &[u8],
-        block_device: &Arc<dyn BlockDevice>,
+        block_device: &Rc<dyn BlockDevice>,
     ) -> usize {
         let mut curr_start = offset;
         let end = (offset + buf.len()).min(self.size as usize);
@@ -376,7 +372,7 @@ impl Inode {
             let curr_block_write_size = curr_block_end - curr_start;
             get_block_cache(
                 self.get_block_id(curr_block as u32, block_device) as usize,
-                Arc::clone(block_device),
+                Rc::clone(block_device),
             )
             .lock()
             .modify(0, |data_block: &mut DataBlock| {

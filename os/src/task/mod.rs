@@ -67,7 +67,7 @@ impl TaskManager {
         let current = self.current_task.as_ref().unwrap();
         current.get_trap_cx()
     }
-    // pub fn current_fd_table(&self) -> &mut Vec<Option<Arc<dyn File>>> {
+    // pub fn current_fd_table(&self) -> &mut Vec<Option<Rc<dyn File>>> {
     //     let inner = self.0.as_ref().unwrap().borrow();
     //     let current = inner.current_task.as_ref().unwrap();
     //     current.get_fd_table()

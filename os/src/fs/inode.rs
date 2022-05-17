@@ -3,7 +3,7 @@ use core::cell::RefCell;
 use super::rfs::{find_inode_by_path, touch_by_path, InodeHandler};
 use super::File;
 use crate::memory::frame::user_buffer::UserBuffer;
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 use alloc::vec::Vec;
 pub struct OSInode {
     readable: bool,
@@ -12,10 +12,10 @@ pub struct OSInode {
 }
 pub struct OSInodeInner {
     offset: usize,
-    inode: Arc<InodeHandler>,
+    inode: Rc<InodeHandler>,
 }
 impl OSInode {
-    pub fn new(readable: bool, writable: bool, inode: Arc<InodeHandler>) -> Self {
+    pub fn new(readable: bool, writable: bool, inode: Rc<InodeHandler>) -> Self {
         Self {
             readable,
             writable,
@@ -63,23 +63,23 @@ impl OpenFlags {
     }
 }
 
-pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
+pub fn open_file(name: &str, flags: OpenFlags) -> Option<Rc<OSInode>> {
     let (readable, writable) = flags.read_write();
     if flags.contains(CREATE) {
         if let Some(inode) = find_inode_by_path(name) {
             // clear size
             inode.clear();
-            Some(Arc::new(OSInode::new(readable, writable, inode)))
+            Some(Rc::new(OSInode::new(readable, writable, inode)))
         } else {
             // create file
-            touch_by_path(name).map(|inode| Arc::new(OSInode::new(readable, writable, inode)))
+            touch_by_path(name).map(|inode| Rc::new(OSInode::new(readable, writable, inode)))
         }
     } else {
         find_inode_by_path(name).map(|inode| {
             if flags.contains(TRUNC) {
                 inode.clear();
             }
-            Arc::new(OSInode::new(readable, writable, inode))
+            Rc::new(OSInode::new(readable, writable, inode))
         })
     }
 }

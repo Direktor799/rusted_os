@@ -7,12 +7,12 @@ use alloc::vec::Vec;
 pub mod virtio_block;
 use crate::fs::rfs::block_dev::BlockDevice;
 use crate::sync::uninit_cell::UninitCell;
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 use virtio_block::VirtIOBlock;
 
 static QUEUE_FRAMES: Mutex<Vec<FrameTracker>> = Mutex::new(Vec::new());
 
-pub static mut BLOCK_DEVICE: UninitCell<Arc<dyn BlockDevice>> = UninitCell::uninit();
+pub static mut BLOCK_DEVICE: UninitCell<Rc<dyn BlockDevice>> = UninitCell::uninit();
 
 #[no_mangle]
 pub extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {
@@ -50,7 +50,7 @@ pub extern "C" fn virtio_virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
 
 pub fn init() {
     unsafe {
-        BLOCK_DEVICE = UninitCell::init(Arc::new(VirtIOBlock::new()));
+        BLOCK_DEVICE = UninitCell::init(Rc::new(VirtIOBlock::new()));
     }
     println!("mod drivers initialized!");
 }

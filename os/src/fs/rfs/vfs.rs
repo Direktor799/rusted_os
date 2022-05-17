@@ -5,16 +5,16 @@ use super::{
     rfs::RustedFileSystem,
 };
 use crate::sync::mutex::{Mutex, MutexGuard};
+use alloc::rc::Rc;
 use alloc::string::String;
-use alloc::sync::Arc;
 use alloc::vec::Vec;
 
 /// Inode句柄
 pub struct InodeHandler {
     block_id: u32,
     block_offset: usize,
-    fs: Arc<Mutex<RustedFileSystem>>,
-    block_device: Arc<dyn BlockDevice>,
+    fs: Rc<Mutex<RustedFileSystem>>,
+    block_device: Rc<dyn BlockDevice>,
 }
 
 impl InodeHandler {
@@ -22,8 +22,8 @@ impl InodeHandler {
     pub fn new(
         block_id: u32,
         block_offset: usize,
-        fs: Arc<Mutex<RustedFileSystem>>,
-        block_device: Arc<dyn BlockDevice>,
+        fs: Rc<Mutex<RustedFileSystem>>,
+        block_device: Rc<dyn BlockDevice>,
     ) -> Self {
         Self {
             block_id: block_id,
@@ -35,14 +35,14 @@ impl InodeHandler {
 
     /// 读取对应的Inode
     fn read_disk_inode<V>(&self, f: impl FnOnce(&Inode) -> V) -> V {
-        get_block_cache(self.block_id as usize, Arc::clone(&self.block_device))
+        get_block_cache(self.block_id as usize, Rc::clone(&self.block_device))
             .lock()
             .read(self.block_offset, f)
     }
 
     /// 修改对应的Inode
     fn modify_disk_inode<V>(&self, f: impl FnOnce(&mut Inode) -> V) -> V {
-        get_block_cache(self.block_id as usize, Arc::clone(&self.block_device))
+        get_block_cache(self.block_id as usize, Rc::clone(&self.block_device))
             .lock()
             .modify(self.block_offset, f)
     }
@@ -75,12 +75,12 @@ impl InodeHandler {
         None
     }
 
-    pub fn find(&self, name: &str) -> Option<Arc<InodeHandler>> {
+    pub fn find(&self, name: &str) -> Option<Rc<InodeHandler>> {
         let fs = self.fs.lock();
         self.read_disk_inode(|disk_inode| {
             self.find_inode_id(name, disk_inode).map(|inode_id| {
                 let (block_id, block_offset) = fs.get_disk_inode_pos(inode_id);
-                Arc::new(Self::new(
+                Rc::new(Self::new(
                     block_id,
                     block_offset,
                     self.fs.clone(),
@@ -119,7 +119,7 @@ impl InodeHandler {
             .into_iter()
             .for_each(|block_id| fs.dealloc_data(block_id));
     }
-    pub fn create(&self, name: &str, filetype: InodeType) -> Option<Arc<InodeHandler>> {
+    pub fn create(&self, name: &str, filetype: InodeType) -> Option<Rc<InodeHandler>> {
         let mut fs = self.fs.lock();
         let op = |dir_inode: &Inode| {
             // assert it is a directory
@@ -135,7 +135,7 @@ impl InodeHandler {
         let new_inode_id = fs.alloc_inode();
         // initialize inode
         let (new_inode_block_id, new_inode_block_offset) = fs.get_disk_inode_pos(new_inode_id);
-        get_block_cache(new_inode_block_id as usize, Arc::clone(&self.block_device))
+        get_block_cache(new_inode_block_id as usize, Rc::clone(&self.block_device))
             .lock()
             .modify(new_inode_block_offset, |new_inode: &mut Inode| {
                 new_inode.init(filetype);
@@ -159,7 +159,7 @@ impl InodeHandler {
         block_cache_sync_all();
         // return inode
         if filetype != InodeType::Directory {
-            return Some(Arc::new(Self::new(
+            return Some(Rc::new(Self::new(
                 block_id,
                 block_offset,
                 self.fs.clone(),
@@ -177,7 +177,7 @@ impl InodeHandler {
                 disk_inode.read_at(0, dirent_self.as_bytes_mut(), &self.block_device)
             });
             // new_inode_handler.create_default_for_dir(dirent_self.inode_number(), new_inode_id);
-            Some(Arc::new(new_inode_handler))
+            Some(Rc::new(new_inode_handler))
         }
     }
     pub fn set_default_dirent(&self, parent_inode_id: u32) {

@@ -4,19 +4,19 @@ use super::{block_dev::BlockDevice, BLOCK_SZ};
 use crate::sync::mutex::Mutex;
 use crate::sync::uninit_cell::UninitCell;
 use alloc::collections::VecDeque;
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 
 /// 内存中的块缓存
 pub struct BlockCache {
     cache: [u8; BLOCK_SZ],
     modified: bool,
-    device: Arc<dyn BlockDevice>,
+    device: Rc<dyn BlockDevice>,
     block_id: usize,
 }
 
 impl BlockCache {
     /// 从磁盘块读到缓存中
-    pub fn new(block_id: usize, device: Arc<dyn BlockDevice>) -> Self {
+    pub fn new(block_id: usize, device: Rc<dyn BlockDevice>) -> Self {
         let mut cache = [0u8; BLOCK_SZ];
         device.read_block(block_id, &mut cache);
         Self {
@@ -85,7 +85,7 @@ const BLOCK_CACHE_SIZE: usize = 16;
 
 /// 块缓存管理器
 pub struct BlockCacheManager {
-    queue: VecDeque<(usize, Arc<Mutex<BlockCache>>)>,
+    queue: VecDeque<(usize, Rc<Mutex<BlockCache>>)>,
 }
 
 impl BlockCacheManager {
@@ -100,10 +100,10 @@ impl BlockCacheManager {
     pub fn get_block_cache(
         &mut self,
         block_id: usize,
-        device: Arc<dyn BlockDevice>,
-    ) -> Arc<Mutex<BlockCache>> {
+        device: Rc<dyn BlockDevice>,
+    ) -> Rc<Mutex<BlockCache>> {
         if let Some(pair) = self.queue.iter().find(|pair| pair.0 == block_id) {
-            Arc::clone(&pair.1)
+            Rc::clone(&pair.1)
         } else {
             // 需要替换
             if self.queue.len() == BLOCK_CACHE_SIZE {
@@ -112,7 +112,7 @@ impl BlockCacheManager {
                     .queue
                     .iter()
                     .enumerate()
-                    .find(|(_, pair)| Arc::strong_count(&pair.1) == 1)
+                    .find(|(_, pair)| Rc::strong_count(&pair.1) == 1)
                 {
                     self.queue.remove(idx);
                 } else {
@@ -120,8 +120,8 @@ impl BlockCacheManager {
                 }
             }
             // 加载新的缓存
-            let block_cache = Arc::new(Mutex::new(BlockCache::new(block_id, Arc::clone(&device))));
-            self.queue.push_back((block_id, Arc::clone(&block_cache)));
+            let block_cache = Rc::new(Mutex::new(BlockCache::new(block_id, Rc::clone(&device))));
+            self.queue.push_back((block_id, Rc::clone(&block_cache)));
             block_cache
         }
     }
@@ -131,7 +131,7 @@ impl BlockCacheManager {
 pub static mut BLOCK_CACHE_MANAGER: UninitCell<Mutex<BlockCacheManager>> = UninitCell::uninit();
 
 /// 获取块缓存
-pub fn get_block_cache(block_id: usize, device: Arc<dyn BlockDevice>) -> Arc<Mutex<BlockCache>> {
+pub fn get_block_cache(block_id: usize, device: Rc<dyn BlockDevice>) -> Rc<Mutex<BlockCache>> {
     unsafe { BLOCK_CACHE_MANAGER.lock().get_block_cache(block_id, device) }
 }
 
