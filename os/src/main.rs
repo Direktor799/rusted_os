@@ -21,6 +21,7 @@ mod memory;
 mod panic;
 mod sbi;
 mod sync;
+mod os_fs;
 mod sys_call;
 mod task;
 use core::arch::global_asm;
