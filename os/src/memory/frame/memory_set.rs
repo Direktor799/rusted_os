@@ -25,6 +25,7 @@ extern "C" {
 pub static mut KERNEL_MEMORY_SET: UninitCell<MemorySet> = UninitCell::uninit();
 
 /// 地址空间
+#[derive(Debug)]
 pub struct MemorySet {
     page_table: PageTable,
     segments: Vec<MemorySegment>,

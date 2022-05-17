@@ -112,7 +112,7 @@ impl VirtPageNum {
 }
 
 /// 虚拟页号区间迭代器
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct VPNRange {
     end_vpn: VirtPageNum,
     curr_vpn: VirtPageNum,

@@ -32,6 +32,7 @@ pub type PTEFlags = u8;
 pub struct PageTableEntry(usize);
 
 /// SV39页表
+#[derive(Debug)]
 pub struct PageTable {
     root_ppn: PhysPageNum,
     frames: Vec<FrameTracker>,

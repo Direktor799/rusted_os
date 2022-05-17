@@ -6,6 +6,7 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 /// 物理页帧（方便通过RAII自动管理内存）
+#[derive(Debug)]
 pub struct FrameTracker(PhysPageNum);
 
 impl FrameTracker {
