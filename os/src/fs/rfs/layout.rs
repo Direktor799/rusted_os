@@ -163,7 +163,7 @@ impl Inode {
         } else if inner_id < INODE_INDIRECT1_BOUND {
             // 一级间接块
             get_block_cache(self.indirect1 as usize, Rc::clone(block_device))
-                .lock()
+                .borrow()
                 .read(0, |indirect_block: &IndirectBlock| {
                     indirect_block[inner_id - INODE_DIRECT_BOUND]
                 })
@@ -171,12 +171,12 @@ impl Inode {
             // 二级间接块
             let last = inner_id - INODE_INDIRECT1_BOUND;
             let sub_indirect1 = get_block_cache(self.indirect2 as usize, Rc::clone(block_device))
-                .lock()
+                .borrow()
                 .read(0, |indirect2: &IndirectBlock| {
                     indirect2[last / INODE_INDIRECT1_COUNT]
                 });
             get_block_cache(sub_indirect1 as usize, Rc::clone(block_device))
-                .lock()
+                .borrow()
                 .read(0, |indirect1: &IndirectBlock| {
                     indirect1[last % INODE_INDIRECT1_COUNT]
                 })
@@ -209,7 +209,7 @@ impl Inode {
         }
         // 扩充一级间接块
         get_block_cache(self.indirect1 as usize, Rc::clone(block_device))
-            .lock()
+            .borrow_mut()
             .modify(0, |indirect1: &mut IndirectBlock| {
                 while current_blocks < total_blocks.min(INODE_INDIRECT1_BOUND) {
                     indirect1[current_blocks as usize - INODE_DIRECT_BOUND] =
@@ -227,7 +227,7 @@ impl Inode {
         }
         // 扩充二级间接块
         get_block_cache(self.indirect2 as usize, Rc::clone(block_device))
-            .lock()
+            .borrow_mut()
             .modify(0, |indirect2: &mut IndirectBlock| {
                 while current_blocks < total_blocks {
                     let curr_sub_indirect1 =
@@ -243,7 +243,7 @@ impl Inode {
                         indirect2[curr_sub_indirect1] as usize,
                         Rc::clone(block_device),
                     )
-                    .lock()
+                    .borrow_mut()
                     .modify(0, |indirect1: &mut IndirectBlock| {
                         indirect1[curr_sub_direct] = new_blocks.next().unwrap();
                     });
@@ -270,7 +270,7 @@ impl Inode {
         }
         // 回收一级间接块
         get_block_cache(self.indirect1 as usize, Rc::clone(block_device))
-            .lock()
+            .borrow()
             .read(0, |indirect1: &IndirectBlock| {
                 while recycled_blocks < current_blocks.min(INODE_INDIRECT1_BOUND) {
                     v.push(indirect1[recycled_blocks - INODE_DIRECT_BOUND]);
@@ -285,7 +285,7 @@ impl Inode {
         }
         // 回收二级间接块
         get_block_cache(self.indirect2 as usize, Rc::clone(block_device))
-            .lock()
+            .borrow()
             .read(0, |indirect2: &IndirectBlock| {
                 while recycled_blocks < current_blocks {
                     let curr_sub_indirect1 =
@@ -301,7 +301,7 @@ impl Inode {
                         indirect2[curr_sub_indirect1] as usize,
                         Rc::clone(block_device),
                     )
-                    .lock()
+                    .borrow()
                     .read(0, |indirect1: &IndirectBlock| {
                         v.push(indirect1[curr_sub_direct]);
                     });
@@ -336,7 +336,7 @@ impl Inode {
                 self.get_block_id(curr_block as u32, block_device) as usize,
                 Rc::clone(block_device),
             )
-            .lock()
+            .borrow()
             .read(0, |data_block: &DataBlock| {
                 let src = &data_block
                     [curr_start % BLOCK_SZ..curr_start % BLOCK_SZ + curr_block_read_size];
@@ -374,7 +374,7 @@ impl Inode {
                 self.get_block_id(curr_block as u32, block_device) as usize,
                 Rc::clone(block_device),
             )
-            .lock()
+            .borrow_mut()
             .modify(0, |data_block: &mut DataBlock| {
                 let src = &buf[write_size..write_size + curr_block_write_size];
                 let dst = &mut data_block

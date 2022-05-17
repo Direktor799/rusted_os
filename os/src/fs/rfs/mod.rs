@@ -11,13 +11,13 @@ pub const BLOCK_SZ: usize = 512;
 type DataBlock = [u8; BLOCK_SZ];
 
 use crate::drivers::BLOCK_DEVICE;
-use crate::sync::mutex::Mutex;
 use crate::sync::uninit_cell::UninitCell;
 use alloc::rc::Rc;
 use alloc::vec;
 use alloc::vec::Vec;
 use block_cache::BlockCacheManager;
 use block_cache::BLOCK_CACHE_MANAGER;
+use core::cell::RefCell;
 pub use rfs::RustedFileSystem;
 pub use vfs::InodeHandler;
 

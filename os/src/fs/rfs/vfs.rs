@@ -4,16 +4,16 @@ use super::{
     layout::{Dirent, Inode, InodeType, DIRENT_SZ},
     rfs::RustedFileSystem,
 };
-use crate::sync::mutex::{Mutex, MutexGuard};
 use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::vec::Vec;
+use core::cell::RefCell;
 
 /// Inode句柄
 pub struct InodeHandler {
     block_id: u32,
     block_offset: usize,
-    fs: Rc<Mutex<RustedFileSystem>>,
+    fs: Rc<RefCell<RustedFileSystem>>,
     block_device: Rc<dyn BlockDevice>,
 }
 
@@ -22,7 +22,7 @@ impl InodeHandler {
     pub fn new(
         block_id: u32,
         block_offset: usize,
-        fs: Rc<Mutex<RustedFileSystem>>,
+        fs: Rc<RefCell<RustedFileSystem>>,
         block_device: Rc<dyn BlockDevice>,
     ) -> Self {
         Self {
@@ -36,14 +36,14 @@ impl InodeHandler {
     /// 读取对应的Inode
     fn read_disk_inode<V>(&self, f: impl FnOnce(&Inode) -> V) -> V {
         get_block_cache(self.block_id as usize, Rc::clone(&self.block_device))
-            .lock()
+            .borrow()
             .read(self.block_offset, f)
     }
 
     /// 修改对应的Inode
     fn modify_disk_inode<V>(&self, f: impl FnOnce(&mut Inode) -> V) -> V {
         get_block_cache(self.block_id as usize, Rc::clone(&self.block_device))
-            .lock()
+            .borrow_mut()
             .modify(self.block_offset, f)
     }
 
@@ -76,7 +76,7 @@ impl InodeHandler {
     }
 
     pub fn find(&self, name: &str) -> Option<Rc<InodeHandler>> {
-        let fs = self.fs.lock();
+        let fs = self.fs.borrow();
         self.read_disk_inode(|disk_inode| {
             self.find_inode_id(name, disk_inode).map(|inode_id| {
                 let (block_id, block_offset) = fs.get_disk_inode_pos(inode_id);
@@ -90,12 +90,7 @@ impl InodeHandler {
         })
     }
 
-    fn increase_size(
-        &self,
-        new_size: u32,
-        disk_inode: &mut Inode,
-        fs: &mut MutexGuard<RustedFileSystem>,
-    ) {
+    fn increase_size(&self, new_size: u32, disk_inode: &mut Inode, fs: &mut RustedFileSystem) {
         if new_size < disk_inode.size {
             return;
         }
@@ -105,12 +100,7 @@ impl InodeHandler {
             .collect();
         disk_inode.increase_size(new_size, v, &self.block_device);
     }
-    fn decrease_size(
-        &self,
-        new_size: u32,
-        disk_inode: &mut Inode,
-        fs: &mut MutexGuard<RustedFileSystem>,
-    ) {
+    fn decrease_size(&self, new_size: u32, disk_inode: &mut Inode, fs: &mut RustedFileSystem) {
         if new_size >= disk_inode.size {
             return;
         }
@@ -120,7 +110,7 @@ impl InodeHandler {
             .for_each(|block_id| fs.dealloc_data(block_id));
     }
     pub fn create(&self, name: &str, filetype: InodeType) -> Option<Rc<InodeHandler>> {
-        let mut fs = self.fs.lock();
+        let mut fs = self.fs.borrow_mut();
         let op = |dir_inode: &Inode| {
             // assert it is a directory
             assert!(dir_inode.is_dir());
@@ -136,7 +126,7 @@ impl InodeHandler {
         // initialize inode
         let (new_inode_block_id, new_inode_block_offset) = fs.get_disk_inode_pos(new_inode_id);
         get_block_cache(new_inode_block_id as usize, Rc::clone(&self.block_device))
-            .lock()
+            .borrow_mut()
             .modify(new_inode_block_offset, |new_inode: &mut Inode| {
                 new_inode.init(filetype);
             });
@@ -181,7 +171,7 @@ impl InodeHandler {
         }
     }
     pub fn set_default_dirent(&self, parent_inode_id: u32) {
-        let mut fs = self.fs.lock();
+        let mut fs = self.fs.borrow_mut();
         self.modify_disk_inode(|cur_dir_inode| {
             // increase size
             self.increase_size(2 * DIRENT_SZ as u32, cur_dir_inode, &mut fs);
@@ -196,7 +186,7 @@ impl InodeHandler {
         });
     }
     pub fn delete(&self, name: &str) {
-        let mut fs = self.fs.lock();
+        let mut fs = self.fs.borrow_mut();
         self.modify_disk_inode(|dir_inode| {
             assert!(dir_inode.is_dir());
             self.find_inode_id(name, dir_inode).expect("No target");
@@ -225,7 +215,7 @@ impl InodeHandler {
     }
 
     pub fn ls(&self) -> Vec<String> {
-        let _fs = self.fs.lock();
+        let _fs = self.fs.borrow();
         self.read_disk_inode(|disk_inode| {
             let file_count = (disk_inode.size as usize) / DIRENT_SZ;
             let mut v: Vec<String> = Vec::new();
@@ -244,12 +234,12 @@ impl InodeHandler {
         self.read_disk_inode(|disk_inode| disk_inode.is_link())
     }
     pub fn read_at(&self, offset: usize, buf: &mut [u8]) -> usize {
-        let _fs = self.fs.lock();
+        let _fs = self.fs.borrow();
         self.read_disk_inode(|disk_inode| disk_inode.read_at(offset, buf, &self.block_device))
     }
 
     pub fn write_at(&self, offset: usize, buf: &[u8]) -> usize {
-        let mut fs = self.fs.lock();
+        let mut fs = self.fs.borrow_mut();
         let size = self.modify_disk_inode(|disk_inode| {
             self.increase_size((offset + buf.len()) as u32, disk_inode, &mut fs);
             disk_inode.write_at(offset, buf, &self.block_device)
@@ -263,7 +253,7 @@ impl InodeHandler {
 
     /// 清空所有数据并回收块
     pub fn clear(&self) {
-        let mut fs = self.fs.lock();
+        let mut fs = self.fs.borrow_mut();
         self.modify_disk_inode(|disk_inode| {
             let data_blocks_dealloc = disk_inode.decrease_size(0, &self.block_device);
             for data_block in data_blocks_dealloc.into_iter() {

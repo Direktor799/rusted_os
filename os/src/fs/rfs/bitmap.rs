@@ -29,7 +29,7 @@ impl Bitmap {
         // 遍历每一个BitmapBlock
         for block_id in 0..self.blocks {
             let pos = get_block_cache(block_id + self.start_block_id, Rc::clone(block_device))
-                .lock()
+                .borrow_mut()
                 .modify(0, |bitmap_block: &mut BitmapBlock| {
                     if let Some((group_pos, bit_pos)) = bitmap_block
                         .iter()
@@ -62,7 +62,7 @@ impl Bitmap {
         let group_pos = (block_id % BLOCK_BITS) / 64;
         let bit_pos = (block_id % BLOCK_BITS) % 64;
         get_block_cache(block_pos + self.start_block_id, Rc::clone(block_device))
-            .lock()
+            .borrow_mut()
             .modify(0, |bitmap_block: &mut BitmapBlock| {
                 assert!(
                     bitmap_block[group_pos] & (1u64 << bit_pos) > 0,

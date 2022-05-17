@@ -1,10 +1,10 @@
 //! 块缓存管理子模块
 
 use super::{block_dev::BlockDevice, BLOCK_SZ};
-use crate::sync::mutex::Mutex;
 use crate::sync::uninit_cell::UninitCell;
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
+use core::cell::RefCell;
 
 /// 内存中的块缓存
 pub struct BlockCache {
@@ -85,7 +85,7 @@ const BLOCK_CACHE_SIZE: usize = 16;
 
 /// 块缓存管理器
 pub struct BlockCacheManager {
-    queue: VecDeque<(usize, Rc<Mutex<BlockCache>>)>,
+    queue: VecDeque<(usize, Rc<RefCell<BlockCache>>)>,
 }
 
 impl BlockCacheManager {
@@ -101,7 +101,7 @@ impl BlockCacheManager {
         &mut self,
         block_id: usize,
         device: Rc<dyn BlockDevice>,
-    ) -> Rc<Mutex<BlockCache>> {
+    ) -> Rc<RefCell<BlockCache>> {
         if let Some(pair) = self.queue.iter().find(|pair| pair.0 == block_id) {
             Rc::clone(&pair.1)
         } else {
@@ -120,7 +120,7 @@ impl BlockCacheManager {
                 }
             }
             // 加载新的缓存
-            let block_cache = Rc::new(Mutex::new(BlockCache::new(block_id, Rc::clone(&device))));
+            let block_cache = Rc::new(RefCell::new(BlockCache::new(block_id, Rc::clone(&device))));
             self.queue.push_back((block_id, Rc::clone(&block_cache)));
             block_cache
         }
@@ -128,23 +128,24 @@ impl BlockCacheManager {
 }
 
 /// 全局块缓存管理器
-pub static mut BLOCK_CACHE_MANAGER: UninitCell<Mutex<BlockCacheManager>> = UninitCell::uninit();
+pub static mut BLOCK_CACHE_MANAGER: UninitCell<BlockCacheManager> = UninitCell::uninit();
 
 /// 获取块缓存
-pub fn get_block_cache(block_id: usize, device: Rc<dyn BlockDevice>) -> Rc<Mutex<BlockCache>> {
-    unsafe { BLOCK_CACHE_MANAGER.lock().get_block_cache(block_id, device) }
+pub fn get_block_cache(block_id: usize, device: Rc<dyn BlockDevice>) -> Rc<RefCell<BlockCache>> {
+    unsafe { BLOCK_CACHE_MANAGER.get_block_cache(block_id, device) }
 }
 
 /// 同步所有块缓存
 pub fn block_cache_sync_all() {
-    let manager = unsafe { BLOCK_CACHE_MANAGER.lock() };
-    for (_, cache) in manager.queue.iter() {
-        cache.lock().sync();
+    unsafe {
+        for (_, cache) in BLOCK_CACHE_MANAGER.queue.iter() {
+            cache.borrow_mut().sync();
+        }
     }
 }
 
 pub fn init() {
     unsafe {
-        BLOCK_CACHE_MANAGER = UninitCell::init(Mutex::new(BlockCacheManager::new()));
+        BLOCK_CACHE_MANAGER = UninitCell::init(BlockCacheManager::new());
     }
 }
