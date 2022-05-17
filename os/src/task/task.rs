@@ -1,4 +1,5 @@
 use super::context::TaskContext;
+use crate::os_fs::{Stdin,Stdout};
 use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT};
 use crate::interrupt::{context::Context, handler::interrupt_handler};
 use crate::memory::frame::address::*;
@@ -7,7 +8,10 @@ use crate::memory::frame::{
     memory_set::KERNEL_MEMORY_SET,
     page_table::{R, W},
 };
-
+use alloc::vec;
+use alloc::vec::Vec;
+use alloc::sync::Arc;
+use crate::os_fs::{File};
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
     UnInit,
@@ -29,6 +33,7 @@ pub struct TaskControlBlock {
     pub task_pos: TaskPos,
     pub memory_set: MemorySet,
     pub trap_cx_ppn: PhysPageNum,
+    pub fd_table: Vec<Option<Arc<dyn File>>>,
 }
 
 impl TaskControlBlock {
@@ -62,6 +67,14 @@ impl TaskControlBlock {
             task_pos: TaskPos::Fcfs1,
             memory_set,
             trap_cx_ppn,
+            fd_table: vec![
+                        // 0 -> stdin
+                        Some(Arc::new(Stdin)),
+                        // 1 -> stdout
+                        Some(Arc::new(Stdout)),
+                        // 2 -> stderr
+                        Some(Arc::new(Stdout)),
+                    ],
         }
     }
 
@@ -71,5 +84,17 @@ impl TaskControlBlock {
 
     pub fn get_trap_cx(&self) -> &'static mut Context {
         self.trap_cx_ppn.get_mut()
+    }
+    pub fn get_fd_table(&mut self) -> &mut Vec<Option<Arc<dyn File>>> {
+        self.fd_table.as_mut()
+    }
+
+    pub fn alloc_fd(&mut self) -> usize {
+        if let Some(fd) = (0..self.fd_table.len()).find(|fd| self.fd_table[*fd].is_none()) {
+            fd
+        } else {
+            self.fd_table.push(None);
+            self.fd_table.len() - 1
+        }
     }
 }

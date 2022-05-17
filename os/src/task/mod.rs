@@ -73,6 +73,17 @@ impl TaskManager {
         let current = inner.current_task.as_ref().unwrap();
         current.get_trap_cx()
     }
+    // pub fn current_fd_table(&self) -> &mut Vec<Option<Arc<dyn File>>> {
+    //     let inner = self.0.as_ref().unwrap().borrow();
+    //     let current = inner.current_task.as_ref().unwrap();
+    //     current.get_fd_table()
+    // }
+    pub fn get_current_task(&mut self) -> &'static mut TaskControlBlock {
+
+        let mut inner = self.0.as_ref().unwrap().borrow_mut();
+        inner.current_task.as_mut().unwrap()
+        // self.0.as_ref().unwrap().borrow_mut().current_task.as_mut().unwrap()
+    }
 }
 
 pub static mut TASK_MANAGER: TaskManager = TaskManager(None);
