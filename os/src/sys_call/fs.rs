@@ -1,12 +1,12 @@
 //! 文件相关系统调用子模块
+use crate::fs::inode::{open_file, OpenFlags};
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
-use crate::os_fs::{open_file, OpenFlags};
 use crate::task::TASK_MANAGER;
 
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
-    let mut task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
     if let Some(inode) = open_file(user_buffer_path.as_str(), OpenFlags(flags)) {
         let fd = task.alloc_fd();
         task.fd_table[fd] = Some(inode);

@@ -1,6 +1,6 @@
 //! VirtIO块设备驱动
 use crate::config::MMIO;
-use crate::fs::block_dev::BlockDevice;
+use crate::fs::rfs::block_dev::BlockDevice;
 use core::cell::RefCell;
 use core::marker::Sync;
 use virtio_drivers::{VirtIOBlk, VirtIOHeader};

@@ -5,7 +5,7 @@ use crate::memory::frame::frame_allocator::*;
 use crate::sync::mutex::Mutex;
 use alloc::vec::Vec;
 pub mod virtio_block;
-use crate::fs::block_dev::BlockDevice;
+use crate::fs::rfs::block_dev::BlockDevice;
 use crate::sync::uninit_cell::UninitCell;
 use alloc::sync::Arc;
 use virtio_block::VirtIOBlock;
