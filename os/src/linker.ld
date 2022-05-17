@@ -26,6 +26,7 @@ SECTIONS
     rodata_start = .;
     .rodata : {
         *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
     }
     . = ALIGN(4K);
     rodata_end = .;
@@ -34,6 +35,7 @@ SECTIONS
     data_start = .;
     .data : {
         *(.data .data.*)
+        *(.sdata .sdata.*)
     }
     . = ALIGN(4K);
     data_end = .;
@@ -42,6 +44,7 @@ SECTIONS
     bss_start = .;
     .bss : {
         *(.sbss .bss .bss.*)
+        *(.sbss .sbss.*)
     }
     . = ALIGN(4K);
     bss_end = .;
