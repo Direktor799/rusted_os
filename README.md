@@ -31,7 +31,7 @@ cd os
 make run
 ```
 ### Force quit
-<kbd>Ctrl + A</kbd> + <kbd>X</kbd>
+<kbd>Ctrl + a</kbd> + <kbd>x</kbd>
 
 ### Test
 [About test](https://cvi3z1pqli.feishu.cn/wiki/wikcnWwUq3Okr3Rp34s5Fm1WnQf)
