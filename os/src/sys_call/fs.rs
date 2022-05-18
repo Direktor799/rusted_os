@@ -59,9 +59,13 @@ pub fn sys_chdir(path: *const u8) -> isize {
     let target_path = get_user_string_in_kernel(user_satp_token, path);
     let folded_cwd = String::from(&task.cwd) + "/" + &target_path;
     let cwd = extend_path(folded_cwd);
-    if let Some(_) = find_inode(&cwd) {
-        task.cwd = cwd;
-        0
+    if let Some(inode) = find_inode(&cwd) {
+        if inode.is_dir() {
+            task.cwd = cwd;
+            0
+        } else {
+            -2
+        }
     } else {
         -1
     }

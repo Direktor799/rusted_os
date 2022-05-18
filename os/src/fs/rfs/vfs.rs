@@ -235,6 +235,12 @@ impl InodeHandler {
             v
         })
     }
+    pub fn is_dir(&self) -> bool {
+        self.read_disk_inode(|disk_inode| disk_inode.is_dir())
+    }
+    pub fn is_file(&self) -> bool {
+        self.read_disk_inode(|disk_inode| disk_inode.is_file())
+    }
     pub fn is_link(&self) -> bool {
         self.read_disk_inode(|disk_inode| disk_inode.is_link())
     }
