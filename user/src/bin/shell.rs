@@ -7,6 +7,7 @@ extern crate alloc;
 extern crate user_lib;
 
 use alloc::string::String;
+use alloc::vec::Vec;
 use user_lib::console::get_char;
 use user_lib::*;
 
@@ -28,19 +29,36 @@ fn main() -> i32 {
         }
         cur.push(ch);
         if ch == '\r' {
+            cur.pop();
             println!("");
             let args = cur.split_whitespace().collect::<alloc::vec::Vec<_>>();
-            if args[0] == "cd" {
-                if chdir(args[1]) != 0 {
-                    println!("{}: No such file or directory", args[1]);
+            if !args.is_empty() {
+                match args[0] {
+                    "cd" => cd(&mut cwd, &args),
+                    _ => println!("{}: command not found", cur),
                 }
-                getcwd(&mut cwd);
-            } else {
-                println!("{}: command not found", cur);
             }
             cur.clear();
             print!("root@rusted_os:{}# ", cwd);
         }
     }
     0
+}
+
+fn cd(cwd: &mut String, args: &Vec<&str>) {
+    let path = match args.len() {
+        1 => String::from("/"),
+        2 => String::from(args[1]),
+        _ => {
+            println!("too many arguments");
+            return;
+        }
+    };
+
+    match chdir(&path) {
+        -1 => println!("{}: No such file or directory", args[1]),
+        -2 => println!("{}: Not a directory", args[1]),
+        _ => {}
+    }
+    getcwd(cwd);
 }

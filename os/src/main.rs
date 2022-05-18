@@ -40,6 +40,11 @@ pub extern "C" fn rust_main() -> ! {
     #[cfg(test)]
     test_main();
     println!("[kernel] Hello rusted_os!");
+
+    unsafe {
+        fs::rfs::ROOT_INODE.get_file_size();
+    }
+
     task::run();
     panic!("Dummy as fuck");
 }
