@@ -1,3 +1,5 @@
+use crate::fs::rfs::ROOT_INODE;
+
 use super::{
     block_cache::{block_cache_sync_all, get_block_cache},
     block_dev::BlockDevice,
@@ -146,8 +148,11 @@ impl InodeHandler {
         });
 
         let (block_id, block_offset) = fs.get_disk_inode_pos(new_inode_id);
+        print!("111111111111");
         block_cache_sync_all();
+        print!("111111111111");
         // return inode
+
         if filetype != InodeType::Directory {
             return Some(Rc::new(Self::new(
                 block_id,

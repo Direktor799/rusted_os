@@ -6,6 +6,7 @@ extern crate alloc;
 #[macro_use]
 extern crate user_lib;
 
+use alloc::fmt::format;
 use alloc::string::String;
 use user_lib::console::get_char;
 use user_lib::*;
@@ -35,6 +36,13 @@ fn main() -> i32 {
                     println!("{}: No such file or directory", args[1]);
                 }
                 getcwd(&mut cwd);
+            } else {
+                println!("{}: command not found", cur);
+            }
+            if args[0] == "mkdir" {
+                if mkdir(args[1]) != 0 {
+                    println!("{}: No such file or directory", args[1]);
+                }
             } else {
                 println!("{}: command not found", cur);
             }

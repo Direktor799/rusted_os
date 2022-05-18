@@ -1,5 +1,5 @@
 //! 文件相关系统调用子模块
-use crate::fs::inode::{open_file, OpenFlags};
+use crate::fs::inode::{open_file, OpenFlags, create_dir, remove_dir};
 use crate::fs::rfs::{extend_path, find_inode};
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
 use crate::task::TASK_MANAGER;
@@ -82,4 +82,26 @@ pub fn sys_get_cwd(buf: *const u8, len: usize) -> isize {
         cur_offset += len;
     }
     0
+}
+
+pub fn sys_mkdir(path: *const u8) -> isize{
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
+    if create_dir(user_buffer_path.as_str()).is_some(){
+        0
+    }
+    else {
+        -1
+    }
+}
+
+pub fn sys_rmdir(path: *const u8) -> isize{
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
+    if remove_dir(user_buffer_path.as_str()).is_some(){
+        0
+    }
+    else {
+        -1
+    }
 }

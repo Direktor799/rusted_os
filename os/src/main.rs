@@ -37,9 +37,13 @@ pub extern "C" fn rust_main() -> ! {
     task::init();
     drivers::init();
     fs::init();
+    fs::format();
     #[cfg(test)]
     test_main();
     println!("[kernel] Hello rusted_os!");
+    unsafe {
+        fs::rfs::ROOT_INODE.get_file_size();
+    }
     task::run();
     panic!("Dummy as fuck");
 }

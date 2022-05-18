@@ -22,6 +22,7 @@ pub static mut ROOT_INODE: UninitCell<Rc<InodeHandler>> = UninitCell::uninit();
 
 pub fn find_inode(path: &str) -> Option<Rc<InodeHandler>> {
     let root_inode = unsafe { ROOT_INODE.clone() };
+    
     path.split('/').fold(Some(root_inode), |res, name| {
         if let Some(node) = res {
             if !name.is_empty() {

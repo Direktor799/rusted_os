@@ -87,3 +87,9 @@ pub fn chdir(path: &str) -> isize {
     zero_ended.push(0 as char);
     sys_chdir(zero_ended.as_ptr())
 }
+
+pub fn mkdir(path: &str) -> isize {
+    let mut zero_ended = String::from(path);
+    zero_ended.push(0 as char);
+    sys_mkdir(zero_ended.as_ptr())
+}

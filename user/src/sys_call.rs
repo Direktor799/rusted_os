@@ -7,6 +7,7 @@ const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GET_TIME: usize = 169;
+const SYS_CALL_MKDIR: usize = 34;
 
 fn sys_call(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
@@ -51,4 +52,8 @@ pub fn sys_get_cwd(buf: &mut [u8]) -> isize {
 
 pub fn sys_chdir(path: *const u8) -> isize {
     sys_call(SYS_CALL_CHDIR, [path as usize, 0, 0])
+}
+
+pub fn sys_mkdir(path: *const u8) -> isize {
+    sys_call(SYS_CALL_MKDIR, [path as usize, 0, 0])
 }
