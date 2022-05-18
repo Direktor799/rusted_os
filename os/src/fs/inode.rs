@@ -64,19 +64,7 @@ impl OpenFlags {
         }
     }
 }
-pub fn create_dir(path: &str) -> Option<isize>{
-    let (parent_path, target) = path.rsplit_once('/')?;
-    let parent_inode = find_inode(parent_path)?;
-    let cur_inode = parent_inode.create(target, super::rfs::layout::InodeType::Directory)?;
-    cur_inode.set_default_dirent(parent_inode.get_inode_id());
-    Some(0)
-}
-pub fn remove_dir(path: &str) -> Option<isize>{
-    let (parent_path, target) = path.rsplit_once('/')?;
-    let parent_inode = find_inode(parent_path)?;
-    parent_inode.delete(target);
-    Some(0)
-}
+
 pub fn open_file(path: &str, flags: OpenFlags) -> Option<Rc<OSInode>> {
     let (readable, writable) = flags.read_write();
     if flags.contains(CREATE) {

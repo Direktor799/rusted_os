@@ -37,7 +37,6 @@ pub extern "C" fn rust_main() -> ! {
     task::init();
     drivers::init();
     fs::init();
-    fs::format();
     #[cfg(test)]
     test_main();
     println!("[kernel] Hello rusted_os!");

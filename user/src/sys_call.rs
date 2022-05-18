@@ -1,13 +1,13 @@
 use core::arch::asm;
 
 const SYS_CALL_GET_CWD: usize = 17;
+const SYS_CALL_MKDIR: usize = 34;
 const SYS_CALL_CHDIR: usize = 49;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GET_TIME: usize = 169;
-const SYS_CALL_MKDIR: usize = 34;
 
 fn sys_call(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
