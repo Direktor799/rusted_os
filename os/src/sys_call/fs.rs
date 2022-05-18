@@ -1,10 +1,9 @@
 //! 文件相关系统调用子模块
-use crate::fs::inode::{open_file, OpenFlags, create_dir, remove_dir};
-use crate::fs::rfs::{extend_path, find_inode};
+use crate::fs::inode::{open_file, OpenFlags};
+use crate::fs::rfs::{extend_path, find_inode,layout::InodeType::Directory};
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
 use crate::task::TASK_MANAGER;
 use alloc::string::String;
-
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
@@ -87,12 +86,11 @@ pub fn sys_get_cwd(buf: *const u8, len: usize) -> isize {
 pub fn sys_mkdir(path: *const u8) -> isize{
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
-    if create_dir(user_buffer_path.as_str()).is_some(){
-        0
-    }
-    else {
-        -1
-    }
+    let (parent_path, target) = user_buffer_path.rsplit_once('/').unwrap();
+    let parent_inode = find_inode(parent_path);
+    let cur_inode = parent_inode.create(target, Directory);
+    cur_inode.set_default_dirent(parent_inode.get_inode_id());
+    0
 }
 
 pub fn sys_rmdir(path: *const u8) -> isize{
