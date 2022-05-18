@@ -15,7 +15,10 @@ mod uninit_cell;
 use crate::heap::heap_allocator::*;
 use crate::uninit_cell::UninitCell;
 use alloc::alloc::Layout;
+use alloc::string::String;
+use alloc::string::ToString;
 use core::cell::RefCell;
+use core::str;
 use sys_call::*;
 
 const USER_HEAP_SIZE: usize = 4096;
@@ -41,7 +44,7 @@ pub extern "C" fn _start() -> ! {
         )));
     }
     exit(main());
-    panic!("unreachable after sys_exit!");
+    unreachable!();
 }
 
 #[linkage = "weak"]
@@ -69,4 +72,18 @@ pub fn r#yield() -> isize {
 
 pub fn get_time() -> isize {
     sys_get_time()
+}
+
+pub fn getcwd(s: &mut String) -> isize {
+    let mut buffer = [0u8; 128];
+    let ret = sys_get_cwd(&mut buffer);
+    let len = buffer.iter().position(|&v| v == 0).unwrap_or(buffer.len());
+    *s = str::from_utf8(&buffer[0..len]).unwrap().to_string();
+    ret
+}
+
+pub fn chdir(path: &str) -> isize {
+    let mut zero_ended = String::from(path);
+    zero_ended.push(0 as char);
+    sys_chdir(zero_ended.as_ptr())
 }

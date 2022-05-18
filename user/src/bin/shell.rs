@@ -6,13 +6,16 @@ extern crate alloc;
 #[macro_use]
 extern crate user_lib;
 
+use alloc::string::String;
 use user_lib::console::get_char;
+use user_lib::*;
 
 #[no_mangle]
 fn main() -> i32 {
     let mut cur = alloc::string::String::new();
-    let mut current_path = alloc::string::String::from("/");
-    print!("root@rusted_os:{}# ", current_path);
+    let mut cwd = String::new();
+    getcwd(&mut cwd);
+    print!("root@rusted_os:{}# ", cwd);
     loop {
         let ch = get_char();
         print!("{}", ch);
@@ -27,29 +30,16 @@ fn main() -> i32 {
         if ch == '\r' {
             println!("");
             let args = cur.split_whitespace().collect::<alloc::vec::Vec<_>>();
-            // if args[0] == "ls" {
-            //     if args.len() >= 2 {
-            //         fs::ls_by_path(args[1]);
-            //     } else {
-            //         fs::ls_by_path(&current_path);
-            //     }
-            // } else if args[0] == "rm" {
-            //     fs::delete_by_path(args[1]);
-            // } else if args[0] == "mkdir" {
-            //     fs::mkdir_by_path(args[1])
-            // } else if args[0] == "touch" {
-            //     fs::touch_by_path(args[1]);
-            // } else if args[0] == "cd" {
-            //     if fs::check_valid_by_path(args[1]) {
-            //         current_path = alloc::string::String::from(args[1]);
-            //     } else {
-            //         println!("{}: No such file or directory", args[1]);
-            //     }
-            // } else {
-            //     println!("Unknown command");
-            // }
+            if args[0] == "cd" {
+                if chdir(args[1]) != 0 {
+                    println!("{}: No such file or directory", args[1]);
+                }
+                getcwd(&mut cwd);
+            } else {
+                println!("{}: command not found", cur);
+            }
             cur.clear();
-            print!("root@rusted_os:{}# ", current_path);
+            print!("root@rusted_os:{}# ", cwd);
         }
     }
     0

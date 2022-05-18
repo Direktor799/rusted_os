@@ -10,6 +10,7 @@ use crate::memory::frame::{
     page_table::{R, W},
 };
 use alloc::rc::Rc;
+use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 #[derive(Copy, Clone, PartialEq)]
@@ -33,6 +34,7 @@ pub struct TaskControlBlock {
     pub task_pos: TaskPos,
     pub memory_set: MemorySet,
     pub trap_cx_ppn: PhysPageNum,
+    pub cwd: String,
     pub fd_table: Vec<Option<Rc<dyn File>>>,
 }
 
@@ -67,6 +69,7 @@ impl TaskControlBlock {
             task_pos: TaskPos::Fcfs1,
             memory_set,
             trap_cx_ppn,
+            cwd: String::from("/"),
             fd_table: vec![
                 // 0 -> stdin
                 Some(Rc::new(Stdin)),

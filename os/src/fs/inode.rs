@@ -1,10 +1,12 @@
 use core::cell::RefCell;
 
-use super::rfs::{find_inode_by_path, touch_by_path, InodeHandler};
+use super::rfs::layout::InodeType;
+use super::rfs::{find_inode, InodeHandler};
 use super::File;
 use crate::memory::frame::user_buffer::UserBuffer;
 use alloc::rc::Rc;
 use alloc::vec::Vec;
+
 pub struct OSInode {
     readable: bool,
     writable: bool,
@@ -63,19 +65,22 @@ impl OpenFlags {
     }
 }
 
-pub fn open_file(name: &str, flags: OpenFlags) -> Option<Rc<OSInode>> {
+pub fn open_file(path: &str, flags: OpenFlags) -> Option<Rc<OSInode>> {
     let (readable, writable) = flags.read_write();
     if flags.contains(CREATE) {
-        if let Some(inode) = find_inode_by_path(name) {
+        if let Some(inode) = find_inode(path) {
             // clear size
             inode.clear();
             Some(Rc::new(OSInode::new(readable, writable, inode)))
         } else {
-            // create file
-            touch_by_path(name).map(|inode| Rc::new(OSInode::new(readable, writable, inode)))
+            let (parent_path, target) = path.rsplit_once('/')?;
+            let parent_inode = find_inode(parent_path)?;
+            parent_inode
+                .create(target, super::rfs::layout::InodeType::File)
+                .map(|inode| Rc::new(OSInode::new(readable, writable, inode)))
         }
     } else {
-        find_inode_by_path(name).map(|inode| {
+        find_inode(path).map(|inode| {
             if flags.contains(TRUNC) {
                 inode.clear();
             }

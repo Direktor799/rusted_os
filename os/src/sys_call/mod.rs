@@ -4,6 +4,8 @@ use proc::*;
 mod fs;
 mod proc;
 
+const SYS_CALL_GET_CWD: usize = 17;
+const SYS_CALL_CHDIR: usize = 49;
 const SYS_CALL_OPEN: usize = 56;
 const SYS_CALL_CLOSE: usize = 57;
 const SYS_CALL_READ: usize = 63;
@@ -14,6 +16,8 @@ const SYS_CALL_GET_TIME: usize = 169;
 
 pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
     match which {
+        SYS_CALL_GET_CWD => sys_get_cwd(args[0] as *const u8, args[1] as usize),
+        SYS_CALL_CHDIR => sys_chdir(args[0] as *const u8),
         SYS_CALL_OPEN => sys_open(args[0] as *const u8, args[1] as u32),
         // SYS_CALL_CLOSE => sys_close(args[0]),
         SYS_CALL_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
