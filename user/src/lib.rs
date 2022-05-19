@@ -93,3 +93,8 @@ pub fn mkdir(path: &str) -> isize {
     zero_ended.push(0 as char);
     sys_mkdir(zero_ended.as_ptr())
 }
+pub fn touch(path: &str, flags: u32) -> isize {
+    let mut zero_ended = String::from(path);
+    zero_ended.push(0 as char);
+    sys_open(zero_ended.as_ptr(),flags)
+}

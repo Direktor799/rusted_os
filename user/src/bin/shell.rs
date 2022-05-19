@@ -36,7 +36,8 @@ fn main() -> i32 {
                 match args[0] {
                     "cd" => cd(&mut cwd, &args),
                     "mkdir" => app_mkdir(&args),
-                    _ => println!("{}: command not found", cur),
+                    "touch" => app_touch(&args),
+                    _ => println!("{}: command not found1111", args[0]),
                 }
             }
             cur.clear();
@@ -79,6 +80,24 @@ fn app_mkdir(args: &Vec<&str>) {
             ),
             -2 => println!("cannot create directory '{}': File exists", target),
             _ => panic!(),
+        }
+    }
+}
+
+fn app_touch(args: &Vec<&str>) {
+    if args.len() == 1 {
+        println!("missing operand");
+        return;
+    }
+    for target in &args[1..] {
+        let flags = args[2].parse::<u32>();
+        if args[2].parse::<u32>().is_err() {
+            print!("Error num!");
+            return;
+        }
+        match touch(target, flags.unwrap()) {
+            -1 => println!("cannot open file '{}'", target),
+            _ => {},
         }
     }
 }
