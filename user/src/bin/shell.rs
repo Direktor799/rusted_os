@@ -5,7 +5,11 @@ extern crate alloc;
 
 #[macro_use]
 extern crate user_lib;
-
+const RDONLY: u32 = 0;
+const WRONLY: u32 = 1 << 0;
+const RDWR: u32 = 1 << 1;
+const CREATE: u32 = 1 << 9;
+const TRUNC: u32 = 1 << 10;
 use alloc::string::String;
 use alloc::vec::Vec;
 use user_lib::console::get_char;
@@ -90,14 +94,9 @@ fn app_touch(args: &Vec<&str>) {
         return;
     }
     for target in &args[1..] {
-        let flags = args[2].parse::<u32>();
-        if args[2].parse::<u32>().is_err() {
-            print!("Error num!");
-            return;
-        }
-        match touch(target, flags.unwrap()) {
+        match touch(target, CREATE | TRUNC) {
             -1 => println!("cannot open file '{}'", target),
-            _ => {},
+            _ => {}
         }
     }
 }

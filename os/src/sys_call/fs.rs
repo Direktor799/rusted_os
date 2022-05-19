@@ -7,7 +7,8 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    if let Some(inode) = open_file(user_buffer_path.as_str(), OpenFlags(flags)) {
+    let cwd = get_full_path(&task.cwd, &user_buffer_path);
+    if let Some(inode) = open_file(cwd.as_str(), OpenFlags(flags)) {
         let fd = task.alloc_fd();
         task.fd_table[fd] = Some(inode);
         fd as isize
