@@ -35,9 +35,16 @@ pub fn find_inode(path: &str) -> Option<Rc<InodeHandler>> {
     })
 }
 
-pub fn extend_path(path: String) -> String {
+pub fn get_full_path(cwd: &String, path: &String) -> String {
     let mut v = vec![];
-    path.split('/').for_each(|name| {
+    let new_path = if path.as_str().chars().next().unwrap() == '/' {
+        // absolute
+        String::from(path)
+    } else {
+        // relative
+        String::from(cwd) + "/" + path
+    };
+    new_path.split('/').for_each(|name| {
         if name.is_empty() || name == "." || (name == ".." && v.is_empty()) {
             // do nothing
         } else if name == ".." {

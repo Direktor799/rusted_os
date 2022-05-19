@@ -1,9 +1,8 @@
 //! 文件相关系统调用子模块
 use crate::fs::inode::{open_file, OpenFlags};
-use crate::fs::rfs::{extend_path, find_inode, layout::InodeType};
+use crate::fs::rfs::{find_inode, get_full_path, layout::InodeType};
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
 use crate::task::TASK_MANAGER;
-use alloc::string::String;
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
@@ -55,18 +54,19 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
 pub fn sys_chdir(path: *const u8) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
     let target_path = get_user_string_in_kernel(user_satp_token, path);
-    let folded_cwd = String::from(&task.cwd) + "/" + &target_path;
-    let cwd = extend_path(folded_cwd);
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let cwd = get_full_path(&task.cwd, &target_path);
     if let Some(inode) = find_inode(&cwd) {
         if inode.is_dir() {
             task.cwd = cwd;
             0
         } else {
+            // not dir
             -2
         }
     } else {
+        // no such file
         -1
     }
 }
@@ -88,27 +88,23 @@ pub fn sys_get_cwd(buf: *const u8, len: usize) -> isize {
 }
 
 pub fn sys_mkdir(path: *const u8) -> isize {
-    // let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    // let target_path = get_user_string_in_kernel(user_satp_token, path);
-    // if let Some((parent_path, target)) = target_path.rsplit_once('/') {
-    //     if let Some(parent_inode) = find_inode(parent_path) {
-    //         if let Some(cur_inode) = parent_inode.create(target, InodeType::Directory) {
-    //             cur_inode.set_default_dirent(parent_inode.get_inode_id());
-    //             0
-    //         } else {
-    //             // already exist
-    //             -1
-    //         }
-    //     } else {
-    //         // parent dir not found
-    //         -1
-    //     }
-    // } else {
-    //     // invalid path
-    //     -1
-    // }
-    crate::test();
-    0
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let target_path = get_user_string_in_kernel(user_satp_token, path);
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let new_path = get_full_path(&task.cwd, &target_path);
+    let (parent_path, target) = new_path.rsplit_once('/').unwrap();
+    if let Some(parent_inode) = find_inode(parent_path) {
+        if let Some(cur_inode) = parent_inode.create(target, InodeType::Directory) {
+            cur_inode.set_default_dirent(parent_inode.get_inode_id());
+            0
+        } else {
+            // file exists
+            -2
+        }
+    } else {
+        // no such file
+        -1
+    }
 }
 
 // pub fn sys_rmdir(path: *const u8) -> isize{

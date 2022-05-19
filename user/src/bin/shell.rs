@@ -35,9 +35,7 @@ fn main() -> i32 {
             if !args.is_empty() {
                 match args[0] {
                     "cd" => cd(&mut cwd, &args),
-                    "mkdir" => {
-                        mkdir(args[1]);
-                    }
+                    "mkdir" => app_mkdir(&args),
                     _ => println!("{}: command not found", cur),
                 }
             }
@@ -59,9 +57,28 @@ fn cd(cwd: &mut String, args: &Vec<&str>) {
     };
 
     match chdir(&path) {
+        0 => {}
         -1 => println!("{}: No such file or directory", args[1]),
         -2 => println!("{}: Not a directory", args[1]),
-        _ => {}
+        _ => panic!(),
     }
     getcwd(cwd);
+}
+
+fn app_mkdir(args: &Vec<&str>) {
+    if args.len() == 1 {
+        println!("missing operand");
+        return;
+    }
+    for target in &args[1..] {
+        match mkdir(target) {
+            0 => {}
+            -1 => println!(
+                "cannot create directory '{}': No such file or directory",
+                target
+            ),
+            -2 => println!("cannot create directory '{}': File exists", target),
+            _ => panic!(),
+        }
+    }
 }

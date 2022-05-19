@@ -45,16 +45,6 @@ pub extern "C" fn rust_main() -> ! {
         fs::rfs::ROOT_INODE.ls();
     }
 
-    crate::test();
-
     task::run();
     panic!("Dummy as fuck");
-}
-
-pub fn test() {
-    unsafe {
-        fs::rfs::ROOT_INODE.create("a", fs::rfs::layout::InodeType::Directory);
-        fs::rfs::ROOT_INODE.delete("a");
-        println!("test passed");
-    }
 }
