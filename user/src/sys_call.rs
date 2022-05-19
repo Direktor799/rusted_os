@@ -4,6 +4,7 @@ const SYS_CALL_GET_CWD: usize = 17;
 const SYS_CALL_MKDIR: usize = 34;
 const SYS_CALL_CHDIR: usize = 49;
 const SYS_CALL_OPEN: usize = 56;
+const SYS_CALL_CLOSE: usize = 57;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
@@ -59,6 +60,12 @@ pub fn sys_chdir(path: *const u8) -> isize {
 pub fn sys_mkdir(path: *const u8) -> isize {
     sys_call(SYS_CALL_MKDIR, [path as usize, 0, 0])
 }
+
+// 返回值为-1表示open失败，否则返回句柄(>=0)
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
     sys_call(SYS_CALL_OPEN, [path as usize, flags as usize, 0])
+}
+// 返回值为-1表示close失败，为0表示执行成功
+pub fn sys_close(fd: u32) -> isize {
+    sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
 }

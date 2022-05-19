@@ -21,7 +21,7 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_MKDIR => sys_mkdir(args[0] as *const u8),
         SYS_CALL_CHDIR => sys_chdir(args[0] as *const u8),
         SYS_CALL_OPEN => sys_open(args[0] as *const u8, args[1] as u32),
-        // SYS_CALL_CLOSE => sys_close(args[0]),
+        SYS_CALL_CLOSE => sys_close(args[0]),
         SYS_CALL_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
         SYS_CALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYS_CALL_EXIT => sys_exit(args[0] as i32),

@@ -15,7 +15,17 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
         -1
     }
 }
-
+pub fn sys_close(fd: usize) -> isize {
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    if fd >= task.fd_table.len() {
+        return -1;
+    }
+    if task.fd_table[fd].is_none() {
+        return -1;
+    }
+    task.fd_table[fd].take();
+    0
+}
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let fd_table = unsafe { &mut TASK_MANAGER.current_task.as_mut().unwrap().fd_table };
