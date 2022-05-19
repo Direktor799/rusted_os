@@ -193,5 +193,3 @@ pub fn init() {
         KERNEL_MEMORY_SET.activate();
     }
 }
-
-fn _test_kernel_memory_set() {}
