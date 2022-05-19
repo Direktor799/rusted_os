@@ -51,7 +51,7 @@ impl OpenFlags {
     /// Do not check validity for simplicity
     /// Return (readable, writable)
     fn contains(&self, num: OpenFlags) -> bool {
-        return self.0 & num.0 == self.0;
+        return self.0 | num.0 == self.0;
     }
     pub fn read_write(&self) -> (bool, bool) {
         // 判断是否OpenFlags为空
@@ -96,6 +96,10 @@ impl File for OSInode {
     fn writable(&self) -> bool {
         self.writable
     }
+    // fn lseek(&self){
+    //     let mut inner = self.inner.borrow_mut();
+    //     inner.offset = 0
+    // }
     fn read(&self, mut buf: UserBuffer) -> usize {
         let mut inner = self.inner.borrow_mut();
         let mut total_read_size = 0usize;
