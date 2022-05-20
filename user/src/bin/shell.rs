@@ -14,6 +14,7 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use user_lib::console::get_char;
 use user_lib::*;
+use core::str;
 
 #[no_mangle]
 fn main() -> i32 {
@@ -96,7 +97,7 @@ fn app_touch(args: &Vec<&str>) {
         return;
     }
     for target in &args[1..] {
-        let fd = touch(target, CREATE | TRUNC);
+        let fd = open(target, CREATE);
         match fd {
             -1 => println!("cannot open file '{}'", target),
             _ => println! {"fd:{}",fd},
@@ -109,10 +110,14 @@ fn read_test(args: &Vec<&str>) {
         return;
     }
     let target = args[1];
-    let mut a = String::from("");
-    match read_from_fd(target.parse::<usize>().unwrap(), &mut a) {
+    let mut buffer = [0u8; 128];
+    match read(target.parse::<usize>().unwrap(), &mut buffer) {
         -1 => println!("cannot read file '{}'", target),
-        _ => println!("mess:{}", a),
+        _ => {
+            let len = buffer.iter().position(|&v| v == 0).unwrap_or(buffer.len());
+            let buf_str = str::from_utf8(&buffer[0..len]).unwrap().to_string();
+            println!("read_mess:{}",buf_str);
+        }
     }
 }
 fn write_test(args: &Vec<&str>) {
@@ -121,13 +126,10 @@ fn write_test(args: &Vec<&str>) {
         return;
     }
     let target = args[1];
-    let a = args[2].clone().to_string();
-    match write_from_fd(target.parse::<usize>().unwrap(), a.clone()) {
-        -1 => println!(
-            "cannot write file '{}' mess'{}'",
-            target.parse::<usize>().unwrap(),
-            a
-        ),
+    let buf_str = args[2].clone().as_bytes();
+
+    match write(target.parse::<usize>().unwrap(), buf_str.clone()) {
+        -1 => println!("cannot write file '{}'", target.parse::<usize>().unwrap(),),
         _ => {}
     }
 }
