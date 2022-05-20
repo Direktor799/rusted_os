@@ -4,7 +4,7 @@
 extern crate alloc;
 
 extern crate user_lib;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::str;
@@ -24,6 +24,7 @@ fn main() -> i32 {
                 "cd" => cd(&mut cwd, &args),
                 "mkdir" => app_mkdir(&args),
                 "cat" => app_cat(&args),
+                "cats" => read_from_symlink(&args),
                 "write" => write_test(&args),
                 "ln" => ln(&args),
                 "exit" => break,
@@ -141,3 +142,46 @@ fn ln(args: &Vec<&str>) {
     }
 }
 
+fn read_from_symlink(args: &Vec<&str>) {
+    // TODO: check file type
+    let target = args[1];
+    let fd = open(target, RDONLY);
+    if fd == -1 {
+        println!("{}: No such file or directory", target);
+        return;
+    }
+    let mut buffer = [0u8; 128];
+    let mut real_path = String::from("");
+    loop {
+        let len = read(fd as usize, &mut buffer);
+        match len {
+            -1 => {
+                println!("{}: Bad file descriptor", fd);
+                break;
+            }
+            0 => break,
+            _ => {
+                real_path = str::from_utf8(&buffer[0..len as usize])
+                    .unwrap()
+                    .to_string()
+            }
+        }
+    }
+    close(fd as usize);
+
+    let fd = open(real_path.as_str(), RDONLY);
+    if fd == -1 {
+        println!("{}: No such file or directory", real_path);
+    }
+    loop {
+        let len = read(fd as usize, &mut buffer);
+        match len {
+            -1 => {
+                println!("{}: Bad file descriptor", fd);
+                break;
+            }
+            0 => break,
+            _ => print!("{}", str::from_utf8(&buffer[0..len as usize]).unwrap()),
+        }
+    }
+}
