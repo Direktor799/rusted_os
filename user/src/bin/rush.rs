@@ -25,6 +25,7 @@ fn main() -> i32 {
                 "mkdir" => app_mkdir(&args),
                 "cat" => app_cat(&args),
                 "write" => write_test(&args),
+                "ln" => ln(&args),
                 "exit" => break,
                 _ => println!("{}: command not found", args[0]),
             }
@@ -118,3 +119,25 @@ fn write_test(args: &Vec<&str>) {
     }
     close(fd as usize);
 }
+
+fn ln(args: &Vec<&str>) {
+    if args.len() <= 2 {
+        println!("missing operand");
+        return;
+    }
+    let target = args[1];
+    let link_path = args[2];
+    match symlink(target, link_path) {
+        -1 => println!(
+            "failed to create symbolic link '{}' => '{}': No such file or directory",
+            link_path, target
+        ),
+        -2 => println!(
+            "failed to create symbolic link '{}': File exists",
+            link_path
+        ),
+        0 => println!("ok"),
+        _ => panic!(),
+    }
+}
+
