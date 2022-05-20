@@ -6,6 +6,7 @@ const SYS_CALL_SYMLINK: usize = 36;
 const SYS_CALL_CHDIR: usize = 49;
 const SYS_CALL_OPEN: usize = 56;
 const SYS_CALL_CLOSE: usize = 57;
+const SYS_CALL_LSEEK: usize = 62;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
@@ -70,4 +71,7 @@ pub fn sys_close(fd: usize) -> isize {
 }
 pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
     sys_call(SYS_CALL_SYMLINK, [target as usize, link_path as usize, 0])
+}
+pub fn sys_lseek(fd: usize, offset:isize, origin:i32) -> isize {
+    sys_call(SYS_CALL_LSEEK, [fd, offset as usize, origin as usize])
 }

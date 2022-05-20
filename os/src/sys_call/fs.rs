@@ -122,8 +122,7 @@ pub fn sys_mkdir(path: *const u8) -> isize {
 }
 
 // target为源文件, link_path为link文件路径
-pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize
-{
+pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
     //获取userbuffer
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let target_path = get_user_string_in_kernel(user_satp_token, target);
@@ -148,5 +147,34 @@ pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize
     } else {
         // no such file
         -1
+    }
+}
+
+pub fn sys_lseek(fd: usize, offset: isize, origin: i32) -> isize {
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    if fd >= task.fd_table.len() {
+        return -1;
+    }
+    if task.fd_table[fd].is_none() {
+        return -1;
+    }
+    // let file = task.fd_table[fd].as_ref().unwrap();
+    //这里怎么获取这两个变量呢
+    let mut file_offset: isize = 0;
+    let file_size: isize = 0;
+
+    let mut new_offset: isize;
+    match origin {
+        0 => new_offset = offset,
+        1 => new_offset = file_offset + offset,
+        2 => new_offset = file_size + offset,
+        _ => panic!(),
+    }
+    if new_offset < 0 {
+        -1
+    }
+    else {
+        file_offset = new_offset;
+        new_offset
     }
 }

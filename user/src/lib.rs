@@ -114,3 +114,6 @@ pub fn symlink(target: &str, link_path: &str) -> isize {
     zero_ended_link_path.push(0 as char);
     sys_symlink(zero_ended_target.as_ptr(), zero_ended_link_path.as_ptr())
 }
+pub fn lseek(fd: usize, offset: isize, origin: i32) -> isize {
+    sys_lseek(fd, offset, origin)
+}
