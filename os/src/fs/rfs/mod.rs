@@ -70,5 +70,6 @@ pub fn format() {
         let rfs = RustedFileSystem::format(BLOCK_DEVICE.clone(), 4096, 1);
         ROOT_INODE = UninitCell::init(Rc::new(RustedFileSystem::root_inode(&rfs)));
         ROOT_INODE.set_default_dirent(ROOT_INODE.get_inode_id());
+        block_cache::block_cache_sync_all();
     }
 }
