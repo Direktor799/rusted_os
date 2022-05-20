@@ -120,14 +120,27 @@ pub fn sys_mkdir(path: *const u8) -> isize {
         -1
     }
 }
+// target为源文件, link_path为link文件路径
+pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize
+{
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let target_path = get_user_string_in_kernel(user_satp_token, link_path);
+    let linkfile_path = get_user_string_in_kernel(user_satp_token, target);
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let new_target_path = get_full_path(&task.cwd, &target_path);
+    let new_linkfile_path = get_full_path(&task.cwd, &linkfile_path);
+    let (parent_path, target) = new_target_path.rsplit_once('/').unwrap();
 
-// pub fn sys_rmdir(path: *const u8) -> isize{
-//     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-//     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
-//     if remove_dir(user_buffer_path.as_str()).is_some(){
-//         0
-//     }
-//     else {
-//         -1
-//     }
-// }
+    if let Some(parent_inode) = find_inode(parent_path) {
+        if let Some(cur_inode) = parent_inode.create(target, InodeType::SoftLink) {
+            cur_inode.write_at(0, new_linkfile_path.as_bytes());
+            0
+        } else {
+            // file exists
+            -2
+        }
+    } else {
+        // no such file
+        -1
+    }
+}

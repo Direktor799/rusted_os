@@ -107,3 +107,10 @@ pub fn open(path: &str, flags: u32) -> isize {
 pub fn close(fd: usize) -> isize {
     sys_close(fd)
 }
+pub fn symlink(target: &str, link_path: &str) -> isize {
+    let mut zero_ended_target = String::from(target);
+    let mut zero_ended_link_path = String::from(link_path);
+    zero_ended_target.push(0 as char);
+    zero_ended_link_path.push(0 as char);
+    sys_symlink(zero_ended_target.as_ptr(), zero_ended_link_path.as_ptr())
+}
