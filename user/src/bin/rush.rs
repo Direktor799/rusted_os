@@ -5,6 +5,7 @@ extern crate alloc;
 
 extern crate user_lib;
 use alloc::string::String;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::str;
 use user_lib::console::get_line;
@@ -70,23 +71,27 @@ fn app_mkdir(args: &Vec<&str>) {
 }
 
 fn app_cat(args: &Vec<&str>) {
+    let mut fds = vec![];
+    let mut buffer = [0u8; 128];
     if args.len() == 1 {
-        // TODO: non-blocking io
-        println!("not supported yet");
-        return;
+        // TODO: runtime error for stdin
+        fds.push(0);
     }
     for target in &args[1..] {
-        let mut buffer = [0u8; 128];
+        // TODO: check file type
         let fd = open(target, RDONLY);
         if fd == -1 {
             println!("{}: No such file or directory", target);
             continue;
         }
+        fds.push(fd);
+    }
+    for fd in fds {
         loop {
             let len = read(fd as usize, &mut buffer);
             match len {
                 -1 => {
-                    println!("{}: Out of resources", target);
+                    println!("{}: Bad file descriptor", fd);
                     break;
                 }
                 0 => break,
@@ -111,7 +116,7 @@ fn write_test(args: &Vec<&str>) {
     }
     let len = write(fd as usize, buf_str);
     match len {
-        -1 => println!("{}: Out of resources", target),
+        -1 => println!("{}: Bad file descriptor", target),
         _ => println!("ok"),
     }
     close(fd as usize);

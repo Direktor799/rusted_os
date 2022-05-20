@@ -14,24 +14,20 @@ impl File for Stdin {
         false
     }
     fn read(&self, mut user_buf: UserBuffer) -> usize {
+        // TODO: variable len
         assert_eq!(user_buf.len(), 1);
         // busy loop
-        let mut c: u8;
         loop {
-            c = console_getchar() as u8;
-            if c == 255 {
-                // TODO: non-blocking io
-                // suspend_current_and_run_next();
-                continue;
+            let ch = console_getchar() as u8;
+            if ch == 255 {
+                break 0;
             } else {
-                break;
+                unsafe {
+                    user_buf.0[0].as_mut_ptr().write_volatile(ch);
+                }
+                break 1;
             }
         }
-        let ch = c as u8;
-        unsafe {
-            user_buf.0[0].as_mut_ptr().write_volatile(ch);
-        }
-        1
     }
     fn write(&self, _user_buf: UserBuffer) -> usize {
         panic!("Cannot write to stdin!");
