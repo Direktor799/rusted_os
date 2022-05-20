@@ -3,12 +3,13 @@ use crate::fs::inode::{open_file, OpenFlags};
 use crate::fs::rfs::{find_inode, get_full_path, layout::InodeType};
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
 use crate::task::TASK_MANAGER;
+
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
     let cwd = get_full_path(&task.cwd, &user_buffer_path);
-    if let Some(inode) = open_file(cwd.as_str(), OpenFlags(flags)) {
+    if let Some(inode) = open_file(&cwd, OpenFlags(flags)) {
         let fd = task.alloc_fd();
         task.fd_table[fd] = Some(inode);
         fd as isize
@@ -16,6 +17,7 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
         -1
     }
 }
+
 pub fn sys_close(fd: usize) -> isize {
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
     if fd >= task.fd_table.len() {
@@ -27,6 +29,7 @@ pub fn sys_close(fd: usize) -> isize {
     task.fd_table[fd].take();
     0
 }
+
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let fd_table = unsafe { &mut TASK_MANAGER.current_task.as_mut().unwrap().fd_table };
