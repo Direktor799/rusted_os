@@ -27,8 +27,6 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_EXIT => sys_exit(args[0] as i32),
         SYS_CALL_YIELD => sys_yield(),
         SYS_CALL_GET_TIME => sys_get_time(),
-        _ => {
-            panic!("sys_call with unknown id: {}", which)
-        }
+        _ => panic!("sys_call with unknown id: {}", which),
     }
 }

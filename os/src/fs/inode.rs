@@ -66,6 +66,7 @@ impl OpenFlags {
 }
 
 pub fn open_file(path: &str, flags: OpenFlags) -> Option<Rc<OSInode>> {
+    // TODO: app mode
     let (readable, writable) = flags.read_write();
     if flags.contains(CREATE) {
         if let Some(inode) = find_inode(path) {
