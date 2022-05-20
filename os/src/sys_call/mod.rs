@@ -4,7 +4,7 @@ use proc::*;
 mod fs;
 mod proc;
 
-const SYS_CALL_GET_CWD: usize = 17;
+const SYS_CALL_GETCWD: usize = 17;
 const SYS_CALL_MKDIR: usize = 34;
 const SYS_CALL_SYMLINK: usize = 36;
 const SYS_CALL_CHDIR: usize = 49;
@@ -15,11 +15,11 @@ const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
-const SYS_CALL_GET_TIME: usize = 169;
+const SYS_CALL_GETTIME: usize = 169;
 
 pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
     match which {
-        SYS_CALL_GET_CWD => sys_get_cwd(args[0] as *const u8, args[1] as usize),
+        SYS_CALL_GETCWD => sys_getcwd(args[0] as *const u8, args[1] as usize),
         SYS_CALL_MKDIR => sys_mkdir(args[0] as *const u8),
         SYS_CALL_SYMLINK => sys_symlink(args[0] as *const u8, args[1] as *const u8),
         SYS_CALL_CHDIR => sys_chdir(args[0] as *const u8),
@@ -30,7 +30,7 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYS_CALL_EXIT => sys_exit(args[0] as i32),
         SYS_CALL_YIELD => sys_yield(),
-        SYS_CALL_GET_TIME => sys_get_time(),
+        SYS_CALL_GETTIME => sys_gettime(),
         _ => {
             panic!("sys_call with unknown id: {}", which)
         }

@@ -75,13 +75,13 @@ pub fn r#yield() -> isize {
     sys_yield()
 }
 
-pub fn get_time() -> isize {
-    sys_get_time()
+pub fn gettime() -> isize {
+    sys_gettime()
 }
 
 pub fn getcwd(s: &mut String) -> isize {
     let mut buffer = [0u8; 128];
-    let ret = sys_get_cwd(&mut buffer);
+    let ret = sys_getcwd(&mut buffer);
     let len = buffer.iter().position(|&v| v == 0).unwrap_or(buffer.len());
     *s = str::from_utf8(&buffer[0..len]).unwrap().to_string();
     ret
