@@ -3,51 +3,30 @@
 
 extern crate alloc;
 
-#[macro_use]
 extern crate user_lib;
-const RDONLY: u32 = 0;
-const WRONLY: u32 = 1 << 0;
-const RDWR: u32 = 1 << 1;
-const CREATE: u32 = 1 << 9;
-const TRUNC: u32 = 1 << 10;
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use alloc::vec::Vec;
 use core::str;
-use user_lib::console::get_char;
+use user_lib::console::get_line;
 use user_lib::*;
 
 #[no_mangle]
 fn main() -> i32 {
-    let mut cur = alloc::string::String::new();
     let mut cwd = String::new();
     getcwd(&mut cwd);
-    print!("root@rusted_os:{}# ", cwd);
     loop {
-        let ch = get_char();
-        print!("{}", ch);
-        if ch == '\x7f' {
-            if !cur.is_empty() {
-                print!("\x08 \x08");
-                cur.pop();
+        print!("root@rusted_os:{}# ", cwd);
+        let input = get_line();
+        let args = input.split_whitespace().collect::<alloc::vec::Vec<_>>();
+        if !args.is_empty() {
+            match args[0] {
+                "cd" => cd(&mut cwd, &args),
+                "mkdir" => app_mkdir(&args),
+                "cat" => app_cat(&args),
+                "write" => write_test(&args),
+                "exit" => break,
+                _ => println!("{}: command not found", args[0]),
             }
-            continue;
-        }
-        cur.push(ch);
-        if ch == '\r' {
-            cur.pop();
-            println!("");
-            let args = cur.split_whitespace().collect::<alloc::vec::Vec<_>>();
-            if !args.is_empty() {
-                match args[0] {
-                    "cd" => cd(&mut cwd, &args),
-                    "mkdir" => app_mkdir(&args),
-                    "cat" => app_cat(&args),
-                    "write" => write_test(&args),
-                    _ => println!("{}: command not found", args[0]),
-                }
-            }
-            cur.clear();
-            print!("root@rusted_os:{}# ", cwd);
         }
     }
     0
@@ -101,6 +80,7 @@ fn app_cat(args: &Vec<&str>) {
         let fd = open(target, RDONLY);
         if fd == -1 {
             println!("{}: No such file or directory", target);
+            continue;
         }
         loop {
             let len = read(fd as usize, &mut buffer);
@@ -109,12 +89,11 @@ fn app_cat(args: &Vec<&str>) {
                     println!("{}: Out of resources", target);
                     break;
                 }
-                0 => {
-                    break;
-                }
+                0 => break,
                 _ => print!("{}", str::from_utf8(&buffer[0..len as usize]).unwrap()),
             }
         }
+        close(fd as usize);
     }
 }
 
@@ -128,10 +107,12 @@ fn write_test(args: &Vec<&str>) {
     let fd = open(target, WRONLY | CREATE);
     if fd == -1 {
         println!("{}: No such file or directory", target);
+        return;
     }
     let len = write(fd as usize, buf_str);
     match len {
         -1 => println!("{}: Out of resources", target),
         _ => println!("ok"),
     }
+    close(fd as usize);
 }

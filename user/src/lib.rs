@@ -44,7 +44,6 @@ pub extern "C" fn _start() -> ! {
         )));
     }
     exit(main());
-    unreachable!();
 }
 
 #[linkage = "weak"]
@@ -52,6 +51,12 @@ pub extern "C" fn _start() -> ! {
 fn main() -> i32 {
     panic!("Cannot find main!");
 }
+
+pub const RDONLY: u32 = 0;
+pub const WRONLY: u32 = 1 << 0;
+pub const RDWR: u32 = 1 << 1;
+pub const CREATE: u32 = 1 << 9;
+pub const TRUNC: u32 = 1 << 10;
 
 pub fn read(fd: usize, buf: &mut [u8]) -> isize {
     sys_read(fd, buf)
@@ -97,4 +102,8 @@ pub fn open(path: &str, flags: u32) -> isize {
     let mut zero_ended = String::from(path);
     zero_ended.push(0 as char);
     sys_open(zero_ended.as_ptr(), flags)
+}
+
+pub fn close(fd: usize) -> isize {
+    sys_close(fd)
 }

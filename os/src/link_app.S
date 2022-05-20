@@ -11,5 +11,5 @@ _app_num:
     .globl app_0_start
     .globl app_0_end
 app_0_start:
-    .incbin "../user/target/riscv64gc-unknown-none-elf/release/shell"
+    .incbin "../user/target/riscv64gc-unknown-none-elf/release/rush"
 app_0_end:

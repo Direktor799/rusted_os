@@ -11,7 +11,6 @@ const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GET_TIME: usize = 169;
 
-
 fn sys_call(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
     unsafe {
@@ -66,6 +65,6 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
     sys_call(SYS_CALL_OPEN, [path as usize, flags as usize, 0])
 }
 // 返回值为-1表示close失败，为0表示执行成功
-pub fn sys_close(fd: u32) -> isize {
+pub fn sys_close(fd: usize) -> isize {
     sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
 }
