@@ -12,6 +12,7 @@ const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GET_TIME: usize = 169;
+
 fn sys_call(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
     unsafe {
@@ -69,9 +70,11 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 pub fn sys_close(fd: usize) -> isize {
     sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
 }
+
 pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
     sys_call(SYS_CALL_SYMLINK, [target as usize, link_path as usize, 0])
 }
-pub fn sys_lseek(fd: usize, offset:isize, origin:i32) -> isize {
-    sys_call(SYS_CALL_LSEEK, [fd, offset as usize, origin as usize])
+
+pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
+    sys_call(SYS_CALL_LSEEK, [fd, offset as usize, whence as usize])
 }

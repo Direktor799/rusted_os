@@ -150,7 +150,7 @@ pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
     }
 }
 
-pub fn sys_lseek(fd: usize, offset: isize, origin: i32) -> isize {
+pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
     if fd >= task.fd_table.len() {
         return -1;
@@ -164,7 +164,7 @@ pub fn sys_lseek(fd: usize, offset: isize, origin: i32) -> isize {
     let file_size: isize = 0;
 
     let mut new_offset: isize;
-    match origin {
+    match whence {
         0 => new_offset = offset,
         1 => new_offset = file_offset + offset,
         2 => new_offset = file_size + offset,
@@ -172,8 +172,7 @@ pub fn sys_lseek(fd: usize, offset: isize, origin: i32) -> isize {
     }
     if new_offset < 0 {
         -1
-    }
-    else {
+    } else {
         file_offset = new_offset;
         new_offset
     }
