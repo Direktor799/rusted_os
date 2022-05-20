@@ -71,11 +71,11 @@ fn app_mkdir(args: &Vec<&str>) {
 }
 
 fn app_cat(args: &Vec<&str>) {
-    let mut fds = vec![];
     let mut buffer = [0u8; 128];
     if args.len() == 1 {
-        // TODO: runtime error for stdin
-        fds.push(0);
+        // TODO: maybe support this after sig & dev ?
+        println!("cat for stdin not supported");
+        return;
     }
     for target in &args[1..] {
         // TODO: check file type
@@ -84,9 +84,6 @@ fn app_cat(args: &Vec<&str>) {
             println!("{}: No such file or directory", target);
             continue;
         }
-        fds.push(fd);
-    }
-    for fd in fds {
         loop {
             let len = read(fd as usize, &mut buffer);
             match len {
