@@ -10,7 +10,7 @@ const WRONLY: u32 = 1 << 0;
 const RDWR: u32 = 1 << 1;
 const CREATE: u32 = 1 << 9;
 const TRUNC: u32 = 1 << 10;
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use user_lib::console::get_char;
 use user_lib::*;
@@ -41,6 +41,8 @@ fn main() -> i32 {
                     "cd" => cd(&mut cwd, &args),
                     "mkdir" => app_mkdir(&args),
                     "touch" => app_touch(&args),
+                    "read" => read_test(&args),
+                    "write" => write_test(&args),
                     _ => println!("{}: command not found1111", args[0]),
                 }
             }
@@ -94,9 +96,38 @@ fn app_touch(args: &Vec<&str>) {
         return;
     }
     for target in &args[1..] {
-        match touch(target, CREATE | TRUNC) {
+        let fd = touch(target, CREATE | TRUNC);
+        match fd {
             -1 => println!("cannot open file '{}'", target),
-            _ => {}
+            _ => println! {"fd:{}",fd},
         }
+    }
+}
+fn read_test(args: &Vec<&str>) {
+    if args.len() == 1 {
+        println!("missing operand");
+        return;
+    }
+    let target = args[1];
+    let mut a = String::from("");
+    match read_from_fd(target.parse::<usize>().unwrap(), &mut a) {
+        -1 => println!("cannot read file '{}'", target),
+        _ => println!("mess:{}", a),
+    }
+}
+fn write_test(args: &Vec<&str>) {
+    if args.len() == 2 {
+        println!("missing operand");
+        return;
+    }
+    let target = args[1];
+    let a = args[2].clone().to_string();
+    match write_from_fd(target.parse::<usize>().unwrap(), a.clone()) {
+        -1 => println!(
+            "cannot write file '{}' mess'{}'",
+            target.parse::<usize>().unwrap(),
+            a
+        ),
+        _ => {}
     }
 }

@@ -96,5 +96,22 @@ pub fn mkdir(path: &str) -> isize {
 pub fn touch(path: &str, flags: u32) -> isize {
     let mut zero_ended = String::from(path);
     zero_ended.push(0 as char);
-    sys_open(zero_ended.as_ptr(),flags)
+    sys_open(zero_ended.as_ptr(), flags)
+}
+pub fn read_from_fd(fd: usize, s: &mut String) -> isize {
+    let mut buffer = [0u8; 128];
+    let ret = sys_read(fd, &mut buffer);
+    if ret != -1 {
+        let len = buffer.iter().position(|&v| v == 0).unwrap_or(buffer.len());
+        *s = str::from_utf8(&buffer[0..len]).unwrap().to_string();
+    }
+    print!("read_len:{} buffer_len{}\n",ret,buffer.len());
+    ret
+}
+
+pub fn write_from_fd(fd: usize, buffer: String) -> isize {
+    print!("ready to write fd {} mess{}\n", fd, buffer);
+    let len = sys_write(fd, buffer.as_bytes());
+    print!("len :{}\n",len);
+    len
 }
