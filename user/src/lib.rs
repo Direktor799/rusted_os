@@ -119,3 +119,13 @@ pub fn symlink(target: &str, link_path: &str) -> isize {
 pub fn lseek(fd: usize, offset: isize, whence: u32) -> isize {
     sys_lseek(fd, offset, whence)
 }
+
+pub fn readlink(path: &str, s: &mut String) -> isize {
+    let mut zero_ended = String::from(path);
+    zero_ended.push(0 as char);
+    let mut buffer = [0u8; 128];
+    let ret = sys_readlink(zero_ended.as_ptr(), &mut buffer);
+    let len = buffer.iter().position(|&v| v == 0).unwrap_or(buffer.len());
+    *s = str::from_utf8(&buffer[0..len]).unwrap().to_string();
+    ret
+}

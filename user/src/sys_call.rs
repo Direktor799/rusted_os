@@ -9,6 +9,7 @@ const SYS_CALL_CLOSE: usize = 57;
 const SYS_CALL_LSEEK: usize = 62;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
+const SYS_CALL_READLINK: usize = 78;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GETTIME: usize = 169;
@@ -77,4 +78,11 @@ pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
 
 pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
     sys_call(SYS_CALL_LSEEK, [fd, offset as usize, whence as usize])
+}
+
+pub fn sys_readlink(path: *const u8, buf: &mut [u8]) -> isize {
+    sys_call(
+        SYS_CALL_READLINK,
+        [path as usize, buf.as_ptr() as usize, buf.len()],
+    )
 }

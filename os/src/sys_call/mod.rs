@@ -13,6 +13,7 @@ const SYS_CALL_CLOSE: usize = 57;
 const SYS_CALL_LSEEK: usize = 62;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
+const SYS_CALL_READLINK: usize = 78;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GETTIME: usize = 169;
@@ -28,6 +29,9 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_LSEEK => sys_lseek(args[0] as usize, args[1] as isize, args[2] as u32),
         SYS_CALL_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
         SYS_CALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
+        SYS_CALL_READLINK => {
+            sys_readlink(args[0] as *const u8, args[1] as *const u8, args[2] as usize)
+        }
         SYS_CALL_EXIT => sys_exit(args[0] as i32),
         SYS_CALL_YIELD => sys_yield(),
         SYS_CALL_GETTIME => sys_gettime(),

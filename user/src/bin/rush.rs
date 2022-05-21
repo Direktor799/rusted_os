@@ -23,9 +23,9 @@ fn main() -> i32 {
                 "cd" => cd(&mut cwd, &args),
                 "mkdir" => app_mkdir(&args),
                 "cat" => app_cat(&args),
-                "cats" => read_from_symlink(&args),
                 "write" => write_test(&args),
                 "ln" => app_ln(&args),
+                "readlink" => app_readlink(&args),
                 "exit" => break,
                 _ => println!("{}: command not found", args[0]),
             }
@@ -141,46 +141,15 @@ fn app_ln(args: &Vec<&str>) {
     }
 }
 
-fn read_from_symlink(args: &Vec<&str>) {
-    // TODO: check file type
-    let target = args[1];
-    let fd = open(target, RDONLY);
-    if fd == -1 {
-        println!("{}: No such file or directory", target);
+fn app_readlink(args: &Vec<&str>) {
+    if args.len() == 1 {
+        println!("missing operand");
         return;
     }
-    let mut buffer = [0u8; 128];
-    let mut real_path = String::from("");
-    loop {
-        let len = read(fd as usize, &mut buffer);
-        match len {
-            -1 => {
-                println!("{}: Bad file descriptor", fd);
-                break;
-            }
-            0 => break,
-            _ => {
-                real_path = str::from_utf8(&buffer[0..len as usize])
-                    .unwrap()
-                    .to_string()
-            }
-        }
-    }
-    close(fd as usize);
-
-    let fd = open(real_path.as_str(), RDONLY);
-    if fd == -1 {
-        println!("{}: No such file or directory", real_path);
-    }
-    loop {
-        let len = read(fd as usize, &mut buffer);
-        match len {
-            -1 => {
-                println!("{}: Bad file descriptor", fd);
-                break;
-            }
-            0 => break,
-            _ => print!("{}", str::from_utf8(&buffer[0..len as usize]).unwrap()),
+    for target in &args[1..] {
+        let mut content = String::new();
+        if readlink(target, &mut content) == 0 {
+            println!("{}", content);
         }
     }
 }

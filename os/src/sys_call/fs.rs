@@ -176,3 +176,31 @@ pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
         new_offset
     }
 }
+
+pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let target_path = get_user_string_in_kernel(user_satp_token, path);
+    let mut user_buffer = get_user_buffer_in_kernel(user_satp_token, buf, len);
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let new_path = get_full_path(&task.cwd, &target_path);
+    if let Some(inode) = find_inode(&new_path) {
+        if !inode.is_link() {
+            // not link file
+            return -3;
+        }
+        if inode.get_file_size() as usize > len {
+            // not big enough
+            return -2;
+        }
+        let mut cur_offset = 0;
+        for slice in user_buffer.0.iter_mut() {
+            let len = slice.len().min(inode.get_file_size() as usize - cur_offset);
+            inode.read_at(cur_offset, &mut slice[cur_offset..cur_offset + len]);
+            cur_offset += len;
+        }
+        0
+    } else {
+        // no such file
+        -1
+    }
+}
