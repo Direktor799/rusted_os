@@ -48,14 +48,9 @@ impl InodeHandler {
     }
 
     pub fn get_inode_id(&self) -> u32 {
-        let mut dirent_self = Dirent::new("", 0);
-        self.read_disk_inode(|disk_inode| {
-            disk_inode.read_at(0, dirent_self.as_bytes_mut(), &self.block_device)
-        });
-        if self.block_id == 0 && self.block_offset == 0 {
-            return 0;
-        }
-        dirent_self.inode_number()
+        self.fs
+            .borrow()
+            .get_disk_inode_id(self.block_id, self.block_offset)
     }
 
     fn find_inode_id(&self, name: &str, disk_inode: &Inode) -> Option<u32> {

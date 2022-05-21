@@ -141,3 +141,30 @@ pub fn unlink(path: &str, flags: u32) -> isize {
     zero_ended.push(0 as char);
     sys_unlink(zero_ended.as_ptr(), flags)
 }
+
+pub const CHR: usize = 0;
+pub const REG: usize = 1;
+pub const DIR: usize = 2;
+pub const LNK: usize = 3;
+
+pub struct Stat {
+    pub ino: u32,
+    pub mode: u32,
+    pub off: u32,
+    pub size: u32,
+}
+
+impl Stat {
+    pub fn new() -> Self {
+        Self {
+            ino: 0,
+            mode: 0,
+            off: 0,
+            size: 0,
+        }
+    }
+}
+
+pub fn fstat(fd: usize, stat: &mut Stat) -> isize {
+    sys_fstat(fd, stat as *mut Stat as *mut u8)
+}

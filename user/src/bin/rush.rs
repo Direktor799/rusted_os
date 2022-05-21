@@ -27,6 +27,7 @@ fn main() -> i32 {
                 "readlink" => app_readlink(&args),
                 "rm" => app_rm(&args),
                 "rmdir" => app_rmdir(&args),
+                "stat" => app_stat(&args),
                 "write" => write_test(&args),
                 "exit" => break,
                 _ => println!("{}: command not found", args[0]),
@@ -90,11 +91,11 @@ fn app_cat(args: &Vec<&str>) {
         loop {
             let len = read(fd as usize, &mut buffer);
             match len {
+                0 => break,
                 -1 => {
                     println!("{}: Bad file descriptor", fd);
                     break;
                 }
-                0 => break,
                 _ => print!("{}", str::from_utf8(&buffer[0..len as usize]).unwrap()),
             }
         }
@@ -167,6 +168,39 @@ fn app_rmdir(args: &Vec<&str>) {
     }
 }
 
+fn app_stat(args: &Vec<&str>) {
+    if args.len() == 1 {
+        println!("missing operand");
+        return;
+    }
+    for target in &args[1..] {
+        let fd = open(target, RDONLY);
+        let mut stat = Stat::new();
+        if fd == -1 {
+            println!("cannot stat '{}': No such file or directory", target);
+            continue;
+        }
+        match fstat(fd as usize, &mut stat) {
+            0 => {}
+            -1 => {
+                println!("{}: Bad file descriptor", fd);
+                continue;
+            }
+            _ => panic!(),
+        }
+        close(fd as usize);
+        let file_type = match stat.mode as usize {
+            CHR => "character special file",
+            REG => "regular file",
+            DIR => "directory",
+            LNK => "symbolic link",
+            _ => panic!("Unknown mode: {}", stat.mode),
+        };
+        println!("File: {}\t\tType: {}", target, file_type);
+        println!("Size: {}\t\tInode: {}", stat.size, stat.ino);
+    }
+}
+
 fn write_test(args: &Vec<&str>) {
     if args.len() <= 2 {
         println!("missing operand");
@@ -181,7 +215,7 @@ fn write_test(args: &Vec<&str>) {
     }
     let len = write(fd as usize, buf_str);
     match len {
-        -1 => println!("{}: Bad file descriptor", target),
+        -1 => println!("{}: Bad file descriptor", fd),
         _ => println!("ok"),
     }
     close(fd as usize);

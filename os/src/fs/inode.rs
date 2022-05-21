@@ -1,6 +1,6 @@
 use super::rfs::layout::InodeType;
 use super::rfs::{find_inode, InodeHandler};
-use super::File;
+use super::{File, DIR, LNK, REG};
 use crate::memory::frame::user_buffer::UserBuffer;
 use alloc::rc::Rc;
 use alloc::vec::Vec;
@@ -131,5 +131,20 @@ impl File for OSInode {
 
     fn get_file_size(&self) -> usize {
         self.inner.borrow().inode.get_file_size() as usize
+    }
+
+    fn get_inode_id(&self) -> usize {
+        self.inner.borrow().inode.get_inode_id() as usize
+    }
+
+    fn get_mode(&self) -> usize {
+        let inode = &self.inner.borrow().inode;
+        if inode.is_file() {
+            REG
+        } else if inode.is_dir() {
+            DIR
+        } else {
+            LNK
+        }
     }
 }

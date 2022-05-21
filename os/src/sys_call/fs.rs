@@ -1,7 +1,11 @@
 //! 文件相关系统调用子模块
+use core::mem::size_of;
+use core::ptr::slice_from_raw_parts;
+
 use crate::fs::inode::{open_file, OpenFlags};
 use crate::fs::rfs::layout::DIRENT_SZ;
 use crate::fs::rfs::{find_inode, get_full_path, layout::InodeType};
+use crate::fs::Stat;
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
 use crate::task::TASK_MANAGER;
 
@@ -237,4 +241,25 @@ pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
         // no such file
         -1
     }
+}
+
+pub fn sys_fstat(fd: usize, stat: *mut u8) -> isize {
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let user_buffer = get_user_buffer_in_kernel(user_satp_token, stat, size_of::<Stat>());
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    if fd >= task.fd_table.len() {
+        return -1;
+    }
+    if task.fd_table[fd].is_none() {
+        return -1;
+    }
+    let file = task.fd_table[fd].as_ref().unwrap();
+    let tmp_stat = Stat::from(file);
+    let stat_buf = slice_from_raw_parts(&tmp_stat as *const _ as *const u8, size_of::<Stat>());
+    for (i, byte) in user_buffer.into_iter().enumerate() {
+        unsafe {
+            *byte = (*stat_buf)[i];
+        }
+    }
+    0
 }

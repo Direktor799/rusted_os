@@ -11,6 +11,7 @@ const SYS_CALL_LSEEK: usize = 62;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_READLINK: usize = 78;
+const SYS_CALL_FSTAT: usize = 80;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GETTIME: usize = 169;
@@ -90,4 +91,8 @@ pub fn sys_readlink(path: *const u8, buf: &mut [u8]) -> isize {
 
 pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
     sys_call(SYS_CALL_UNLINK, [path as usize, flags as usize, 0])
+}
+
+pub fn sys_fstat(fd: usize, stat: *mut u8) -> isize {
+    sys_call(SYS_CALL_FSTAT, [fd as usize, stat as usize, 0])
 }
