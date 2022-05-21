@@ -18,6 +18,7 @@ use alloc::alloc::Layout;
 use alloc::string::String;
 use alloc::string::ToString;
 use core::cell::RefCell;
+use core::mem::size_of;
 use core::str;
 use sys_call::*;
 
@@ -81,10 +82,11 @@ pub fn gettime() -> isize {
 
 pub fn getcwd(s: &mut String) -> isize {
     let mut buffer = [0u8; 128];
-    let ret = sys_getcwd(&mut buffer);
-    let len = buffer.iter().position(|&v| v == 0).unwrap_or(buffer.len());
-    *s = str::from_utf8(&buffer[0..len]).unwrap().to_string();
-    ret
+    let len = sys_getcwd(&mut buffer);
+    *s = str::from_utf8(&buffer[0..len as usize])
+        .unwrap()
+        .to_string();
+    len
 }
 
 pub fn chdir(path: &str) -> isize {
@@ -128,10 +130,11 @@ pub fn readlink(path: &str, s: &mut String) -> isize {
     let mut zero_ended = String::from(path);
     zero_ended.push(0 as char);
     let mut buffer = [0u8; 128];
-    let ret = sys_readlink(zero_ended.as_ptr(), &mut buffer);
-    let len = buffer.iter().position(|&v| v == 0).unwrap_or(buffer.len());
-    *s = str::from_utf8(&buffer[0..len]).unwrap().to_string();
-    ret
+    let len = sys_readlink(zero_ended.as_ptr(), &mut buffer);
+    *s = str::from_utf8(&buffer[0..len as usize])
+        .unwrap()
+        .to_string();
+    len
 }
 
 pub const AT_REMOVEDIR: u32 = 1;
@@ -168,3 +171,12 @@ impl Stat {
 pub fn fstat(fd: usize, stat: &mut Stat) -> isize {
     sys_fstat(fd, stat as *mut Stat as *mut u8)
 }
+
+pub const NAME_LENGTH_LIMIT: usize = 27;
+#[repr(C)]
+pub struct Dirent {
+    pub name: [u8; NAME_LENGTH_LIMIT + 1],
+    pub inode_number: u32,
+}
+
+pub const DIRENT_SZ: usize = size_of::<Dirent>();

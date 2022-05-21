@@ -103,7 +103,7 @@ pub fn sys_getcwd(buf: *const u8, len: usize) -> isize {
         slice[..len].copy_from_slice(&cwd[cur_offset..cur_offset + len]);
         cur_offset += len;
     }
-    0
+    cwd.len() as isize
 }
 
 pub fn sys_mkdir(path: *const u8) -> isize {
@@ -204,7 +204,7 @@ pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
             inode.read_at(cur_offset, &mut slice[cur_offset..cur_offset + len]);
             cur_offset += len;
         }
-        0
+        inode.get_file_size() as isize
     } else {
         // no such file
         -1
