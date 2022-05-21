@@ -150,6 +150,10 @@ pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
     }
 }
 
+const SEEK_SET: u32 = 0;
+const SEEK_CUR: u32 = 1;
+const SEEK_END: u32 = 2;
+
 pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
     if fd >= task.fd_table.len() {
@@ -158,22 +162,19 @@ pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
     if task.fd_table[fd].is_none() {
         return -1;
     }
-    // let file = task.fd_table[fd].as_ref().unwrap();
-    //这里怎么获取这两个变量呢
-    let mut file_offset: isize = 0;
-    let file_size: isize = 0;
-
-    let mut new_offset: isize;
-    match whence {
-        0 => new_offset = offset,
-        1 => new_offset = file_offset + offset,
-        2 => new_offset = file_size + offset,
-        _ => panic!(),
-    }
+    let file = task.fd_table[fd].as_ref().unwrap();
+    let cur_offset = file.get_offset() as isize;
+    let file_size = file.get_file_size() as isize;
+    let new_offset = match whence {
+        SEEK_SET => offset,
+        SEEK_CUR => cur_offset + offset,
+        SEEK_END => file_size + offset,
+        _ => return -2,
+    };
     if new_offset < 0 {
         -1
     } else {
-        file_offset = new_offset;
+        file.set_offset(new_offset as usize);
         new_offset
     }
 }

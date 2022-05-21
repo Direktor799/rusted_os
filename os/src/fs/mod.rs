@@ -7,6 +7,13 @@ pub trait File {
     fn writable(&self) -> bool;
     fn read(&self, buf: UserBuffer) -> usize;
     fn write(&self, buf: UserBuffer) -> usize;
+    fn get_offset(&self) -> usize {
+        0
+    }
+    fn set_offset(&self, _offset: usize) {}
+    fn get_file_size(&self) -> usize {
+        0
+    }
 }
 
 pub fn init() {

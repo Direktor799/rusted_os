@@ -116,6 +116,10 @@ pub fn symlink(target: &str, link_path: &str) -> isize {
     sys_symlink(zero_ended_target.as_ptr(), zero_ended_link_path.as_ptr())
 }
 
+pub const SEEK_SET: u32 = 0;
+pub const SEEK_CUR: u32 = 1;
+pub const SEEK_END: u32 = 2;
+
 pub fn lseek(fd: usize, offset: isize, whence: u32) -> isize {
     sys_lseek(fd, offset, whence)
 }

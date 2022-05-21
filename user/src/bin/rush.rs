@@ -4,7 +4,7 @@
 extern crate alloc;
 
 extern crate user_lib;
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use alloc::vec::Vec;
 use core::str;
 use user_lib::console::get_line;
@@ -17,17 +17,17 @@ fn main() -> i32 {
     loop {
         print!("root@rusted_os:{}# ", cwd);
         let input = get_line();
-        let args = input.split_whitespace().collect::<alloc::vec::Vec<_>>();
+        let args = input.split_whitespace().collect::<Vec<_>>();
         if !args.is_empty() {
             match args[0] {
                 "cd" => cd(&mut cwd, &args),
                 "mkdir" => app_mkdir(&args),
                 "cat" => app_cat(&args),
-                "write" => write_test(&args),
                 "ln" => app_ln(&args),
                 "readlink" => app_readlink(&args),
                 "rm" => app_rm(&args),
                 "rmdir" => app_rmdir(&args),
+                "write" => write_test(&args),
                 "exit" => break,
                 _ => println!("{}: command not found", args[0]),
             }
@@ -102,26 +102,6 @@ fn app_cat(args: &Vec<&str>) {
     }
 }
 
-fn write_test(args: &Vec<&str>) {
-    if args.len() <= 2 {
-        println!("missing operand");
-        return;
-    }
-    let target = args[1];
-    let buf_str = args[2].as_bytes();
-    let fd = open(target, WRONLY | CREATE);
-    if fd == -1 {
-        println!("{}: No such file or directory", target);
-        return;
-    }
-    let len = write(fd as usize, buf_str);
-    match len {
-        -1 => println!("{}: Bad file descriptor", target),
-        _ => println!("ok"),
-    }
-    close(fd as usize);
-}
-
 fn app_ln(args: &Vec<&str>) {
     if args.len() <= 2 {
         println!("missing file operand");
@@ -185,4 +165,24 @@ fn app_rmdir(args: &Vec<&str>) {
             _ => panic!(),
         }
     }
+}
+
+fn write_test(args: &Vec<&str>) {
+    if args.len() <= 2 {
+        println!("missing operand");
+        return;
+    }
+    let target = args[1];
+    let buf_str = args[2].as_bytes();
+    let fd = open(target, WRONLY | CREATE);
+    if fd == -1 {
+        println!("{}: No such file or directory", target);
+        return;
+    }
+    let len = write(fd as usize, buf_str);
+    match len {
+        -1 => println!("{}: Bad file descriptor", target),
+        _ => println!("ok"),
+    }
+    close(fd as usize);
 }

@@ -1,11 +1,10 @@
-use core::cell::RefCell;
-
 use super::rfs::layout::InodeType;
 use super::rfs::{find_inode, InodeHandler};
 use super::File;
 use crate::memory::frame::user_buffer::UserBuffer;
 use alloc::rc::Rc;
 use alloc::vec::Vec;
+use core::cell::RefCell;
 
 pub struct OSInode {
     readable: bool,
@@ -77,7 +76,7 @@ pub fn open_file(path: &str, flags: OpenFlags) -> Option<Rc<OSInode>> {
             let (parent_path, target) = path.rsplit_once('/')?;
             let parent_inode = find_inode(parent_path)?;
             parent_inode
-                .create(target, super::rfs::layout::InodeType::File)
+                .create(target, InodeType::File)
                 .map(|inode| Rc::new(OSInode::new(readable, writable, inode)))
         }
     } else {
@@ -97,10 +96,6 @@ impl File for OSInode {
     fn writable(&self) -> bool {
         self.writable
     }
-    // fn lseek(&self){
-    //     let mut inner = self.inner.borrow_mut();
-    //     inner.offset = 0
-    // }
     fn read(&self, mut buf: UserBuffer) -> usize {
         let mut inner = self.inner.borrow_mut();
         let mut total_read_size = 0usize;
@@ -124,5 +119,17 @@ impl File for OSInode {
             total_write_size += write_size;
         }
         total_write_size
+    }
+
+    fn get_offset(&self) -> usize {
+        self.inner.borrow().offset
+    }
+
+    fn set_offset(&self, offset: usize) {
+        self.inner.borrow_mut().offset = offset;
+    }
+
+    fn get_file_size(&self) -> usize {
+        self.inner.borrow().inode.get_file_size() as usize
     }
 }
