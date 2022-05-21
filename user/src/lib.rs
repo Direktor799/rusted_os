@@ -129,3 +129,11 @@ pub fn readlink(path: &str, s: &mut String) -> isize {
     *s = str::from_utf8(&buffer[0..len]).unwrap().to_string();
     ret
 }
+
+pub const AT_REMOVEDIR: u32 = 1;
+
+pub fn unlink(path: &str, flags: u32) -> isize {
+    let mut zero_ended = String::from(path);
+    zero_ended.push(0 as char);
+    sys_unlink(zero_ended.as_ptr(), flags)
+}

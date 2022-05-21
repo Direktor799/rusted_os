@@ -1,5 +1,6 @@
 //! 文件相关系统调用子模块
 use crate::fs::inode::{open_file, OpenFlags};
+use crate::fs::rfs::layout::DIRENT_SZ;
 use crate::fs::rfs::{find_inode, get_full_path, layout::InodeType};
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
 use crate::task::TASK_MANAGER;
@@ -199,6 +200,38 @@ pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
             cur_offset += len;
         }
         0
+    } else {
+        // no such file
+        -1
+    }
+}
+
+const AT_REMOVEDIR: u32 = 1;
+
+pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
+    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
+    let target_path = get_user_string_in_kernel(user_satp_token, path);
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let new_path = get_full_path(&task.cwd, &target_path);
+    let (parent_path, target) = new_path.rsplit_once('/').unwrap();
+    if let Some(inode) = find_inode(&new_path) {
+        if flags & AT_REMOVEDIR == 0 && !inode.is_dir() {
+            inode.clear();
+            find_inode(parent_path).unwrap().delete(target);
+            0
+        } else if flags & AT_REMOVEDIR == 1 && inode.is_dir() {
+            if inode.get_file_size() as usize == DIRENT_SZ * 2 {
+                inode.clear();
+                find_inode(parent_path).unwrap().delete(target);
+                0
+            } else {
+                // not empty
+                -3
+            }
+        } else {
+            // type not matched
+            -2
+        }
     } else {
         // no such file
         -1

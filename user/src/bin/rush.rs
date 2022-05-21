@@ -26,6 +26,8 @@ fn main() -> i32 {
                 "write" => write_test(&args),
                 "ln" => app_ln(&args),
                 "readlink" => app_readlink(&args),
+                "rm" => app_rm(&args),
+                "rmdir" => app_rmdir(&args),
                 "exit" => break,
                 _ => println!("{}: command not found", args[0]),
             }
@@ -150,6 +152,37 @@ fn app_readlink(args: &Vec<&str>) {
         let mut content = String::new();
         if readlink(target, &mut content) == 0 {
             println!("{}", content);
+        }
+    }
+}
+
+fn app_rm(args: &Vec<&str>) {
+    if args.len() == 1 {
+        println!("missing operand");
+        return;
+    }
+    for target in &args[1..] {
+        match unlink(target, 0) {
+            0 => {}
+            -1 => println!("cannot remove '{}': No such file or directory", target),
+            -2 => println!("cannot remove '{}': Is a directory", target),
+            _ => panic!(),
+        }
+    }
+}
+
+fn app_rmdir(args: &Vec<&str>) {
+    if args.len() == 1 {
+        println!("missing operand");
+        return;
+    }
+    for target in &args[1..] {
+        match unlink(target, AT_REMOVEDIR) {
+            0 => {}
+            -1 => println!("failed to remove '{}': No such file or directory", target),
+            -2 => println!("failed to remove '{}': Not a directory", target),
+            -3 => println!("failed to remove '{}': Directory not empty", target),
+            _ => panic!(),
         }
     }
 }

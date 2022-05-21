@@ -2,6 +2,7 @@ use core::arch::asm;
 
 const SYS_CALL_GETCWD: usize = 17;
 const SYS_CALL_MKDIR: usize = 34;
+const SYS_CALL_UNLINK: usize = 35;
 const SYS_CALL_SYMLINK: usize = 36;
 const SYS_CALL_CHDIR: usize = 49;
 const SYS_CALL_OPEN: usize = 56;
@@ -85,4 +86,8 @@ pub fn sys_readlink(path: *const u8, buf: &mut [u8]) -> isize {
         SYS_CALL_READLINK,
         [path as usize, buf.as_ptr() as usize, buf.len()],
     )
+}
+
+pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
+    sys_call(SYS_CALL_UNLINK, [path as usize, flags as usize, 0])
 }
