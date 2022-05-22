@@ -2,6 +2,7 @@ mod context;
 pub mod schd;
 mod switch;
 mod task;
+mod id;
 
 use crate::interrupt::context::Context;
 use crate::interrupt::timer;
@@ -116,6 +117,7 @@ pub fn init() {
             schd: SchdMaster::new(),
         });
         TASK_MANAGER.init();
+        id::init();
         println!("mod task initialized!");
     }
 }

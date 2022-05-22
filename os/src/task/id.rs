@@ -1,9 +1,6 @@
-use super::ProcessControlBlock;
-use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE};
 use crate::sync::uninit_cell::UninitCell;
 use alloc::{
-    sync::{Arc, Weak},
-    vec::Vec,
+    vec::Vec
 };
 
 pub struct RecycleAllocator {
@@ -42,11 +39,19 @@ pub static mut PID_ALLOCATOR: UninitCell<RecycleAllocator> = UninitCell::uninit(
 pub struct PidHandle(pub usize);
 
 pub fn pid_alloc() -> PidHandle {
-    PidHandle(PID_ALLOCATOR.alloc())
+    unsafe {
+        PidHandle(PID_ALLOCATOR.alloc())
+    }
 }
 
 impl Drop for PidHandle {
     fn drop(&mut self) {
-        PID_ALLOCATOR.dealloc(self.0);
+        unsafe {
+            PID_ALLOCATOR.dealloc(self.0);
+        }
     }
+}
+
+pub fn init() {
+    UninitCell::init(RecycleAllocator::new());
 }
