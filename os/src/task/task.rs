@@ -28,7 +28,7 @@ pub enum TaskPos {
     Rr,
 }
 
-pub struct TaskControlBlock {
+pub struct ProcessControlBlock {
     pub task_status: TaskStatus,
     pub task_cx: TaskContext,
     pub task_pos: TaskPos,
@@ -38,7 +38,7 @@ pub struct TaskControlBlock {
     pub fd_table: Vec<Option<Rc<dyn File>>>,
 }
 
-impl TaskControlBlock {
+impl ProcessControlBlock {
     pub fn new(elf_data: &[u8], app_id: usize) -> Self {
         let (memory_set, user_sp, entry) = MemorySet::from_elf(elf_data);
         // guard page

@@ -10,10 +10,10 @@ use crate::sync::uninit_cell::UninitCell;
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
-pub use task::{TaskControlBlock, TaskPos, TaskStatus};
+pub use task::{ProcessControlBlock, TaskPos, TaskStatus};
 
 pub struct TaskManager {
-    pub current_task: Option<TaskControlBlock>,
+    pub current_task: Option<ProcessControlBlock>,
     schd: SchdMaster,
 }
 
@@ -22,7 +22,7 @@ impl TaskManager {
         unsafe {
             let app_num = APP_MANAGER.get_app_num();
             for i in 0..app_num {
-                let tcb = TaskControlBlock::new(APP_MANAGER.get_app_data(i), i);
+                let tcb = ProcessControlBlock::new(APP_MANAGER.get_app_data(i), i);
                 if i == 0 {
                     self.current_task = Some(tcb);
                 } else {
@@ -72,7 +72,7 @@ impl TaskManager {
     //     let current = inner.current_task.as_ref().unwrap();
     //     current.get_fd_table()
     // }
-    // pub fn get_current_task(&mut self) -> &'static mut TaskControlBlock {
+    // pub fn get_current_task(&mut self) -> &'static mut ProcessControlBlock {
 
     //     let mut inner = self.0.as_ref().unwrap().borrow_mut();
     //     inner.current_task.as_mut().unwrap()
