@@ -1,7 +1,5 @@
 use crate::sync::uninit_cell::UninitCell;
-use alloc::{
-    vec::Vec
-};
+use alloc::vec::Vec;
 
 pub struct RecycleAllocator {
     current: usize,
@@ -39,9 +37,7 @@ pub static mut PID_ALLOCATOR: UninitCell<RecycleAllocator> = UninitCell::uninit(
 pub struct PidHandle(pub usize);
 
 pub fn pid_alloc() -> PidHandle {
-    unsafe {
-        PidHandle(PID_ALLOCATOR.alloc())
-    }
+    unsafe { PidHandle(PID_ALLOCATOR.alloc()) }
 }
 
 impl Drop for PidHandle {
@@ -53,5 +49,7 @@ impl Drop for PidHandle {
 }
 
 pub fn init() {
-    UninitCell::init(RecycleAllocator::new());
+    unsafe {
+        PID_ALLOCATOR = UninitCell::init(RecycleAllocator::new());
+    }
 }
