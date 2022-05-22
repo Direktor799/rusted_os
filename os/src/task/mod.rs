@@ -49,13 +49,10 @@ impl TaskManager {
         drop(next_task_inner);
         self.current_task = Some(next_task);
         unsafe {
-            // println!(
-            //     "switching to 0x{:x}",
-            //     (*((*next_task_cx).sp as *const Context)).sepc
-            // );
+            // println!("{:x?}", *current_task_cx);
+            // println!("{:x?}", *next_task_cx);
             __switch(current_task_cx, next_task_cx);
         }
-        unreachable!();
     }
 
     fn set_current_task_status(&mut self, stat: TaskStatus) {
@@ -141,10 +138,6 @@ pub fn run() {
         let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
         drop(current_task_inner);
         let mut _unused = TaskContext::zero_init();
-        // println!(
-        //     "first time switching to 0x{:x}",
-        //     (*((*current_task_cx).sp as *const Context)).sepc
-        // );
         __switch(&mut _unused as *mut TaskContext, current_task_cx);
         unreachable!();
     }

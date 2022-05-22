@@ -72,14 +72,14 @@ impl ProcessControlBlock {
             entry,
             user_sp,
             unsafe { KERNEL_MEMORY_SET.satp_token() },
-            kernel_stack_end - 1,
+            kernel_stack_end,
             interrupt_handler as usize,
         );
         Self {
             pid: pid_alloc(),
             inner: RefCell::new(ProcessControlBlockInner {
                 task_status: TaskStatus::Ready,
-                task_cx: TaskContext::goto_trap_return(kernel_stack_end - 1),
+                task_cx: TaskContext::goto_trap_return(kernel_stack_end),
                 task_pos: TaskPos::Fcfs1,
                 memory_set,
                 trap_cx_ppn,
