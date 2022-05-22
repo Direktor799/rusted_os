@@ -10,11 +10,12 @@ use crate::loader::app_manager::APP_MANAGER;
 use crate::sync::uninit_cell::UninitCell;
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
+use alloc::rc::Rc;
 pub use switch::__switch;
 pub use task::{ProcessControlBlock, TaskPos, TaskStatus};
 
 pub struct TaskManager {
-    pub current_task: Option<ProcessControlBlock>,
+    pub current_task: Option<Rc<ProcessControlBlock>>,
     schd: SchdMaster,
 }
 
@@ -23,7 +24,7 @@ impl TaskManager {
         unsafe {
             let app_num = APP_MANAGER.get_app_num();
             for i in 0..app_num {
-                let tcb = ProcessControlBlock::new(APP_MANAGER.get_app_data(i), i);
+                let tcb = Rc::from(ProcessControlBlock::new(APP_MANAGER.get_app_data(i), i));
                 if i == 0 {
                     self.current_task = Some(tcb);
                 } else {
@@ -68,6 +69,9 @@ impl TaskManager {
         let current = self.current_task.as_ref().unwrap();
         current.get_trap_cx()
     }
+    pub fn get_current_process(&self) -> Option<Rc<ProcessControlBlock>> {
+        self.current_task
+    }
     // pub fn current_fd_table(&self) -> &mut Vec<Option<Rc<dyn File>>> {
     //     let inner = self.0.as_ref().unwrap().borrow();
     //     let current = inner.current_task.as_ref().unwrap();
@@ -107,6 +111,12 @@ pub fn suspend_current_and_run_next() {
 pub fn schedule_callback() {
     unsafe {
         TASK_MANAGER.switch_to_next_task();
+    }
+}
+
+pub fn get_current_process() -> Option<Rc<ProcessControlBlock>> {
+    unsafe {
+        TASK_MANAGER.get_current_process()
     }
 }
 
