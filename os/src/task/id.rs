@@ -1,4 +1,10 @@
 use crate::sync::uninit_cell::UninitCell;
+use crate::config::{TRAMPOLINE, KERNEL_STACK_SIZE, PAGE_SIZE};
+use crate::memory::frame::{
+    address::{VirtAddr, VPNRange},
+    memory_set::{KERNEL_MEMORY_SET},
+    page_table::{R, W}
+};
 use alloc::vec::Vec;
 
 pub struct RecycleAllocator {
@@ -51,5 +57,63 @@ impl Drop for PidHandle {
 pub fn init() {
     unsafe {
         PID_ALLOCATOR = UninitCell::init(RecycleAllocator::new());
+    }
+}
+
+pub fn kernel_stack_position(app_id: usize) -> (usize, usize) {
+    let top = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
+    let bottom = top - KERNEL_STACK_SIZE;
+    (bottom, top)
+}
+///Kernelstack for app
+pub struct KernelStack {
+    pid: usize,
+}
+
+impl KernelStack {
+    ///Create a kernelstack from pid
+    pub fn new(pid_handle: &PidHandle) -> Self {
+        let pid = pid_handle.0;
+        let (kernel_stack_bottom, kernel_stack_top) = kernel_stack_position(pid);
+        unsafe {
+            KERNEL_MEMORY_SET.insert_segment(
+                VPNRange::new(
+                    VirtAddr(kernel_stack_bottom).vpn(),
+                    VirtAddr(kernel_stack_top).vpn()
+                ),
+                R | W,
+                None
+            );
+        }
+        KernelStack { pid: pid_handle.0 }
+    }
+    #[allow(unused)]
+    ///Push a value on top of kernelstack
+    pub fn push_on_top<T>(&self, value: T) -> *mut T
+    where
+        T: Sized,
+    {
+        let kernel_stack_top = self.get_top();
+        let ptr_mut = (kernel_stack_top - core::mem::size_of::<T>()) as *mut T;
+        unsafe {
+            *ptr_mut = value;
+        }
+        ptr_mut
+    }
+    ///Get the value on the top of kernelstack
+    pub fn get_top(&self) -> usize {
+        let (_, kernel_stack_top) = kernel_stack_position(self.pid);
+        kernel_stack_top
+    }
+}
+
+impl Drop for KernelStack {
+    fn drop(&mut self) {
+        let (kernel_stack_bottom, _) = kernel_stack_position(self.pid);
+        let kernel_stack_bottom_va = VirtAddr(kernel_stack_bottom);
+        unsafe {
+            KERNEL_MEMORY_SET
+                .remove_area_with_start_vpn(kernel_stack_bottom_va.into());
+        }
     }
 }

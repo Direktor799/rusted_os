@@ -1,4 +1,5 @@
 use super::context::TaskContext;
+use super::id::{KernelStack, PidHandle, pid_alloc};
 use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT};
 use crate::fs::stdio::{Stdin, Stdout};
 use crate::fs::File;
@@ -13,6 +14,7 @@ use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
+
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
     UnInit,
@@ -29,6 +31,7 @@ pub enum TaskPos {
 }
 
 pub struct ProcessControlBlock {
+    pub pid: PidHandle,
     pub task_status: TaskStatus,
     pub task_cx: TaskContext,
     pub task_pos: TaskPos,
@@ -36,6 +39,7 @@ pub struct ProcessControlBlock {
     pub trap_cx_ppn: PhysPageNum,
     pub cwd: String,
     pub fd_table: Vec<Option<Rc<dyn File>>>,
+    pub children: Vec<Rc<ProcessControlBlock>>
 }
 
 impl ProcessControlBlock {
@@ -66,6 +70,7 @@ impl ProcessControlBlock {
             interrupt_handler as usize,
         );
         Self {
+            pid: pid_alloc(),
             task_status: TaskStatus::Ready,
             task_cx: TaskContext::goto_trap_return(kernel_stack_end - 1),
             task_pos: TaskPos::Fcfs1,
@@ -80,7 +85,43 @@ impl ProcessControlBlock {
                 // 2 -> stderr
                 Some(Rc::new(Stdout)),
             ],
+            children: vec![]
         }
+    }
+
+    pub fn fork(self) -> Rc<Self> {
+        let memory_set = self.memory_set.clone();
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr(TRAP_CONTEXT).vpn())
+            .unwrap();
+        let pid_handle = pid_alloc();
+        let kernel_stack = KernelStack::new(&pid_handle);
+        let kernel_stack_top = kernel_stack.get_top();
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr(TRAP_CONTEXT).vpn())
+            .expect("[kernel] Trap context not mapped!");
+        let process_control_block = Rc::new(ProcessControlBlock {
+            pid: pid_handle,
+            task_status: self.task_status,
+            task_cx: TaskContext::goto_trap_return(kernel_stack_top),
+            task_pos: self.task_pos,
+            memory_set: memory_set,
+            trap_cx_ppn: trap_cx_ppn,
+            cwd: self.cwd,
+            fd_table: vec![
+                // 0 -> stdin
+                Some(Rc::new(Stdin)),
+                // 1 -> stdout
+                Some(Rc::new(Stdout)),
+                // 2 -> stderr
+                Some(Rc::new(Stdout)),
+            ],
+            children: vec![]
+        });
+        self.children.push(process_control_block);
+        let trap_cx = process_control_block.get_trap_cx();
+        trap_cx.kernel_sp = kernel_stack_top;
+        process_control_block
     }
 
     pub fn get_user_token(&self) -> usize {
