@@ -46,8 +46,10 @@ impl ProcessControlBlock {
         let kernel_stack_start = kernel_stack_end - KERNEL_STACK_SIZE;
         unsafe {
             KERNEL_MEMORY_SET.insert_segment(
-                VirtAddr(kernel_stack_start).vpn(),
-                VirtAddr(kernel_stack_end).vpn(),
+                VPNRange::new(
+                    VirtAddr(kernel_stack_start).vpn(),
+                    VirtAddr(kernel_stack_end).vpn(),
+                ),
                 R | W,
                 None,
             );
