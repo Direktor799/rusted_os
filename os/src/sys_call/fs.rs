@@ -8,10 +8,11 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let cwd = get_full_path(&task.cwd, &user_buffer_path);
+    let mut task_inner = task.inner.borrow_mut();
+    let cwd = get_full_path(&task_inner.cwd, &user_buffer_path);
     if let Some(inode) = open_file(&cwd, OpenFlags(flags)) {
-        let fd = task.alloc_fd();
-        task.fd_table[fd] = Some(inode);
+        let fd = task_inner.alloc_fd();
+        task_inner.fd_table[fd] = Some(inode);
         fd as isize
     } else {
         -1
@@ -20,19 +21,22 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 
 pub fn sys_close(fd: usize) -> isize {
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    if fd >= task.fd_table.len() {
+    let mut task_inner = task.inner.borrow_mut();
+    if fd >= task_inner.fd_table.len() {
         return -1;
     }
-    if task.fd_table[fd].is_none() {
+    if task_inner.fd_table[fd].is_none() {
         return -1;
     }
-    task.fd_table[fd].take();
+    task_inner.fd_table[fd].take();
     0
 }
 
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let fd_table = unsafe { &mut TASK_MANAGER.current_task.as_mut().unwrap().fd_table };
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let mut task_inner = task.inner.borrow_mut();
+    let fd_table = &mut task_inner.fd_table;
     if fd >= fd_table.len() {
         return -1;
     }
@@ -50,7 +54,9 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let fd_table = unsafe { &mut TASK_MANAGER.current_task.as_mut().unwrap().fd_table };
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let mut task_inner = task.inner.borrow_mut();
+    let fd_table = &mut task_inner.fd_table;
     if fd >= fd_table.len() {
         return -1;
     }
@@ -70,10 +76,11 @@ pub fn sys_chdir(path: *const u8) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let target_path = get_user_string_in_kernel(user_satp_token, path);
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let cwd = get_full_path(&task.cwd, &target_path);
+    let mut task_inner = task.inner.borrow_mut();
+    let cwd = get_full_path(&task_inner.cwd, &target_path);
     if let Some(inode) = find_inode(&cwd) {
         if inode.is_dir() {
-            task.cwd = cwd;
+            task_inner.cwd = cwd;
             0
         } else {
             // not dir
@@ -88,7 +95,9 @@ pub fn sys_chdir(path: *const u8) -> isize {
 pub fn sys_get_cwd(buf: *const u8, len: usize) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let mut user_buffer = get_user_buffer_in_kernel(user_satp_token, buf, len);
-    let cwd = unsafe { TASK_MANAGER.current_task.as_ref().unwrap().cwd.as_bytes() };
+    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
+    let task_inner = task.inner.borrow();
+    let cwd = task_inner.cwd.as_bytes();
     if cwd.len() > len {
         return -1;
     }
@@ -105,7 +114,8 @@ pub fn sys_mkdir(path: *const u8) -> isize {
     let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
     let target_path = get_user_string_in_kernel(user_satp_token, path);
     let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let new_path = get_full_path(&task.cwd, &target_path);
+    let task_inner = task.inner.borrow();
+    let new_path = get_full_path(&task_inner.cwd, &target_path);
     let (parent_path, target) = new_path.rsplit_once('/').unwrap();
     if let Some(parent_inode) = find_inode(parent_path) {
         if let Some(cur_inode) = parent_inode.create(target, InodeType::Directory) {

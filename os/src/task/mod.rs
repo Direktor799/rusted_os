@@ -1,16 +1,16 @@
 mod context;
+mod id;
 pub mod schd;
 mod switch;
 mod task;
-mod id;
 
 use crate::interrupt::context::Context;
 use crate::interrupt::timer;
 use crate::loader::app_manager::APP_MANAGER;
 use crate::sync::uninit_cell::UninitCell;
+use alloc::rc::Rc;
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
-use alloc::rc::Rc;
 pub use switch::__switch;
 pub use task::{ProcessControlBlock, TaskPos, TaskStatus};
 
@@ -36,15 +36,18 @@ impl TaskManager {
 
     fn switch_to_next_task(&mut self) {
         let mut current_task = self.current_task.take().expect("[kernel] No current task");
-        let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
+        let mut current_task_inner = current_task.inner.borrow_mut();
+        let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
+        drop(current_task_inner);
         let mut next_task = self
             .schd
             .get_next_and_requeue_current(current_task)
             .expect("[kernel] All tasks have completed!");
-        let next_task_cx = &mut next_task.task_cx as *mut TaskContext;
-        timer::set_next_timeout(get_time_slice(next_task.task_pos));
+        let mut next_task_inner = next_task.inner.borrow_mut();
+        let next_task_cx = &mut next_task_inner.task_cx as *mut TaskContext;
+        timer::set_next_timeout(get_time_slice(next_task_inner.task_pos));
+        drop(next_task_inner);
         self.current_task = Some(next_task);
-        drop(self);
         unsafe {
             // println!(
             //     "switching to 0x{:x}",
@@ -57,7 +60,8 @@ impl TaskManager {
 
     fn set_current_task_status(&mut self, stat: TaskStatus) {
         if let Some(current_task) = self.current_task.as_mut() {
-            (*current_task).task_status = stat;
+            let mut inner = current_task.inner.borrow_mut();
+            inner.task_status = stat;
         }
     }
 
@@ -70,7 +74,7 @@ impl TaskManager {
         current.get_trap_cx()
     }
     pub fn get_current_process(&self) -> Option<Rc<ProcessControlBlock>> {
-        self.current_task
+        self.current_task.clone()
     }
     // pub fn current_fd_table(&self) -> &mut Vec<Option<Rc<dyn File>>> {
     //     let inner = self.0.as_ref().unwrap().borrow();
@@ -115,19 +119,17 @@ pub fn schedule_callback() {
 }
 
 pub fn get_current_process() -> Option<Rc<ProcessControlBlock>> {
-    unsafe {
-        TASK_MANAGER.get_current_process()
-    }
+    unsafe { TASK_MANAGER.get_current_process() }
 }
 
 pub fn init() {
     unsafe {
+        id::init();
         TASK_MANAGER = UninitCell::init(TaskManager {
             current_task: None,
             schd: SchdMaster::new(),
         });
         TASK_MANAGER.init();
-        id::init();
         println!("mod task initialized!");
     }
 }
@@ -135,7 +137,9 @@ pub fn init() {
 pub fn run() {
     unsafe {
         let current_task = TASK_MANAGER.current_task.as_mut().unwrap();
-        let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
+        let mut current_task_inner = current_task.inner.borrow_mut();
+        let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
+        drop(current_task_inner);
         let mut _unused = TaskContext::zero_init();
         // println!(
         //     "first time switching to 0x{:x}",

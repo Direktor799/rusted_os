@@ -18,19 +18,23 @@ impl MultilevelFeedbackQueue {
         }
     }
     pub fn requeue(&mut self, mut task: Rc<ProcessControlBlock>) -> bool {
-        match task.task_pos {
+        let mut inner = task.inner.borrow_mut();
+        match inner.task_pos {
             TaskPos::Fcfs1 => {
-                task.task_pos = TaskPos::Fcfs2;
+                inner.task_pos = TaskPos::Fcfs2;
+                drop(inner);
                 self.fcfs2_queue.push_back(task);
                 true
             }
             TaskPos::Fcfs2 => {
-                task.task_pos = TaskPos::Rr;
+                inner.task_pos = TaskPos::Rr;
+                drop(inner);
                 self.rr_queue.push_back(task);
                 true
             }
             TaskPos::Rr => {
-                task.task_pos = TaskPos::Rr;
+                inner.task_pos = TaskPos::Rr;
+                drop(inner);
                 self.rr_queue.push_back(task);
                 true
             }
@@ -69,8 +73,10 @@ impl SchdMaster {
         &mut self,
         mut current_task_cb: Rc<ProcessControlBlock>,
     ) -> Option<Rc<ProcessControlBlock>> {
-        if current_task_cb.task_status != TaskStatus::Exited {
-            current_task_cb.task_status = TaskStatus::Ready;
+        let mut inner = current_task_cb.inner.borrow_mut();
+        if inner.task_status != TaskStatus::Exited {
+            inner.task_status = TaskStatus::Ready;
+            drop(inner);
             self.mlfq.requeue(current_task_cb);
         }
         self.mlfq.get_task()
