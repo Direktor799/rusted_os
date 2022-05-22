@@ -142,7 +142,7 @@ impl MemorySet {
         )
     }
 
-    /// 在此地址空间中为虚拟页号分配物理页
+    /// 在此地址空间中添加映射并分配物理页
     pub fn insert_segment(
         &mut self,
         vpn_range: VPNRange,
@@ -157,6 +157,19 @@ impl MemorySet {
             self.page_table.map(vpn, frame.ppn(), seg_flags);
         }
         self.segments.push(segment);
+    }
+
+    /// 从地址空间中删除指定映射
+    pub fn remove_segment(&mut self, start_vpn: VirtPageNum) {
+        let segment_index = self
+            .segments
+            .iter()
+            .position(|segment| segment.vpn_range.curr_vpn == start_vpn)
+            .unwrap();
+        for vpn in self.segments[segment_index].vpn_range {
+            self.page_table.unmap(vpn);
+        }
+        self.segments.remove(segment_index);
     }
 
     /// 映射跳板页

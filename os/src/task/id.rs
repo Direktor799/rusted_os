@@ -1,10 +1,10 @@
-use crate::sync::uninit_cell::UninitCell;
-use crate::config::{TRAMPOLINE, KERNEL_STACK_SIZE, PAGE_SIZE};
+use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE};
 use crate::memory::frame::{
-    address::{VirtAddr, VPNRange},
-    memory_set::{KERNEL_MEMORY_SET},
-    page_table::{R, W}
+    address::{VPNRange, VirtAddr},
+    memory_set::KERNEL_MEMORY_SET,
+    page_table::{R, W},
 };
+use crate::sync::uninit_cell::UninitCell;
 use alloc::vec::Vec;
 
 pub struct RecycleAllocator {
@@ -79,10 +79,10 @@ impl KernelStack {
             KERNEL_MEMORY_SET.insert_segment(
                 VPNRange::new(
                     VirtAddr(kernel_stack_bottom).vpn(),
-                    VirtAddr(kernel_stack_top).vpn()
+                    VirtAddr(kernel_stack_top).vpn(),
                 ),
                 R | W,
-                None
+                None,
             );
         }
         KernelStack { pid: pid_handle.0 }
@@ -110,10 +110,9 @@ impl KernelStack {
 impl Drop for KernelStack {
     fn drop(&mut self) {
         let (kernel_stack_bottom, _) = kernel_stack_position(self.pid);
-        let kernel_stack_bottom_va = VirtAddr(kernel_stack_bottom);
+        let kernel_stack_bottom_vpn = VirtAddr(kernel_stack_bottom).vpn();
         unsafe {
-            KERNEL_MEMORY_SET
-                .remove_area_with_start_vpn(kernel_stack_bottom_va.into());
+            KERNEL_MEMORY_SET.remove_segment(kernel_stack_bottom_vpn);
         }
     }
 }
