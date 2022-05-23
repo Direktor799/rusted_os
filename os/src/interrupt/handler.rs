@@ -6,7 +6,7 @@ use crate::sys_call::sys_call;
 use crate::task::{exit_current_and_run_next, get_current_process, schedule_callback};
 use core::arch::global_asm;
 
-global_asm!(include_str!("./interrupt.S"));
+global_asm!(include_str!("./interrupt.asm"));
 
 const ILLEGAL_INSTRUCTION: usize = 2;
 const BREAKPOINT: usize = 3;
