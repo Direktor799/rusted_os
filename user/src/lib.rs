@@ -177,3 +177,8 @@ pub const DIRENT_SZ: usize = size_of::<Dirent>();
 pub fn fork() -> isize {
     sys_fork()
 }
+
+pub fn exec(path: &str) -> isize {
+    let path = String::from(path) + "\0";
+    sys_exec(path.as_ptr())
+}

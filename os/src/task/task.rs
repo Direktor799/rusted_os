@@ -110,7 +110,7 @@ impl ProcessControlBlock {
         let mut inner = self.inner.borrow_mut();
         inner.memory_set = memory_set;
         inner.trap_cx_ppn = trap_cx_ppn;
-        let trap_cx = self.get_trap_cx();
+        let trap_cx = trap_cx_ppn.get_mut();
         *trap_cx = Context::app_init_context(
             entry_point,
             user_sp,
@@ -118,7 +118,7 @@ impl ProcessControlBlock {
             self.kernel_stack.get_top(),
             interrupt_handler as usize,
         );
-    }    
+    }
 
     pub fn fork(&self) -> Rc<Self> {
         let mut inner = self.inner.borrow_mut();

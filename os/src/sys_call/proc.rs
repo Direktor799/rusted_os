@@ -1,6 +1,8 @@
 //! 进程相关系统调用子模块
-use alloc::vec::Vec;
 
+use alloc::vec;
+
+use crate::fs::rfs::{find_inode, get_full_path};
 use crate::interrupt::timer::get_time_ms;
 use crate::memory::frame::page_table::get_user_string_in_kernel;
 use crate::task::{
@@ -40,10 +42,13 @@ pub fn sys_fork() -> isize {
     new_proc.pid.0 as isize
 }
 
-pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
-    let current = get_current_process().unwrap();
-    let token = current.get_user_token();
-    let path = get_user_string_in_kernel(token, path);
+// TODO: args and ret
+pub fn sys_exec(path: *const u8) -> isize {
+    let proc = get_current_process();
+    let proc_inner = proc.inner.borrow();
+    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_full_path(&proc_inner.cwd, &path);
+    drop(proc_inner);
     // let mut args_vec: Vec<String> = Vec::new();
     // loop {
     //     let arg_str_ptr = *translated_ref(token, args);
@@ -55,15 +60,14 @@ pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {
     //         args = args.add(1);
     //     }
     // }
-    // if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
-    //     let all_data = app_inode.read_all();
-    //     let process = get_current_process().unwrap();
-    //     let argc = args_vec.len();
-    //     process.exec(all_data.as_slice(), args_vec);
-    //     // return argc because cx.x[10] will be covered with it later
-    //     argc as isize
-    // } else {
-    //     -1
-    // }
-    -1
+    if let Some(app_inode) = find_inode(&path) {
+        let size = app_inode.get_file_size() as usize;
+        let mut app_data = vec![0u8; size];
+        app_inode.read_at(0, &mut app_data);
+        proc.exec(app_data.as_slice());
+        // return argc because cx.x[10] will be covered with it later
+        0
+    } else {
+        -1
+    }
 }

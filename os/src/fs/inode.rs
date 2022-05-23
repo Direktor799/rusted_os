@@ -27,7 +27,7 @@ impl OSInode {
 
 pub struct OpenFlags(pub u32);
 
-// const RDONLY: OpenFlags = OpenFlags(0);
+// pub const RDONLY: OpenFlags = OpenFlags(0);
 const WRONLY: OpenFlags = OpenFlags(1 << 0);
 // const RDWR: OpenFlags = OpenFlags(1 << 1);
 const CREATE: OpenFlags = OpenFlags(1 << 9);

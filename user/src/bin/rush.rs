@@ -29,7 +29,11 @@ fn main() -> i32 {
                 "rm" => app_rm(&args),
                 "rmdir" => app_rmdir(&args),
                 "stat" => app_stat(&args),
-                "ls" => app_ls(&args),
+                "ls" => {
+                    if fork() == 0 {
+                        exec("/bin/ls");
+                    }
+                }
                 "write" => write_test(&args),
                 "exit" => break,
                 _ => println!("{}: command not found", args[0]),
