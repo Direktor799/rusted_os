@@ -1,6 +1,3 @@
-#[allow(unused_imports)]
-use crate::sbi::shutdown;
-
 #[cfg(test)]
 pub fn test_runner(tests: &[&dyn Fn() -> Result<&'static str, &'static str>]) {
     println!("Running {} tests...", tests.len());
@@ -20,7 +17,7 @@ pub fn test_runner(tests: &[&dyn Fn() -> Result<&'static str, &'static str>]) {
         succeed,
         tests.len() - succeed
     );
-    shutdown();
+    crate::sbi::shutdown();
 }
 
 #[macro_export]

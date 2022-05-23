@@ -17,12 +17,12 @@ pub const W: u8 = 1 << 2;
 pub const X: u8 = 1 << 3;
 /// SV39页表项用户标志位
 pub const U: u8 = 1 << 4;
-/// SV39页表项全局标志位
-const G: u8 = 1 << 5;
-/// SV39页表项已使用标志位
-const A: u8 = 1 << 6;
-/// SV39页表项已修改标志位
-const D: u8 = 1 << 7;
+// /// SV39页表项全局标志位
+// const G: u8 = 1 << 5;
+// /// SV39页表项已使用标志位
+// const A: u8 = 1 << 6;
+// /// SV39页表项已修改标志位
+// const D: u8 = 1 << 7;
 
 /// SV39页表项标志位段
 pub type PTEFlags = u8;

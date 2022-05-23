@@ -1,4 +1,5 @@
 mod context;
+mod id;
 pub mod schd;
 mod switch;
 mod task;
@@ -7,13 +8,14 @@ use crate::interrupt::context::Context;
 use crate::interrupt::timer;
 use crate::loader::app_manager::APP_MANAGER;
 use crate::sync::uninit_cell::UninitCell;
+use alloc::rc::Rc;
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
-pub use task::{TaskControlBlock, TaskPos, TaskStatus};
+pub use task::{ProcessControlBlock, TaskPos, TaskStatus};
 
 pub struct TaskManager {
-    pub current_task: Option<TaskControlBlock>,
+    pub current_task: Option<Rc<ProcessControlBlock>>,
     schd: SchdMaster,
 }
 
@@ -22,7 +24,7 @@ impl TaskManager {
         unsafe {
             let app_num = APP_MANAGER.get_app_num();
             for i in 0..app_num {
-                let tcb = TaskControlBlock::new(APP_MANAGER.get_app_data(i), i);
+                let tcb = Rc::new(ProcessControlBlock::new(APP_MANAGER.get_app_data(i)));
                 if i == 0 {
                     self.current_task = Some(tcb);
                 } else {
@@ -33,29 +35,30 @@ impl TaskManager {
     }
 
     fn switch_to_next_task(&mut self) {
-        let mut current_task = self.current_task.take().expect("[kernel] No current task");
-        let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
-        let mut next_task = self
+        let current_task = self.current_task.take().expect("[kernel] No task");
+        let mut current_task_inner = current_task.inner.borrow_mut();
+        let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
+        drop(current_task_inner);
+        let next_task = self
             .schd
             .get_next_and_requeue_current(current_task)
             .expect("[kernel] All tasks have completed!");
-        let next_task_cx = &mut next_task.task_cx as *mut TaskContext;
-        timer::set_next_timeout(get_time_slice(next_task.task_pos));
+        let mut next_task_inner = next_task.inner.borrow_mut();
+        let next_task_cx = &mut next_task_inner.task_cx as *mut TaskContext;
+        timer::set_next_timeout(get_time_slice(next_task_inner.task_pos));
+        drop(next_task_inner);
         self.current_task = Some(next_task);
-        drop(self);
         unsafe {
-            // println!(
-            //     "switching to 0x{:x}",
-            //     (*((*next_task_cx).sp as *const Context)).sepc
-            // );
+            // println!("{:x?}", *current_task_cx);
+            // println!("{:x?}", *next_task_cx);
             __switch(current_task_cx, next_task_cx);
         }
-        unreachable!();
     }
 
     fn set_current_task_status(&mut self, stat: TaskStatus) {
         if let Some(current_task) = self.current_task.as_mut() {
-            (*current_task).task_status = stat;
+            let mut inner = current_task.inner.borrow_mut();
+            inner.task_status = stat;
         }
     }
 
@@ -67,12 +70,15 @@ impl TaskManager {
         let current = self.current_task.as_ref().unwrap();
         current.get_trap_cx()
     }
+    pub fn get_current_process(&self) -> Option<Rc<ProcessControlBlock>> {
+        self.current_task.clone()
+    }
     // pub fn current_fd_table(&self) -> &mut Vec<Option<Rc<dyn File>>> {
     //     let inner = self.0.as_ref().unwrap().borrow();
     //     let current = inner.current_task.as_ref().unwrap();
     //     current.get_fd_table()
     // }
-    // pub fn get_current_task(&mut self) -> &'static mut TaskControlBlock {
+    // pub fn get_current_task(&mut self) -> &'static mut ProcessControlBlock {
 
     //     let mut inner = self.0.as_ref().unwrap().borrow_mut();
     //     inner.current_task.as_mut().unwrap()
@@ -85,6 +91,12 @@ pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
 fn set_current_task_status(stat: TaskStatus) {
     unsafe {
         TASK_MANAGER.set_current_task_status(stat);
+    }
+}
+
+pub fn add_new_task(task: Rc<ProcessControlBlock>) {
+    unsafe {
+        TASK_MANAGER.schd.add_new_task(task);
     }
 }
 
@@ -109,8 +121,17 @@ pub fn schedule_callback() {
     }
 }
 
+pub fn get_current_process() -> Option<Rc<ProcessControlBlock>> {
+    unsafe { TASK_MANAGER.get_current_process() }
+}
+
+pub fn get_current_token() -> usize {
+    unsafe { TASK_MANAGER.get_current_token() }
+}
+
 pub fn init() {
     unsafe {
+        id::init();
         TASK_MANAGER = UninitCell::init(TaskManager {
             current_task: None,
             schd: SchdMaster::new(),
@@ -123,12 +144,10 @@ pub fn init() {
 pub fn run() {
     unsafe {
         let current_task = TASK_MANAGER.current_task.as_mut().unwrap();
-        let current_task_cx = &mut current_task.task_cx as *mut TaskContext;
+        let mut current_task_inner = current_task.inner.borrow_mut();
+        let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
+        drop(current_task_inner);
         let mut _unused = TaskContext::zero_init();
-        // println!(
-        //     "first time switching to 0x{:x}",
-        //     (*((*current_task_cx).sp as *const Context)).sepc
-        // );
         __switch(&mut _unused as *mut TaskContext, current_task_cx);
         unreachable!();
     }

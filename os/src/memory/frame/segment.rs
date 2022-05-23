@@ -8,9 +8,9 @@ pub type SegFlags = u8;
 
 #[derive(Debug)]
 pub struct MemorySegment {
-    vpn_range: VPNRange,
+    pub vpn_range: VPNRange,
     pub data_frames: BTreeMap<VirtPageNum, FrameTracker>,
-    flags: SegFlags,
+    pub flags: SegFlags,
 }
 
 impl MemorySegment {

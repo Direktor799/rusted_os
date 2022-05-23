@@ -8,7 +8,6 @@ use crate::sync::uninit_cell::UninitCell;
 use alloc::{vec, vec::Vec};
 
 extern "C" {
-    fn kernel_start();
     fn text_start();
     fn trampoline_start();
     fn text_end();
@@ -42,7 +41,6 @@ impl MemorySet {
 
     /// 创建新内核地址空间
     pub fn new_kernel() -> Self {
-        // println!("kernel start at {:x}", kernel_start as usize);
         // println!(".text [{:x}, {:x})", text_start as usize, text_end as usize);
         // println!(
         //     ".rodata [{:x}, {:x})",
@@ -118,18 +116,20 @@ impl MemorySet {
                 perm |= X;
             }
             memory_set.insert_segment(
-                start_vpn,
-                end_vpn,
+                VPNRange::new(start_vpn, end_vpn),
                 perm,
                 Some(&elf_data[ph.offset()..ph.offset() + ph.file_size()]),
             );
         }
         let user_stack_start_vpn = VirtPageNum(max_end_vpn.0 + 1);
         let user_stack_end_vpn = VirtPageNum(user_stack_start_vpn.0 + USER_STACK_SIZE / PAGE_SIZE);
-        memory_set.insert_segment(user_stack_start_vpn, user_stack_end_vpn, U | R | W, None);
         memory_set.insert_segment(
-            VirtAddr(TRAP_CONTEXT).vpn(),
-            VirtAddr(TRAMPOLINE).vpn(),
+            VPNRange::new(user_stack_start_vpn, user_stack_end_vpn),
+            U | R | W,
+            None,
+        );
+        memory_set.insert_segment(
+            VPNRange::new(VirtAddr(TRAP_CONTEXT).vpn(), VirtAddr(TRAMPOLINE).vpn()),
             R | W,
             None,
         );
@@ -140,15 +140,14 @@ impl MemorySet {
         )
     }
 
-    /// 在此地址空间中为虚拟页号分配物理页
+    /// 在此地址空间中添加映射并分配物理页
     pub fn insert_segment(
         &mut self,
-        start_vpn: VirtPageNum,
-        end_vpn: VirtPageNum,
+        vpn_range: VPNRange,
         seg_flags: SegFlags,
         data: Option<&[u8]>,
     ) {
-        let segment = MemorySegment::new(VPNRange::new(start_vpn, end_vpn), seg_flags);
+        let segment = MemorySegment::new(vpn_range, seg_flags);
         if let Some(data) = data {
             segment.copy_data(data);
         }
@@ -156,6 +155,19 @@ impl MemorySet {
             self.page_table.map(vpn, frame.ppn(), seg_flags);
         }
         self.segments.push(segment);
+    }
+
+    /// 从地址空间中删除指定映射
+    pub fn remove_segment(&mut self, start_vpn: VirtPageNum) {
+        let segment_index = self
+            .segments
+            .iter()
+            .position(|segment| segment.vpn_range.curr_vpn == start_vpn)
+            .unwrap();
+        for vpn in self.segments[segment_index].vpn_range {
+            self.page_table.unmap(vpn);
+        }
+        self.segments.remove(segment_index);
     }
 
     /// 映射跳板页
@@ -184,6 +196,25 @@ impl MemorySet {
         unsafe {
             core::arch::asm!("csrw satp, {}", "sfence.vma", in(reg) satp);
         }
+    }
+}
+
+impl Clone for MemorySet {
+    fn clone(&self) -> Self {
+        let mut new_memory_set = MemorySet::new();
+        new_memory_set.map_trampoline();
+        for segment in &self.segments {
+            new_memory_set.insert_segment(segment.vpn_range, segment.flags, None);
+            // copy data from another space
+            for vpn in segment.vpn_range {
+                let src_ppn = self.translate(vpn).unwrap();
+                let dst_ppn = new_memory_set.translate(vpn).unwrap();
+                dst_ppn
+                    .get_bytes_array()
+                    .copy_from_slice(src_ppn.get_bytes_array());
+            }
+        }
+        new_memory_set
     }
 }
 

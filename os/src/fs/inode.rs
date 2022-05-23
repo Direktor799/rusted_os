@@ -3,7 +3,6 @@ use super::rfs::{find_inode, InodeHandler};
 use super::{File, DIR, LNK, REG};
 use crate::memory::frame::user_buffer::UserBuffer;
 use alloc::rc::Rc;
-use alloc::vec::Vec;
 use core::cell::RefCell;
 
 pub struct OSInode {
@@ -15,6 +14,7 @@ pub struct OSInodeInner {
     offset: usize,
     inode: Rc<InodeHandler>,
 }
+
 impl OSInode {
     pub fn new(readable: bool, writable: bool, inode: Rc<InodeHandler>) -> Self {
         Self {
@@ -23,26 +23,13 @@ impl OSInode {
             inner: RefCell::new(OSInodeInner { offset: 0, inode }),
         }
     }
-    pub fn read_all(&self) -> Vec<u8> {
-        let mut inner = self.inner.borrow_mut();
-        let mut buffer = [0u8; 512];
-        let mut v: Vec<u8> = Vec::new();
-        loop {
-            let len = inner.inode.read_at(inner.offset, &mut buffer);
-            if len == 0 {
-                break;
-            }
-            inner.offset += len;
-            v.extend_from_slice(&buffer[..len]);
-        }
-        v
-    }
 }
+
 pub struct OpenFlags(pub u32);
 
-const RDONLY: OpenFlags = OpenFlags(0);
+// const RDONLY: OpenFlags = OpenFlags(0);
 const WRONLY: OpenFlags = OpenFlags(1 << 0);
-const RDWR: OpenFlags = OpenFlags(1 << 1);
+// const RDWR: OpenFlags = OpenFlags(1 << 1);
 const CREATE: OpenFlags = OpenFlags(1 << 9);
 const TRUNC: OpenFlags = OpenFlags(1 << 10);
 
@@ -93,9 +80,11 @@ impl File for OSInode {
     fn readable(&self) -> bool {
         self.readable
     }
+
     fn writable(&self) -> bool {
         self.writable
     }
+
     fn read(&self, mut buf: UserBuffer) -> usize {
         let mut inner = self.inner.borrow_mut();
         let mut total_read_size = 0usize;
@@ -109,6 +98,7 @@ impl File for OSInode {
         }
         total_read_size
     }
+
     fn write(&self, buf: UserBuffer) -> usize {
         let mut inner = self.inner.borrow_mut();
         let mut total_write_size = 0usize;

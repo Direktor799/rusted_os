@@ -180,3 +180,7 @@ pub struct Dirent {
 }
 
 pub const DIRENT_SZ: usize = size_of::<Dirent>();
+
+pub fn fork() -> isize {
+    sys_fork()
+}

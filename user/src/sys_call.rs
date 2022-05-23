@@ -15,6 +15,7 @@ const SYS_CALL_FSTAT: usize = 80;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GETTIME: usize = 169;
+const SYS_CALL_FORK: usize = 220;
 
 fn sys_call(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
@@ -95,4 +96,8 @@ pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
 
 pub fn sys_fstat(fd: usize, stat: *mut u8) -> isize {
     sys_call(SYS_CALL_FSTAT, [fd as usize, stat as usize, 0])
+}
+
+pub fn sys_fork() -> isize {
+    sys_call(SYS_CALL_FORK, [0, 0, 0])
 }

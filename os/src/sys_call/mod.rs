@@ -1,10 +1,8 @@
-use fs::*;
-use proc::*;
-
-use crate::fs::Stat;
-
 mod fs;
 mod proc;
+
+use fs::*;
+use proc::*;
 
 const SYS_CALL_GETCWD: usize = 17;
 const SYS_CALL_MKDIR: usize = 34;
@@ -21,6 +19,9 @@ const SYS_CALL_FSTAT: usize = 80;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GETTIME: usize = 169;
+const SYS_CALL_GETPID: usize = 172;
+const SYS_CALL_FORK: usize = 220;
+// const SYS_CALL_EXEC: usize = 221;
 
 pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
     match which {
@@ -41,8 +42,9 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_EXIT => sys_exit(args[0] as i32),
         SYS_CALL_YIELD => sys_yield(),
         SYS_CALL_GETTIME => sys_gettime(),
-        _ => {
-            panic!("sys_call with unknown id: {}", which)
-        }
+        SYS_CALL_GETPID => sys_getpid(),
+        SYS_CALL_FORK => sys_fork(),
+        // SYS_CALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const usize),
+        _ => panic!("sys_call with unknown id: {}", which),
     }
 }
