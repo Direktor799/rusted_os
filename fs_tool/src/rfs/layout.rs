@@ -1,7 +1,5 @@
 //! 磁盘布局子模块
 
-use crate::rfs::block_cache::block_cache_sync_all;
-
 use super::{block_cache::get_block_cache, block_dev::BlockDevice, DataBlock, BLOCK_SZ};
 use std::fmt::{Debug, Formatter, Result};
 use std::mem::size_of;
