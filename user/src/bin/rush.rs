@@ -35,7 +35,18 @@ fn main() -> i32 {
                         exec("/bin/ls");
                     } else {
                         let mut exit_code = 0;
-                        waitpid(pid as usize, &mut exit_code);
+                        let ret = waitpid(pid as usize, &mut exit_code);
+                        println!("pid:{} ret:{}", ret, exit_code);
+                    }
+                }
+                "test" => {
+                    let pid = fork();
+                    if pid == 0 {
+                        exec("/bin/test");
+                    } else {
+                        let mut exit_code = 0;
+                        let ret = waitpid(pid as usize, &mut exit_code);
+                        println!("pid:{} ret:{}", ret, exit_code);
                     }
                 }
                 "write" => write_test(&args),
