@@ -24,7 +24,7 @@ impl TaskManager {
         unsafe {
             let app_num = APP_MANAGER.get_app_num();
             for i in 0..app_num {
-                let tcb = Rc::new(ProcessControlBlock::new(APP_MANAGER.get_app_data(i), i));
+                let tcb = Rc::new(ProcessControlBlock::new(APP_MANAGER.get_app_data(i)));
                 if i == 0 {
                     self.current_task = Some(tcb);
                 } else {

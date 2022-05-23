@@ -73,7 +73,6 @@ impl SchdMaster {
         &mut self,
         mut current_task_cb: Rc<ProcessControlBlock>,
     ) -> Option<Rc<ProcessControlBlock>> {
-        println!("get_next_and_requeue_current");
         let mut inner = current_task_cb.inner.borrow_mut();
         if inner.task_status != TaskStatus::Exited {
             inner.task_status = TaskStatus::Ready;

@@ -34,6 +34,7 @@ pub enum TaskPos {
 
 pub struct ProcessControlBlock {
     pub pid: PidHandle,
+    pub kernel_stack: KernelStack,
     pub inner: RefCell<ProcessControlBlockInner>,
 }
 
@@ -49,10 +50,12 @@ pub struct ProcessControlBlockInner {
 }
 
 impl ProcessControlBlock {
-    pub fn new(elf_data: &[u8], app_id: usize) -> Self {
+    pub fn new(elf_data: &[u8]) -> Self {
+        let pid = pid_alloc();
+        let kernel_stack = KernelStack::new(&pid);
         let (memory_set, user_sp, entry) = MemorySet::from_elf(elf_data);
         // guard page
-        let kernel_stack_end = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
+        let kernel_stack_end = TRAMPOLINE - pid.0 * (KERNEL_STACK_SIZE + PAGE_SIZE);
         let kernel_stack_start = kernel_stack_end - KERNEL_STACK_SIZE;
         unsafe {
             KERNEL_MEMORY_SET.insert_segment(
@@ -76,7 +79,8 @@ impl ProcessControlBlock {
             interrupt_handler as usize,
         );
         Self {
-            pid: pid_alloc(),
+            pid,
+            kernel_stack,
             inner: RefCell::new(ProcessControlBlockInner {
                 task_status: TaskStatus::Ready,
                 task_cx: TaskContext::goto_trap_return(kernel_stack_end),
@@ -108,12 +112,13 @@ impl ProcessControlBlock {
             .expect("[kernel] Trap context not mapped!");
         let process_control_block = Rc::new(ProcessControlBlock {
             pid: pid_handle,
+            kernel_stack,
             inner: RefCell::new(ProcessControlBlockInner {
                 task_status: inner.task_status,
                 task_cx: TaskContext::goto_trap_return(kernel_stack_top),
                 task_pos: inner.task_pos,
-                memory_set: memory_set,
-                trap_cx_ppn: trap_cx_ppn,
+                memory_set,
+                trap_cx_ppn,
                 cwd: inner.cwd.clone(),
                 fd_table: vec![
                     // 0 -> stdin
