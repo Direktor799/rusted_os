@@ -14,6 +14,9 @@ const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GET_TIME: usize = 169;
+const SYSCALL_GETPID: usize = 172;
+const SYSCALL_FORK: usize = 220;
+// const SYSCALL_EXEC: usize = 221;
 
 pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
     match which {
@@ -27,6 +30,9 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_EXIT => sys_exit(args[0] as i32),
         SYS_CALL_YIELD => sys_yield(),
         SYS_CALL_GET_TIME => sys_get_time(),
+        SYSCALL_GETPID => sys_getpid(),
+        SYSCALL_FORK => sys_fork(),
+        // SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const usize),
         _ => panic!("sys_call with unknown id: {}", which),
     }
 }

@@ -97,7 +97,7 @@ impl ProcessControlBlock {
         }
     }
 
-    pub fn fork(self) -> Rc<Self> {
+    pub fn fork(&self) -> Rc<Self> {
         let mut inner = self.inner.borrow_mut();
         let memory_set = self.inner.borrow().memory_set.clone();
         let pid_handle = pid_alloc();

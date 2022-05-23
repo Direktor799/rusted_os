@@ -94,6 +94,12 @@ fn set_current_task_status(stat: TaskStatus) {
     }
 }
 
+pub fn add_new_task(task: Rc<ProcessControlBlock>) {
+    unsafe {
+        TASK_MANAGER.schd.add_new_task(task);
+    }
+}
+
 pub fn exit_current_and_run_next() {
     set_current_task_status(TaskStatus::Exited);
     unsafe {
