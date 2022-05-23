@@ -90,32 +90,27 @@ pub fn getcwd(s: &mut String) -> isize {
 }
 
 pub fn chdir(path: &str) -> isize {
-    let mut zero_ended = String::from(path);
-    zero_ended.push(0 as char);
-    sys_chdir(zero_ended.as_ptr())
+    let path = String::from(path) + "\0";
+    sys_chdir(path.as_ptr())
 }
 
 pub fn mkdir(path: &str) -> isize {
-    let mut zero_ended = String::from(path);
-    zero_ended.push(0 as char);
-    sys_mkdir(zero_ended.as_ptr())
+    let path = String::from(path) + "\0";
+    sys_mkdir(path.as_ptr())
 }
 pub fn open(path: &str, flags: u32) -> isize {
-    let mut zero_ended = String::from(path);
-    zero_ended.push(0 as char);
-    sys_open(zero_ended.as_ptr(), flags)
+    let path = String::from(path) + "\0";
+    sys_open(path.as_ptr(), flags)
 }
 
 pub fn close(fd: usize) -> isize {
     sys_close(fd)
 }
 
-pub fn symlink(target: &str, link_path: &str) -> isize {
-    let mut zero_ended_target = String::from(target);
-    let mut zero_ended_link_path = String::from(link_path);
-    zero_ended_target.push(0 as char);
-    zero_ended_link_path.push(0 as char);
-    sys_symlink(zero_ended_target.as_ptr(), zero_ended_link_path.as_ptr())
+pub fn symlink(target_path: &str, link_path: &str) -> isize {
+    let target_path = String::from(target_path) + "\0";
+    let link_path = String::from(link_path) + "\0";
+    sys_symlink(target_path.as_ptr(), link_path.as_ptr())
 }
 
 pub const SEEK_SET: u32 = 0;
@@ -127,10 +122,9 @@ pub fn lseek(fd: usize, offset: isize, whence: u32) -> isize {
 }
 
 pub fn readlink(path: &str, s: &mut String) -> isize {
-    let mut zero_ended = String::from(path);
-    zero_ended.push(0 as char);
+    let path = String::from(path) + "\0";
     let mut buffer = [0u8; 128];
-    let len = sys_readlink(zero_ended.as_ptr(), &mut buffer);
+    let len = sys_readlink(path.as_ptr(), &mut buffer);
     *s = str::from_utf8(&buffer[0..len as usize])
         .unwrap()
         .to_string();
@@ -140,9 +134,8 @@ pub fn readlink(path: &str, s: &mut String) -> isize {
 pub const AT_REMOVEDIR: u32 = 1;
 
 pub fn unlink(path: &str, flags: u32) -> isize {
-    let mut zero_ended = String::from(path);
-    zero_ended.push(0 as char);
-    sys_unlink(zero_ended.as_ptr(), flags)
+    let path = String::from(path) + "\0";
+    sys_unlink(path.as_ptr(), flags)
 }
 
 pub const CHR: usize = 0;
@@ -169,7 +162,7 @@ impl Stat {
 }
 
 pub fn fstat(fd: usize, stat: &mut Stat) -> isize {
-    sys_fstat(fd, stat as *mut Stat as *mut u8)
+    sys_fstat(fd, stat as *mut _ as *mut _)
 }
 
 pub const NAME_LENGTH_LIMIT: usize = 27;

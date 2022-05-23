@@ -75,8 +75,11 @@ pub fn sys_close(fd: usize) -> isize {
     sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
 }
 
-pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
-    sys_call(SYS_CALL_SYMLINK, [target as usize, link_path as usize, 0])
+pub fn sys_symlink(target_path: *const u8, link_path: *const u8) -> isize {
+    sys_call(
+        SYS_CALL_SYMLINK,
+        [target_path as usize, link_path as usize, 0],
+    )
 }
 
 pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
