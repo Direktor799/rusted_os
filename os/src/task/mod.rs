@@ -4,7 +4,6 @@ pub mod schd;
 mod switch;
 mod task;
 
-use crate::interrupt::context::Context;
 use crate::interrupt::timer;
 use crate::loader::app_manager::APP_MANAGER;
 use crate::sync::uninit_cell::UninitCell;
@@ -15,7 +14,7 @@ pub use switch::__switch;
 pub use task::{ProcessControlBlock, TaskPos, TaskStatus};
 
 pub struct TaskManager {
-    pub current_task: Option<Rc<ProcessControlBlock>>,
+    current_task: Option<Rc<ProcessControlBlock>>,
     schd: SchdMaster,
 }
 
@@ -62,28 +61,9 @@ impl TaskManager {
         }
     }
 
-    pub fn get_current_token(&self) -> usize {
-        let current = self.current_task.as_ref().unwrap();
-        current.get_user_token()
+    pub fn get_current_process(&self) -> Rc<ProcessControlBlock> {
+        self.current_task.as_ref().unwrap().clone()
     }
-    pub fn get_current_trap_cx(&self) -> &mut Context {
-        let current = self.current_task.as_ref().unwrap();
-        current.get_trap_cx()
-    }
-    pub fn get_current_process(&self) -> Option<Rc<ProcessControlBlock>> {
-        self.current_task.clone()
-    }
-    // pub fn current_fd_table(&self) -> &mut Vec<Option<Rc<dyn File>>> {
-    //     let inner = self.0.as_ref().unwrap().borrow();
-    //     let current = inner.current_task.as_ref().unwrap();
-    //     current.get_fd_table()
-    // }
-    // pub fn get_current_task(&mut self) -> &'static mut ProcessControlBlock {
-
-    //     let mut inner = self.0.as_ref().unwrap().borrow_mut();
-    //     inner.current_task.as_mut().unwrap()
-    //     // self.0.as_ref().unwrap().borrow_mut().current_task.as_mut().unwrap()
-    // }
 }
 
 pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
@@ -121,12 +101,8 @@ pub fn schedule_callback() {
     }
 }
 
-pub fn get_current_process() -> Option<Rc<ProcessControlBlock>> {
+pub fn get_current_process() -> Rc<ProcessControlBlock> {
     unsafe { TASK_MANAGER.get_current_process() }
-}
-
-pub fn get_current_token() -> usize {
-    unsafe { TASK_MANAGER.get_current_token() }
 }
 
 pub fn init() {

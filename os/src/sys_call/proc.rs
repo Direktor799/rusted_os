@@ -5,10 +5,10 @@ use crate::task::{
 };
 
 pub fn sys_exit(exit_code: i32) -> ! {
-    let current = get_current_process().unwrap();
+    let proc = get_current_process();
     println!(
         "[kernel] Process {} exit with code {}",
-        current.pid.0, exit_code
+        proc.pid.0, exit_code
     );
     exit_current_and_run_next();
     panic!("Unreachable in sys_exit!");
@@ -24,17 +24,17 @@ pub fn sys_gettime() -> isize {
 }
 
 pub fn sys_getpid() -> isize {
-    let current = get_current_process().unwrap();
-    current.pid.0 as isize
+    let proc = get_current_process();
+    proc.pid.0 as isize
 }
 
 pub fn sys_fork() -> isize {
-    let current = get_current_process().unwrap();
-    let new = current.fork();
-    let trap_cx = new.get_trap_cx();
+    let proc = get_current_process();
+    let new_proc = proc.fork();
+    let trap_cx = new_proc.inner.borrow().trap_cx();
     trap_cx.x[10] = 0;
-    add_new_task(new.clone());
-    new.pid.0 as isize
+    add_new_task(new_proc.clone());
+    new_proc.pid.0 as isize
 }
 
 // pub fn sys_exec(path: *const u8, mut args: *const usize) -> isize {}

@@ -110,7 +110,7 @@ impl ProcessControlBlock {
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");
-        let process_control_block = Rc::new(ProcessControlBlock {
+        let new_pcb = Rc::new(ProcessControlBlock {
             pid: pid_handle,
             kernel_stack,
             inner: RefCell::new(ProcessControlBlockInner {
@@ -131,22 +131,22 @@ impl ProcessControlBlock {
                 children: vec![],
             }),
         });
-        inner.children.push(process_control_block.clone());
-        let trap_cx = process_control_block.get_trap_cx();
+        inner.children.push(new_pcb.clone());
+        let trap_cx = new_pcb.inner.borrow_mut().trap_cx();
         trap_cx.kernel_sp = kernel_stack_top;
-        process_control_block
-    }
-
-    pub fn get_user_token(&self) -> usize {
-        self.inner.borrow().memory_set.satp_token()
-    }
-
-    pub fn get_trap_cx(&self) -> &'static mut Context {
-        self.inner.borrow().trap_cx_ppn.get_mut()
+        new_pcb
     }
 }
 
 impl ProcessControlBlockInner {
+    pub fn token(&self) -> usize {
+        self.memory_set.satp_token()
+    }
+
+    pub fn trap_cx(&self) -> &'static mut Context {
+        self.trap_cx_ppn.get_mut()
+    }
+
     pub fn alloc_fd(&mut self) -> usize {
         if let Some(fd) = (0..self.fd_table.len()).find(|fd| self.fd_table[*fd].is_none()) {
             fd

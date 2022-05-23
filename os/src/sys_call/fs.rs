@@ -7,17 +7,17 @@ use crate::fs::rfs::layout::DIRENT_SZ;
 use crate::fs::rfs::{find_inode, get_full_path, layout::InodeType};
 use crate::fs::Stat;
 use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
-use crate::task::TASK_MANAGER;
+use crate::task::get_current_process;
 
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let user_buffer_path = get_user_string_in_kernel(user_satp_token, path);
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
-    let cwd = get_full_path(&task_inner.cwd, &user_buffer_path);
-    if let Some(inode) = open_file(&cwd, OpenFlags(flags)) {
-        let fd = task_inner.alloc_fd();
-        task_inner.fd_table[fd] = Some(inode);
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_full_path(&proc_inner.cwd, &path);
+
+    if let Some(inode) = open_file(&path, OpenFlags(flags)) {
+        let fd = proc_inner.alloc_fd();
+        proc_inner.fd_table[fd] = Some(inode);
         fd as isize
     } else {
         -1
@@ -25,32 +25,30 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 }
 
 pub fn sys_close(fd: usize) -> isize {
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
-    if fd >= task_inner.fd_table.len() {
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let fd_table = &mut proc_inner.fd_table;
+
+    if fd >= fd_table.len() || fd_table[fd].is_none() {
         return -1;
     }
-    if task_inner.fd_table[fd].is_none() {
-        return -1;
-    }
-    task_inner.fd_table[fd].take();
+    fd_table[fd].take();
     0
 }
 
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
-    let fd_table = &mut task_inner.fd_table;
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
+    let fd_table = &mut proc_inner.fd_table;
+
     if fd >= fd_table.len() {
         return -1;
     }
     if let Some(file) = &fd_table[fd] {
-        let file = file.clone();
         if !file.readable() {
             return -1;
         }
-        let user_buffer = get_user_buffer_in_kernel(user_satp_token, buf, len);
         file.read(user_buffer) as isize
     } else {
         -1
@@ -58,19 +56,18 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
 }
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
-    let fd_table = &mut task_inner.fd_table;
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
+    let fd_table = &mut proc_inner.fd_table;
+
     if fd >= fd_table.len() {
         return -1;
     }
     if let Some(file) = &fd_table[fd] {
-        let file = file.clone();
         if !file.writable() {
             return -1;
         }
-        let user_buffer = get_user_buffer_in_kernel(user_satp_token, buf, len);
         file.write(user_buffer) as isize
     } else {
         -1
@@ -78,14 +75,14 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 }
 
 pub fn sys_chdir(path: *const u8) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let target_path = get_user_string_in_kernel(user_satp_token, path);
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
-    let cwd = get_full_path(&task_inner.cwd, &target_path);
-    if let Some(inode) = find_inode(&cwd) {
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_full_path(&proc_inner.cwd, &path);
+
+    if let Some(inode) = find_inode(&path) {
         if inode.is_dir() {
-            task_inner.cwd = cwd;
+            proc_inner.cwd = path;
             0
         } else {
             // not dir
@@ -98,16 +95,16 @@ pub fn sys_chdir(path: *const u8) -> isize {
 }
 
 pub fn sys_getcwd(buf: *const u8, len: usize) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let mut user_buffer = get_user_buffer_in_kernel(user_satp_token, buf, len);
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let task_inner = task.inner.borrow();
-    let cwd = task_inner.cwd.as_bytes();
+    let proc = get_current_process();
+    let proc_inner = proc.inner.borrow_mut();
+    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
+    let cwd = proc_inner.cwd.as_bytes();
+
     if cwd.len() > len {
         return -1;
     }
     let mut cur_offset = 0;
-    for slice in user_buffer.0.iter_mut() {
+    for slice in user_buffer.0.into_iter() {
         let len = slice.len().min(cwd.len() - cur_offset);
         slice[..len].copy_from_slice(&cwd[cur_offset..cur_offset + len]);
         cur_offset += len;
@@ -116,12 +113,12 @@ pub fn sys_getcwd(buf: *const u8, len: usize) -> isize {
 }
 
 pub fn sys_mkdir(path: *const u8) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let target_path = get_user_string_in_kernel(user_satp_token, path);
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let task_inner = task.inner.borrow();
-    let new_path = get_full_path(&task_inner.cwd, &target_path);
-    let (parent_path, target) = new_path.rsplit_once('/').unwrap();
+    let proc = get_current_process();
+    let proc_inner = proc.inner.borrow_mut();
+    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_full_path(&proc_inner.cwd, &path);
+
+    let (parent_path, target) = path.rsplit_once('/').unwrap();
     if let Some(parent_inode) = find_inode(parent_path) {
         if let Some(cur_inode) = parent_inode.create(target, InodeType::Directory) {
             cur_inode.set_default_dirent(parent_inode.get_inode_id());
@@ -137,23 +134,18 @@ pub fn sys_mkdir(path: *const u8) -> isize {
 }
 
 // target为源文件, link_path为link文件路径
-pub fn sys_symlink(target: *const u8, link_path: *const u8) -> isize {
-    // 获取userbuffer
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let target_path = get_user_string_in_kernel(user_satp_token, target);
-    let linkfile_path = get_user_string_in_kernel(user_satp_token, link_path);
-    // 处理相对路径
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
+pub fn sys_symlink(target_path: *const u8, link_path: *const u8) -> isize {
+    let proc = get_current_process();
+    let proc_inner = proc.inner.borrow_mut();
+    let target_path = get_user_string_in_kernel(proc_inner.token(), target_path);
+    let target_path = get_full_path(&proc_inner.cwd, &target_path);
+    let link_path = get_user_string_in_kernel(proc_inner.token(), link_path);
+    let link_path = get_full_path(&proc_inner.cwd, &link_path);
 
-    let new_target_path = get_full_path(&task_inner.cwd, &target_path);
-    let new_linkfile_path = get_full_path(&task_inner.cwd, &linkfile_path);
-
-    let (parent_path, link_target) = new_linkfile_path.rsplit_once('/').unwrap();
-
+    let (parent_path, target) = link_path.rsplit_once('/').unwrap();
     if let Some(parent_inode) = find_inode(parent_path) {
-        if let Some(cur_inode) = parent_inode.create(link_target, InodeType::SoftLink) {
-            cur_inode.write_at(0, new_target_path.as_bytes());
+        if let Some(cur_inode) = parent_inode.create(target, InodeType::SoftLink) {
+            cur_inode.write_at(0, target_path.as_bytes());
             0
         } else {
             // file exists
@@ -170,16 +162,14 @@ const SEEK_CUR: u32 = 1;
 const SEEK_END: u32 = 2;
 
 pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let fd_table = &mut proc_inner.fd_table;
 
-    if fd >= task_inner.fd_table.len() {
+    if fd >= fd_table.len() || fd_table[fd].is_none() {
         return -1;
     }
-    if task_inner.fd_table[fd].is_none() {
-        return -1;
-    }
-    let file = task_inner.fd_table[fd].as_ref().unwrap();
+    let file = fd_table[fd].clone().unwrap();
     let cur_offset = file.get_offset() as isize;
     let file_size = file.get_file_size() as isize;
     let new_offset = match whence {
@@ -197,14 +187,13 @@ pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
 }
 
 pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let target_path = get_user_string_in_kernel(user_satp_token, path);
-    let mut user_buffer = get_user_buffer_in_kernel(user_satp_token, buf, len);
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
+    let proc = get_current_process();
+    let proc_inner = proc.inner.borrow_mut();
+    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_full_path(&proc_inner.cwd, &path);
+    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
 
-    let new_path = get_full_path(&task_inner.cwd, &target_path);
-    if let Some(inode) = find_inode(&new_path) {
+    if let Some(inode) = find_inode(&path) {
         if !inode.is_link() {
             // not link file
             return -3;
@@ -214,7 +203,7 @@ pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
             return -2;
         }
         let mut cur_offset = 0;
-        for slice in user_buffer.0.iter_mut() {
+        for slice in user_buffer.0.into_iter() {
             let len = slice.len().min(inode.get_file_size() as usize - cur_offset);
             inode.read_at(cur_offset, &mut slice[cur_offset..cur_offset + len]);
             cur_offset += len;
@@ -229,14 +218,13 @@ pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
 const AT_REMOVEDIR: u32 = 1;
 
 pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let target_path = get_user_string_in_kernel(user_satp_token, path);
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
+    let proc = get_current_process();
+    let proc_inner = proc.inner.borrow_mut();
+    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_full_path(&proc_inner.cwd, &path);
 
-    let new_path = get_full_path(&task_inner.cwd, &target_path);
-    let (parent_path, target) = new_path.rsplit_once('/').unwrap();
-    if let Some(inode) = find_inode(&new_path) {
+    let (parent_path, target) = path.rsplit_once('/').unwrap();
+    if let Some(inode) = find_inode(&path) {
         if flags & AT_REMOVEDIR == 0 && !inode.is_dir() {
             inode.clear();
             find_inode(parent_path).unwrap().delete(target);
@@ -261,18 +249,15 @@ pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
 }
 
 pub fn sys_fstat(fd: usize, stat: *mut u8) -> isize {
-    let user_satp_token = unsafe { TASK_MANAGER.get_current_token() };
-    let user_buffer = get_user_buffer_in_kernel(user_satp_token, stat, size_of::<Stat>());
-    let task = unsafe { TASK_MANAGER.current_task.as_mut().unwrap() };
-    let mut task_inner = task.inner.borrow_mut();
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), stat, size_of::<Stat>());
+    let fd_table = &mut proc_inner.fd_table;
 
-    if fd >= task_inner.fd_table.len() {
+    if fd >= fd_table.len() || fd_table[fd].is_none() {
         return -1;
     }
-    if task_inner.fd_table[fd].is_none() {
-        return -1;
-    }
-    let file = task_inner.fd_table[fd].as_ref().unwrap();
+    let file = fd_table[fd].clone().unwrap();
     let tmp_stat = Stat::from(file);
     let stat_buf = slice_from_raw_parts(&tmp_stat as *const _ as *const u8, size_of::<Stat>());
     for (i, byte) in user_buffer.into_iter().enumerate() {

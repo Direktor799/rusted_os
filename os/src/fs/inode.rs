@@ -85,11 +85,11 @@ impl File for OSInode {
         self.writable
     }
 
-    fn read(&self, mut buf: UserBuffer) -> usize {
+    fn read(&self, buf: UserBuffer) -> usize {
         let mut inner = self.inner.borrow_mut();
         let mut total_read_size = 0usize;
-        for slice in buf.0.iter_mut() {
-            let read_size = inner.inode.read_at(inner.offset, *slice);
+        for slice in buf.0.into_iter() {
+            let read_size = inner.inode.read_at(inner.offset, slice);
             if read_size == 0 {
                 break;
             }

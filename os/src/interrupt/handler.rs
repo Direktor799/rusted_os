@@ -3,7 +3,7 @@
 use super::context::Context;
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::sys_call::sys_call;
-use crate::task::{exit_current_and_run_next, schedule_callback, TASK_MANAGER};
+use crate::task::{exit_current_and_run_next, get_current_process, schedule_callback};
 use core::arch::global_asm;
 
 global_asm!(include_str!("./interrupt.S"));
@@ -53,7 +53,7 @@ pub fn interrupt_kernel() -> ! {
 #[no_mangle]
 pub fn interrupt_handler() -> ! {
     set_kernel_interrupt();
-    let context = unsafe { TASK_MANAGER.get_current_trap_cx() };
+    let context = get_current_process().inner.borrow_mut().trap_cx();
     let mut scause: usize;
     let mut stval: usize;
     unsafe {
@@ -84,7 +84,7 @@ pub fn interrupt_handler() -> ! {
 /// 中断恢复程序
 pub fn interrupt_return() -> ! {
     set_user_trap_entry();
-    let user_satp = unsafe { TASK_MANAGER.get_current_token() };
+    let user_satp = get_current_process().inner.borrow().token();
     extern "C" {
         fn __interrupt();
         fn __restore();

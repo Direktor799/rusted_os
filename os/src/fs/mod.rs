@@ -17,8 +17,8 @@ pub struct Stat {
     pub size: u32,
 }
 
-impl From<&Rc<dyn File>> for Stat {
-    fn from(file: &Rc<dyn File>) -> Self {
+impl From<Rc<dyn File>> for Stat {
+    fn from(file: Rc<dyn File>) -> Self {
         Self {
             ino: file.get_inode_id() as u32,
             mode: file.get_mode() as u32,
