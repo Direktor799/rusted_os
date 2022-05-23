@@ -52,8 +52,3 @@ pub fn init() {
     rfs::init();
     println!("mod fs initialized!");
 }
-
-pub fn format() {
-    rfs::format();
-    println!("mod fs formated!");
-}

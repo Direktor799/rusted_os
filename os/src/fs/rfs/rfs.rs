@@ -87,12 +87,14 @@ impl RustedFileSystem {
     }
 
     /// 打开设备上的文件系统
-    pub fn open(block_device: Rc<dyn BlockDevice>) -> Rc<RefCell<Self>> {
+    pub fn open(block_device: Rc<dyn BlockDevice>) -> Option<Rc<RefCell<Self>>> {
         // 根据超级块信息初始化文件系统
         get_block_cache(0, Rc::clone(&block_device))
             .borrow()
             .read(0, |super_block: &SuperBlock| {
-                assert!(super_block.is_valid(), "Error loading RFS!");
+                if !super_block.is_valid() {
+                    return None;
+                }
                 let inode_total_blocks = super_block.inode_bitmap_blocks + super_block.inode_blocks;
                 let rfs = Self {
                     block_device,
@@ -104,7 +106,7 @@ impl RustedFileSystem {
                     inode_start_block: 1 + super_block.inode_bitmap_blocks,
                     data_start_block: 1 + inode_total_blocks + super_block.data_bitmap_blocks,
                 };
-                Rc::new(RefCell::new(rfs))
+                Some(Rc::new(RefCell::new(rfs)))
             })
     }
 
@@ -130,11 +132,6 @@ impl RustedFileSystem {
     pub fn get_disk_inode_id(&self, block_id: u32, block_offset: usize) -> u32 {
         (block_id - self.inode_start_block) * INODES_PER_BLOCK
             + block_offset as u32 / size_of::<Inode>() as u32
-    }
-
-    /// 获取数据块对应的磁盘块号
-    pub fn get_data_block_id(&self, data_block_id: u32) -> u32 {
-        self.data_start_block + data_block_id
     }
 
     /// 分配Inode
