@@ -182,3 +182,25 @@ pub fn exec(path: &str) -> isize {
     let path = String::from(path) + "\0";
     sys_exec(path.as_ptr())
 }
+
+pub fn wait(exit_code: &mut i32) -> isize {
+    loop {
+        match sys_waitpid(-1, exit_code as *mut _ as *mut _) {
+            -2 => {
+                sys_yield();
+            }
+            pid => return pid,
+        }
+    }
+}
+
+pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
+    loop {
+        match sys_waitpid(pid as isize, exit_code as *mut _ as *mut _) {
+            -2 => {
+                sys_yield();
+            }
+            pid => return pid,
+        }
+    }
+}

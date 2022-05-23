@@ -47,6 +47,7 @@ pub struct ProcessControlBlockInner {
     pub fd_table: Vec<Option<Rc<dyn File>>>,
     pub parent: Weak<ProcessControlBlock>,
     pub children: Vec<Rc<ProcessControlBlock>>,
+    pub exit_code: i32,
 }
 
 impl ProcessControlBlock {
@@ -98,6 +99,7 @@ impl ProcessControlBlock {
                 ],
                 parent: Weak::new(),
                 children: vec![],
+                exit_code: 0,
             }),
         }
     }
@@ -150,6 +152,7 @@ impl ProcessControlBlock {
                 ],
                 parent: Rc::downgrade(&self),
                 children: vec![],
+                exit_code: 0,
             }),
         });
         inner.children.push(new_pcb.clone());

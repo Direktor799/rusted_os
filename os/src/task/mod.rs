@@ -19,13 +19,9 @@ pub struct TaskManager {
 }
 
 impl TaskManager {
-    fn new(proc_path: &str) -> Self {
-        let app_inode = find_inode(&proc_path).expect("[kernel] init proc not found!");
-        let size = app_inode.get_file_size() as usize;
-        let mut app_data = vec![0u8; size];
-        app_inode.read_at(0, &mut app_data);
+    fn new(deamon: Rc<ProcessControlBlock>) -> Self {
         Self {
-            current_task: Some(Rc::new(ProcessControlBlock::new(&app_data))),
+            current_task: Some(deamon),
             schd: SchdMaster::new(),
         }
     }
@@ -51,13 +47,6 @@ impl TaskManager {
         }
     }
 
-    fn set_current_task_status(&mut self, stat: TaskStatus) {
-        if let Some(current_task) = self.current_task.as_mut() {
-            let mut inner = current_task.inner.borrow_mut();
-            inner.task_status = stat;
-        }
-    }
-
     pub fn get_current_process(&self) -> Rc<ProcessControlBlock> {
         self.current_task.as_ref().unwrap().clone()
     }
@@ -65,11 +54,7 @@ impl TaskManager {
 
 pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
 
-fn set_current_task_status(stat: TaskStatus) {
-    unsafe {
-        TASK_MANAGER.set_current_task_status(stat);
-    }
-}
+pub static mut DEAMON: UninitCell<Rc<ProcessControlBlock>> = UninitCell::uninit();
 
 pub fn add_new_task(task: Rc<ProcessControlBlock>) {
     unsafe {
@@ -77,11 +62,21 @@ pub fn add_new_task(task: Rc<ProcessControlBlock>) {
     }
 }
 
-pub fn exit_current_and_run_next() {
-    set_current_task_status(TaskStatus::Exited);
+pub fn exit_current_and_run_next(exit_code: i32) {
+    let proc = get_current_process();
+    let mut inner = proc.inner.borrow_mut();
+    inner.task_status = TaskStatus::Exited;
+    inner.exit_code = exit_code;
     unsafe {
-        TASK_MANAGER.switch_to_next_task();
+        let mut deamon_inner = DEAMON.inner.borrow_mut();
+        for child in inner.children.iter() {
+            child.inner.borrow_mut().parent = Rc::downgrade(&DEAMON);
+            deamon_inner.children.push(child.clone());
+        }
     }
+    drop(inner);
+    drop(proc);
+    suspend_current_and_run_next();
 }
 
 pub fn suspend_current_and_run_next() {
@@ -105,7 +100,12 @@ pub fn get_current_process() -> Rc<ProcessControlBlock> {
 pub fn init() {
     unsafe {
         id::init();
-        TASK_MANAGER = UninitCell::init(TaskManager::new("/bin/deamon"));
+        let app_inode = find_inode("/bin/deamon").expect("[kernel] deamon not found!");
+        let size = app_inode.get_file_size() as usize;
+        let mut app_data = vec![0u8; size];
+        app_inode.read_at(0, &mut app_data);
+        DEAMON = UninitCell::init(Rc::new(ProcessControlBlock::new(&app_data)));
+        TASK_MANAGER = UninitCell::init(TaskManager::new(DEAMON.clone()));
         println!("mod task initialized!");
     }
 }
