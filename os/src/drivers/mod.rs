@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use core::cell::RefCell;
 pub mod virtio_block;
 use crate::fs::rfs::block_dev::BlockDevice;
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::uninit_cell::UninitCell;
 use alloc::rc::Rc;
 use virtio_block::VirtIOBlock;
 

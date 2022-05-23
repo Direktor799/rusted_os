@@ -1,7 +1,7 @@
 //! 页式内存分配器子模块
 use super::address::{PhysAddr, PhysPageNum};
 use crate::config::{MEMORY_END_ADDR, PAGE_SIZE};
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::uninit_cell::UninitCell;
 use alloc::vec;
 use alloc::vec::Vec;
 

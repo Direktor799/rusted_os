@@ -11,7 +11,7 @@ pub const BLOCK_SZ: usize = 512;
 type DataBlock = [u8; BLOCK_SZ];
 
 use crate::drivers::BLOCK_DEVICE;
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::uninit_cell::UninitCell;
 use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::vec;

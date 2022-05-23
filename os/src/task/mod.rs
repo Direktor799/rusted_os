@@ -4,10 +4,10 @@ pub mod schd;
 mod switch;
 mod task;
 
-use crate::interrupt::timer;
-use crate::loader::app_manager::APP_MANAGER;
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::uninit_cell::UninitCell;
+use crate::{fs::rfs::find_inode, interrupt::timer};
 use alloc::rc::Rc;
+use alloc::vec;
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
@@ -19,17 +19,14 @@ pub struct TaskManager {
 }
 
 impl TaskManager {
-    fn init(&mut self) {
-        unsafe {
-            let app_num = APP_MANAGER.get_app_num();
-            for i in 0..app_num {
-                let tcb = Rc::new(ProcessControlBlock::new(APP_MANAGER.get_app_data(i)));
-                if i == 0 {
-                    self.current_task = Some(tcb);
-                } else {
-                    self.schd.add_new_task(tcb);
-                }
-            }
+    fn new(proc_path: &str) -> Self {
+        let app_inode = find_inode(&proc_path).expect("[kernel] init proc not found!");
+        let size = app_inode.get_file_size() as usize;
+        let mut app_data = vec![0u8; size];
+        app_inode.read_at(0, &mut app_data);
+        Self {
+            current_task: Some(Rc::new(ProcessControlBlock::new(&app_data))),
+            schd: SchdMaster::new(),
         }
     }
 
@@ -108,11 +105,7 @@ pub fn get_current_process() -> Rc<ProcessControlBlock> {
 pub fn init() {
     unsafe {
         id::init();
-        TASK_MANAGER = UninitCell::init(TaskManager {
-            current_task: None,
-            schd: SchdMaster::new(),
-        });
-        TASK_MANAGER.init();
+        TASK_MANAGER = UninitCell::init(TaskManager::new("/bin/rush"));
         println!("mod task initialized!");
     }
 }

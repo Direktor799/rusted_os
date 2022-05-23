@@ -1,7 +1,7 @@
 //! 块缓存管理子模块
 
 use super::{block_dev::BlockDevice, BLOCK_SZ};
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::uninit_cell::UninitCell;
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
 use core::cell::RefCell;

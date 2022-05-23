@@ -4,7 +4,7 @@ use crate::memory::frame::{
     memory_set::KERNEL_MEMORY_SET,
     page_table::{R, W},
 };
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::uninit_cell::UninitCell;
 use alloc::vec::Vec;
 
 pub struct RecycleAllocator {

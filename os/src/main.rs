@@ -16,13 +16,12 @@ mod config;
 mod drivers;
 mod fs;
 mod interrupt;
-mod loader;
 mod memory;
 mod panic;
 mod sbi;
-mod sync;
 mod sys_call;
 mod task;
+mod tools;
 use core::arch::global_asm;
 
 global_asm!(include_str!("entry.asm"));
@@ -33,10 +32,9 @@ global_asm!(include_str!("link_app.asm"));
 pub extern "C" fn rust_main() -> ! {
     memory::init();
     interrupt::init();
-    loader::init();
-    task::init();
     drivers::init();
     fs::init();
+    task::init();
     #[cfg(test)]
     test_main();
     println!("[kernel] Hello rusted_os!");

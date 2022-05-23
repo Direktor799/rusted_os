@@ -2,7 +2,7 @@
 
 use super::linked_list::LinkedList;
 use crate::config::KERNEL_HEAP_SIZE;
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::uninit_cell::UninitCell;
 use alloc::alloc::{GlobalAlloc, Layout};
 use core::cell::RefCell;
 use core::cmp::{max, min};

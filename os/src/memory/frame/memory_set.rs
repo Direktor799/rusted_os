@@ -3,8 +3,8 @@ use super::address::*;
 use super::page_table::{PageTable, R, U, W, X};
 use super::segment::{MemorySegment, SegFlags};
 use crate::config::{MEMORY_END_ADDR, MMIO, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE};
-use crate::loader::elf_decoder::ElfFile;
-use crate::sync::uninit_cell::UninitCell;
+use crate::tools::elf_decoder::ElfFile;
+use crate::tools::uninit_cell::UninitCell;
 use alloc::{vec, vec::Vec};
 
 extern "C" {
