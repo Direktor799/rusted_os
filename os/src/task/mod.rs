@@ -105,7 +105,7 @@ pub fn get_current_process() -> Rc<ProcessControlBlock> {
 pub fn init() {
     unsafe {
         id::init();
-        TASK_MANAGER = UninitCell::init(TaskManager::new("/bin/rush"));
+        TASK_MANAGER = UninitCell::init(TaskManager::new("/bin/deamon"));
         println!("mod task initialized!");
     }
 }
