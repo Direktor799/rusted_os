@@ -8,7 +8,6 @@ use crate::sync::uninit_cell::UninitCell;
 use alloc::{vec, vec::Vec};
 
 extern "C" {
-    fn kernel_start();
     fn text_start();
     fn trampoline_start();
     fn text_end();
@@ -42,7 +41,6 @@ impl MemorySet {
 
     /// 创建新内核地址空间
     pub fn new_kernel() -> Self {
-        // println!("kernel start at {:x}", kernel_start as usize);
         // println!(".text [{:x}, {:x})", text_start as usize, text_end as usize);
         // println!(
         //     ".rodata [{:x}, {:x})",

@@ -11,7 +11,7 @@ pub struct TaskContext {
     /// kernel stack pointer of app
     pub sp: usize,
     /// callee saved registers:  s 0..11
-    s: [usize; 12],
+    x: [usize; 12],
 }
 
 impl TaskContext {
@@ -20,14 +20,14 @@ impl TaskContext {
         Self {
             ra: 0,
             sp: 0,
-            s: [0; 12],
+            x: [0; 12],
         }
     }
 
     pub fn goto_trap_return(kernel_sp: usize) -> Self {
         Self {
             ra: interrupt_return as usize,
-            s: [0; 12],
+            x: [0; 12],
             sp: kernel_sp,
         }
     }

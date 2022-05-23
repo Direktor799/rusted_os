@@ -54,24 +54,18 @@ impl Drop for PidHandle {
     }
 }
 
-pub fn init() {
-    unsafe {
-        PID_ALLOCATOR = UninitCell::init(RecycleAllocator::new());
-    }
-}
-
 pub fn kernel_stack_position(app_id: usize) -> (usize, usize) {
     let top = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
     let bottom = top - KERNEL_STACK_SIZE;
     (bottom, top)
 }
-///Kernelstack for app
+/// Kernelstack for app
 pub struct KernelStack {
     pid: usize,
 }
 
 impl KernelStack {
-    ///Create a kernelstack from pid
+    /// Create a kernelstack from pid
     pub fn new(pid_handle: &PidHandle) -> Self {
         let pid = pid_handle.0;
         let (kernel_stack_bottom, kernel_stack_top) = kernel_stack_position(pid);
@@ -87,8 +81,8 @@ impl KernelStack {
         }
         KernelStack { pid: pid_handle.0 }
     }
-    #[allow(unused)]
-    ///Push a value on top of kernelstack
+
+    /// Push a value on top of kernelstack
     pub fn push_on_top<T>(&self, value: T) -> *mut T
     where
         T: Sized,
@@ -100,7 +94,8 @@ impl KernelStack {
         }
         ptr_mut
     }
-    ///Get the value on the top of kernelstack
+
+    /// Get the value on the top of kernelstack
     pub fn get_top(&self) -> usize {
         let (_, kernel_stack_top) = kernel_stack_position(self.pid);
         kernel_stack_top
@@ -114,5 +109,11 @@ impl Drop for KernelStack {
         unsafe {
             KERNEL_MEMORY_SET.remove_segment(kernel_stack_bottom_vpn);
         }
+    }
+}
+
+pub fn init() {
+    unsafe {
+        PID_ALLOCATOR = UninitCell::init(RecycleAllocator::new());
     }
 }

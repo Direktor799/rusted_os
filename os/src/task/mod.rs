@@ -35,11 +35,11 @@ impl TaskManager {
     }
 
     fn switch_to_next_task(&mut self) {
-        let mut current_task = self.current_task.take().expect("[kernel] No current task");
+        let current_task = self.current_task.take().expect("[kernel] No task");
         let mut current_task_inner = current_task.inner.borrow_mut();
         let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
         drop(current_task_inner);
-        let mut next_task = self
+        let next_task = self
             .schd
             .get_next_and_requeue_current(current_task)
             .expect("[kernel] All tasks have completed!");

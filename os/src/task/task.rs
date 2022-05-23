@@ -1,4 +1,4 @@
-use core::cell::{Ref, RefCell};
+use core::cell::RefCell;
 
 use super::context::TaskContext;
 use super::id::{pid_alloc, KernelStack, PidHandle};
@@ -19,9 +19,9 @@ use alloc::vec::Vec;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
-    UnInit,
+    // UnInit,
     Ready,
-    Running,
+    // Running,
     Exited,
 }
 

@@ -17,7 +17,7 @@ impl MultilevelFeedbackQueue {
             rr_queue: VecDeque::new(),
         }
     }
-    pub fn requeue(&mut self, mut task: Rc<ProcessControlBlock>) -> bool {
+    pub fn requeue(&mut self, task: Rc<ProcessControlBlock>) -> bool {
         let mut inner = task.inner.borrow_mut();
         match inner.task_pos {
             TaskPos::Fcfs1 => {
@@ -71,7 +71,7 @@ impl SchdMaster {
     /// next task can be None
     pub fn get_next_and_requeue_current(
         &mut self,
-        mut current_task_cb: Rc<ProcessControlBlock>,
+        current_task_cb: Rc<ProcessControlBlock>,
     ) -> Option<Rc<ProcessControlBlock>> {
         let mut inner = current_task_cb.inner.borrow_mut();
         if inner.task_status != TaskStatus::Exited {

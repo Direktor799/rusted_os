@@ -100,6 +100,7 @@ impl InodeHandler {
             .collect();
         disk_inode.increase_size(new_size, v, &self.block_device);
     }
+
     fn decrease_size(&self, new_size: u32, disk_inode: &mut Inode, fs: &mut RustedFileSystem) {
         if new_size >= disk_inode.size {
             return;
@@ -170,6 +171,7 @@ impl InodeHandler {
             Some(Rc::new(new_inode_handler))
         }
     }
+
     pub fn set_default_dirent(&self, parent_inode_id: u32) {
         let mut fs = self.fs.borrow_mut();
         self.modify_disk_inode(|cur_dir_inode| {
@@ -230,15 +232,19 @@ impl InodeHandler {
             v
         })
     }
+
     pub fn is_dir(&self) -> bool {
         self.read_disk_inode(|disk_inode| disk_inode.is_dir())
     }
+
     pub fn is_file(&self) -> bool {
         self.read_disk_inode(|disk_inode| disk_inode.is_file())
     }
+
     pub fn is_link(&self) -> bool {
         self.read_disk_inode(|disk_inode| disk_inode.is_link())
     }
+
     pub fn read_at(&self, offset: usize, buf: &mut [u8]) -> usize {
         let _fs = self.fs.borrow();
         self.read_disk_inode(|disk_inode| disk_inode.read_at(offset, buf, &self.block_device))
@@ -253,6 +259,7 @@ impl InodeHandler {
         block_cache_sync_all();
         size
     }
+
     pub fn get_file_size(&self) -> u32 {
         self.read_disk_inode(|disk_inode| disk_inode.size)
     }
