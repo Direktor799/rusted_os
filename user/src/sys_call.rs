@@ -10,6 +10,7 @@ const SYS_CALL_WRITE: usize = 64;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GET_TIME: usize = 169;
+const SYS_CALL_FORK: usize = 220;
 
 fn sys_call(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
@@ -67,4 +68,8 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 // 返回值为-1表示close失败，为0表示执行成功
 pub fn sys_close(fd: usize) -> isize {
     sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
+}
+
+pub fn sys_fork() -> isize {
+    sys_call(SYS_CALL_FORK, [0, 0, 0])
 }

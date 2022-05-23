@@ -107,3 +107,7 @@ pub fn open(path: &str, flags: u32) -> isize {
 pub fn close(fd: usize) -> isize {
     sys_close(fd)
 }
+
+pub fn fork() -> isize {
+    sys_fork()
+}
