@@ -12,14 +12,13 @@ use crate::memory::frame::{
     memory_set::KERNEL_MEMORY_SET,
     page_table::{R, W},
 };
-use alloc::rc::Rc;
+use alloc::rc::{Rc, Weak};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
-    // UnInit,
     Ready,
     // Running,
     Exited,
@@ -46,6 +45,7 @@ pub struct ProcessControlBlockInner {
     pub trap_cx_ppn: PhysPageNum,
     pub cwd: String,
     pub fd_table: Vec<Option<Rc<dyn File>>>,
+    pub parent: Weak<ProcessControlBlock>,
     pub children: Vec<Rc<ProcessControlBlock>>,
 }
 
@@ -96,6 +96,7 @@ impl ProcessControlBlock {
                     // 2 -> stderr
                     Some(Rc::new(Stdout)),
                 ],
+                parent: Weak::new(),
                 children: vec![],
             }),
         }
@@ -120,7 +121,7 @@ impl ProcessControlBlock {
         );
     }
 
-    pub fn fork(&self) -> Rc<Self> {
+    pub fn fork(self: Rc<Self>) -> Rc<Self> {
         let mut inner = self.inner.borrow_mut();
         let memory_set = inner.memory_set.clone();
         let pid_handle = pid_alloc();
@@ -147,6 +148,7 @@ impl ProcessControlBlock {
                     // 2 -> stderr
                     Some(Rc::new(Stdout)),
                 ],
+                parent: Rc::downgrade(&self),
                 children: vec![],
             }),
         });
