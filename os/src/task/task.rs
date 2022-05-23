@@ -99,7 +99,7 @@ impl ProcessControlBlock {
 
     pub fn fork(&self) -> Rc<Self> {
         let mut inner = self.inner.borrow_mut();
-        let memory_set = self.inner.borrow().memory_set.clone();
+        let memory_set = inner.memory_set.clone();
         let pid_handle = pid_alloc();
         let kernel_stack = KernelStack::new(&pid_handle);
         let kernel_stack_top = kernel_stack.get_top();
