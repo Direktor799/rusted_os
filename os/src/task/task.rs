@@ -101,6 +101,25 @@ impl ProcessControlBlock {
         }
     }
 
+    pub fn exec(&self, elf_data: &[u8]) {
+        let (memory_set, user_sp, entry_point) = MemorySet::from_elf(elf_data);
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr(TRAP_CONTEXT).vpn())
+            .expect("[kernel] Trap context not mapped!");
+
+        let mut inner = self.inner.borrow_mut();
+        inner.memory_set = memory_set;
+        inner.trap_cx_ppn = trap_cx_ppn;
+        let trap_cx = self.get_trap_cx();
+        *trap_cx = Context::app_init_context(
+            entry_point,
+            user_sp,
+            unsafe { KERNEL_MEMORY_SET.satp_token() },
+            self.kernel_stack.get_top(),
+            interrupt_handler as usize,
+        );
+    }    
+
     pub fn fork(&self) -> Rc<Self> {
         let mut inner = self.inner.borrow_mut();
         let memory_set = inner.memory_set.clone();
