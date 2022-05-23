@@ -222,7 +222,7 @@ impl Inode {
             return;
         }
         // 若还未分配二级间接块
-        if current_blocks == INODE_INDIRECT1_COUNT {
+        if current_blocks == INODE_INDIRECT1_BOUND {
             self.indirect2 = new_blocks.next().unwrap();
         }
         // 扩充二级间接块
