@@ -25,7 +25,6 @@ mod tools;
 use core::arch::global_asm;
 
 global_asm!(include_str!("entry.asm"));
-global_asm!(include_str!("link_app.asm"));
 
 /// This is where we start.
 #[no_mangle]
