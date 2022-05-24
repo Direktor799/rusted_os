@@ -64,6 +64,11 @@ pub fn sys_exec(path: *const u8) -> isize {
         let size = app_inode.get_file_size() as usize;
         let mut app_data = vec![0u8; size];
         app_inode.read_at(0, &mut app_data);
+        let hash = app_data.iter().fold(1, |acc, &byte| {
+            let res = acc as u64 * (byte as u64 + 1);
+            res % 123456789
+        });
+        println!("{} hash: {:x}", path, hash);
         proc.exec(app_data.as_slice());
         // return argc because cx.x[10] will be covered with it later
         0
