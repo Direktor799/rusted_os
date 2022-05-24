@@ -1,10 +1,9 @@
 //! 进程相关系统调用子模块
 
+use alloc::rc::Rc;
+use alloc::vec::{self, Vec};
 use core::mem::size_of;
 use core::ptr::slice_from_raw_parts;
-
-use alloc::rc::Rc;
-use alloc::vec;
 
 use crate::fs::rfs::{find_inode, get_full_path};
 use crate::interrupt::timer::get_time_ms;
@@ -61,15 +60,32 @@ pub fn sys_exec(path: *const u8) -> isize {
     //     }
     // }
     if let Some(app_inode) = find_inode(&path) {
-        let size = app_inode.get_file_size() as usize;
-        let mut app_data = vec![0u8; size];
-        app_inode.read_at(0, &mut app_data);
-        let hash = app_data.iter().fold(1, |acc, &byte| {
-            let res = acc as u64 * (byte as u64 + 1);
-            res % 123456789
-        });
-        println!("{} hash: {:x} len: {}", path, hash, size);
+        // let size = app_inode.get_file_size() as usize;
+        // let mut app_data = vec![0u8; size];
+        // app_inode.read_at(0, &mut app_data);
+        // let hash = app_data.iter().fold(1, |acc, &byte| {
+        //     let res = acc as u64 * (byte as u64 + 1);
+        //     res % 123456789
+        // });
+        // println!(
+        //     "{} blocks",
+        //     crate::fs::rfs::layout::Inode::total_blocks(size as u32)
+        // );
+        // println!("{} hash: {:x} len: {}", path, hash, size);
+        let mut buffer = [0u8; 512];
+        let mut app_data: Vec<u8> = Vec::new();
+        let mut offset = 0;
+        loop {
+            let len = app_inode.read_at(offset, &mut buffer);
+            if len == 0 {
+                break;
+            }
+            offset += len;
+            app_data.extend_from_slice(&buffer[..len]);
+        }
         proc.exec(app_data.as_slice());
+        println!("try to find after exec");
+        find_inode(&path);
         // return argc because cx.x[10] will be covered with it later
         0
     } else {

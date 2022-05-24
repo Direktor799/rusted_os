@@ -25,7 +25,9 @@ pub fn find_inode(path: &str) -> Option<Rc<InodeHandler>> {
     path.split('/').fold(Some(root_inode), |res, name| {
         if let Some(node) = res {
             if !name.is_empty() {
-                node.find(name)
+                let ret = node.find(name);
+                println!("found {} {}", name, ret.as_ref().unwrap().is_dir());
+                ret
             } else {
                 Some(node)
             }

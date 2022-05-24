@@ -4,6 +4,7 @@ use super::{block_dev::BlockDevice, BLOCK_SZ};
 use crate::tools::uninit_cell::UninitCell;
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
+use alloc::vec::Vec;
 use core::cell::RefCell;
 
 /// 内存中的块缓存
@@ -33,7 +34,7 @@ impl BlockCache {
     }
 
     /// 获取只读的缓存引用
-    pub fn get_ref<T>(&self, offset: usize) -> &T
+    fn get_ref<T>(&self, offset: usize) -> &T
     where
         T: Sized,
     {
@@ -44,7 +45,7 @@ impl BlockCache {
     }
 
     /// 获取可变的的缓存引用
-    pub fn get_mut<T>(&mut self, offset: usize) -> &mut T
+    fn get_mut<T>(&mut self, offset: usize) -> &mut T
     where
         T: Sized,
     {
@@ -108,12 +109,11 @@ impl BlockCacheManager {
             // 需要替换
             if self.queue.len() == BLOCK_CACHE_SIZE {
                 // 删除当前未被使用的块
-                if let Some((idx, _)) = self
-                    .queue
-                    .iter()
-                    .enumerate()
-                    .find(|(_, pair)| Rc::strong_count(&pair.1) == 1)
-                {
+                if let Some((idx, _)) = self.queue.iter().enumerate().find(|(_, pair)| {
+                    // println!("{} {}", pair.0, Rc::strong_count(&pair.1));
+                    Rc::strong_count(&pair.1) == 1
+                }) {
+                    // println!("swapping -{} +{}", self.queue[idx].0, block_id);
                     self.queue.remove(idx);
                 } else {
                     panic!("Run out of BlockCache!");
@@ -126,6 +126,44 @@ impl BlockCacheManager {
         }
     }
 }
+
+// pub struct BlockCacheManager {
+//     queue: Vec<(usize, Rc<RefCell<BlockCache>>)>,
+// }
+
+// impl BlockCacheManager {
+//     pub fn new() -> Self {
+//         Self { queue: Vec::new() }
+//     }
+//     pub fn get_block_cache(
+//         &mut self,
+//         block_id: usize,
+//         block_device: Rc<dyn BlockDevice>,
+//     ) -> Rc<RefCell<BlockCache>> {
+//         if let Some((_, cache)) = self.queue.iter().find(|(id, _)| *id == block_id) {
+//             cache.clone()
+//         } else {
+//             if self.queue.len() == BLOCK_CACHE_SIZE {
+//                 if let Some((idx, _)) = self
+//                     .queue
+//                     .iter()
+//                     .enumerate()
+//                     .find(|(_, (_, cache))| Rc::strong_count(cache) == 1)
+//                 {
+//                     self.queue.swap_remove(idx);
+//                 } else {
+//                     panic!("Run out of BlockCache!");
+//                 }
+//             }
+//             let block_cache = Rc::new(RefCell::new(BlockCache::new(
+//                 block_id,
+//                 block_device.clone(),
+//             )));
+//             self.queue.push((block_id, Rc::clone(&block_cache)));
+//             block_cache
+//         }
+//     }
+// }
 
 /// 全局块缓存管理器
 pub static mut BLOCK_CACHE_MANAGER: UninitCell<BlockCacheManager> = UninitCell::uninit();

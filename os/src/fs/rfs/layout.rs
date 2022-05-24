@@ -67,7 +67,7 @@ impl SuperBlock {
 }
 
 /// Inode类型
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum InodeType {
     File,
     Directory,
@@ -84,7 +84,7 @@ pub struct Inode {
     pub direct: [u32; INODE_DIRECT_COUNT],
     pub indirect1: u32,
     pub indirect2: u32,
-    type_: InodeType,
+    pub type_: InodeType,
 }
 
 impl Inode {

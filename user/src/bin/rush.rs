@@ -35,8 +35,7 @@ fn main() -> i32 {
                         exec("/bin/ls");
                     } else {
                         let mut exit_code = 0;
-                        let ret = waitpid(pid as usize, &mut exit_code);
-                        println!("pid:{} ret:{}", ret, exit_code);
+                        waitpid(pid as usize, &mut exit_code);
                     }
                 }
                 "ls1" => {
@@ -45,8 +44,7 @@ fn main() -> i32 {
                         exec("/bin/ls1");
                     } else {
                         let mut exit_code = 0;
-                        let ret = waitpid(pid as usize, &mut exit_code);
-                        println!("pid:{} ret:{}", ret, exit_code);
+                        waitpid(pid as usize, &mut exit_code);
                     }
                 }
                 "lss" => app_ls(&args),
@@ -56,8 +54,7 @@ fn main() -> i32 {
                         exec("/bin/test");
                     } else {
                         let mut exit_code = 0;
-                        let ret = waitpid(pid as usize, &mut exit_code);
-                        println!("pid:{} ret:{}", ret, exit_code);
+                        waitpid(pid as usize, &mut exit_code);
                     }
                 }
                 "write" => write_test(&args),
