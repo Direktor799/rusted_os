@@ -6,13 +6,13 @@ use crate::fs::inode::{open_file, OpenFlags};
 use crate::fs::rfs::layout::DIRENT_SZ;
 use crate::fs::rfs::{find_inode, get_full_path, layout::InodeType};
 use crate::fs::Stat;
-use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
+use crate::memory::frame::user_buffer::{get_user_buffer, get_user_string};
 use crate::task::get_current_process;
 
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
     let proc = get_current_process();
     let mut proc_inner = proc.inner.borrow_mut();
-    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_user_string(proc_inner.token(), path);
     let path = get_full_path(&proc_inner.cwd, &path);
 
     if let Some(inode) = open_file(&path, OpenFlags(flags)) {
@@ -39,7 +39,7 @@ pub fn sys_close(fd: usize) -> isize {
 pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     let proc = get_current_process();
     let mut proc_inner = proc.inner.borrow_mut();
-    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
+    let user_buffer = get_user_buffer(proc_inner.token(), buf, len);
     let fd_table = &mut proc_inner.fd_table;
 
     if fd >= fd_table.len() {
@@ -58,7 +58,7 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     let proc = get_current_process();
     let mut proc_inner = proc.inner.borrow_mut();
-    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
+    let user_buffer = get_user_buffer(proc_inner.token(), buf, len);
     let fd_table = &mut proc_inner.fd_table;
 
     if fd >= fd_table.len() {
@@ -77,7 +77,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 pub fn sys_chdir(path: *const u8) -> isize {
     let proc = get_current_process();
     let mut proc_inner = proc.inner.borrow_mut();
-    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_user_string(proc_inner.token(), path);
     let path = get_full_path(&proc_inner.cwd, &path);
 
     if let Some(inode) = find_inode(&path) {
@@ -97,7 +97,7 @@ pub fn sys_chdir(path: *const u8) -> isize {
 pub fn sys_getcwd(buf: *const u8, len: usize) -> isize {
     let proc = get_current_process();
     let proc_inner = proc.inner.borrow_mut();
-    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
+    let user_buffer = get_user_buffer(proc_inner.token(), buf, len);
     let cwd = proc_inner.cwd.as_bytes();
 
     if cwd.len() > len {
@@ -115,7 +115,7 @@ pub fn sys_getcwd(buf: *const u8, len: usize) -> isize {
 pub fn sys_mkdir(path: *const u8) -> isize {
     let proc = get_current_process();
     let proc_inner = proc.inner.borrow_mut();
-    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_user_string(proc_inner.token(), path);
     let path = get_full_path(&proc_inner.cwd, &path);
 
     let (parent_path, target) = path.rsplit_once('/').unwrap();
@@ -137,9 +137,9 @@ pub fn sys_mkdir(path: *const u8) -> isize {
 pub fn sys_symlink(target_path: *const u8, link_path: *const u8) -> isize {
     let proc = get_current_process();
     let proc_inner = proc.inner.borrow_mut();
-    let target_path = get_user_string_in_kernel(proc_inner.token(), target_path);
+    let target_path = get_user_string(proc_inner.token(), target_path);
     let target_path = get_full_path(&proc_inner.cwd, &target_path);
-    let link_path = get_user_string_in_kernel(proc_inner.token(), link_path);
+    let link_path = get_user_string(proc_inner.token(), link_path);
     let link_path = get_full_path(&proc_inner.cwd, &link_path);
 
     let (parent_path, target) = link_path.rsplit_once('/').unwrap();
@@ -189,9 +189,9 @@ pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
 pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
     let proc = get_current_process();
     let proc_inner = proc.inner.borrow_mut();
-    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_user_string(proc_inner.token(), path);
     let path = get_full_path(&proc_inner.cwd, &path);
-    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), buf, len);
+    let user_buffer = get_user_buffer(proc_inner.token(), buf, len);
 
     if let Some(inode) = find_inode(&path) {
         if !inode.is_link() {
@@ -220,7 +220,7 @@ const AT_REMOVEDIR: u32 = 1;
 pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
     let proc = get_current_process();
     let proc_inner = proc.inner.borrow_mut();
-    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_user_string(proc_inner.token(), path);
     let path = get_full_path(&proc_inner.cwd, &path);
 
     let (parent_path, target) = path.rsplit_once('/').unwrap();
@@ -251,7 +251,7 @@ pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
 pub fn sys_fstat(fd: usize, stat: *mut u8) -> isize {
     let proc = get_current_process();
     let mut proc_inner = proc.inner.borrow_mut();
-    let user_buffer = get_user_buffer_in_kernel(proc_inner.token(), stat, size_of::<Stat>());
+    let user_buffer = get_user_buffer(proc_inner.token(), stat, size_of::<Stat>());
     let fd_table = &mut proc_inner.fd_table;
 
     if fd >= fd_table.len() || fd_table[fd].is_none() {

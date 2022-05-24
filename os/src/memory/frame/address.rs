@@ -88,11 +88,6 @@ impl PhysPageNum {
         let pa = self.addr();
         unsafe { core::slice::from_raw_parts_mut(pa.0 as *mut u8, PAGE_SIZE) }
     }
-
-    /// 获取物理页面起始处指定类型数据
-    pub fn get_mut<T>(&self) -> &'static mut T {
-        self.addr().get_mut()
-    }
 }
 
 impl VirtPageNum {
@@ -149,7 +144,7 @@ test!(test_phys_page_num, {
     for byte in bytes {
         *byte = u8::MAX;
     }
-    let first_usize = ppn.get_mut::<usize>();
+    let first_usize = ppn.addr().get_mut::<usize>();
     test_assert!(*first_usize == usize::MAX, "Read / write failed");
     Ok("passed")
 });

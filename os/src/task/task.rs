@@ -71,7 +71,7 @@ impl ProcessControlBlock {
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");
-        let trap_cx = trap_cx_ppn.get_mut();
+        let trap_cx = trap_cx_ppn.addr().get_mut();
         *trap_cx = Context::app_init_context(
             entry,
             user_sp,
@@ -113,7 +113,7 @@ impl ProcessControlBlock {
         let mut inner = self.inner.borrow_mut();
         inner.memory_set = memory_set;
         inner.trap_cx_ppn = trap_cx_ppn;
-        let trap_cx = trap_cx_ppn.get_mut();
+        let trap_cx = trap_cx_ppn.addr().get_mut();
         *trap_cx = Context::app_init_context(
             entry_point,
             user_sp,
@@ -161,7 +161,7 @@ impl ProcessControlBlockInner {
     }
 
     pub fn trap_cx(&self) -> &'static mut Context {
-        self.trap_cx_ppn.get_mut()
+        self.trap_cx_ppn.addr().get_mut()
     }
 
     pub fn alloc_fd(&mut self) -> usize {

@@ -171,7 +171,7 @@ impl MemorySet {
     }
 
     /// 映射跳板页
-    pub fn map_trampoline(&mut self) {
+    fn map_trampoline(&mut self) {
         self.page_table.map(
             VirtAddr(TRAMPOLINE).vpn(),
             PhysAddr(trampoline_start as usize).ppn(),
