@@ -39,6 +39,16 @@ fn main() -> i32 {
                         println!("pid:{} ret:{}", ret, exit_code);
                     }
                 }
+                "ls1" => {
+                    let pid = fork();
+                    if pid == 0 {
+                        exec("/bin/ls1");
+                    } else {
+                        let mut exit_code = 0;
+                        let ret = waitpid(pid as usize, &mut exit_code);
+                        println!("pid:{} ret:{}", ret, exit_code);
+                    }
+                }
                 "lss" => app_ls(&args),
                 "test" => {
                     let pid = fork();

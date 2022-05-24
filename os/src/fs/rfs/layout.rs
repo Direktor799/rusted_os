@@ -3,7 +3,6 @@
 use super::{block_cache::get_block_cache, block_dev::BlockDevice, DataBlock, BLOCK_SZ};
 use alloc::rc::Rc;
 use alloc::vec::Vec;
-use core::fmt::{Debug, Formatter, Result};
 use core::mem::size_of;
 
 /// 换成咱八路军的曲子
@@ -39,18 +38,6 @@ pub struct SuperBlock {
     pub inode_blocks: u32,
     pub data_bitmap_blocks: u32,
     pub data_blocks: u32,
-}
-
-impl Debug for SuperBlock {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.debug_struct("SuperBlock")
-            .field("total_blocks", &self.total_blocks)
-            .field("inode_bitmap_blocks", &self.inode_bitmap_blocks)
-            .field("inode_blocks", &self.inode_blocks)
-            .field("data_bitmap_blocks", &self.data_bitmap_blocks)
-            .field("data_blocks", &self.data_blocks)
-            .finish()
-    }
 }
 
 impl SuperBlock {
