@@ -142,14 +142,7 @@ impl ProcessControlBlock {
                 memory_set,
                 trap_cx_ppn,
                 cwd: inner.cwd.clone(),
-                fd_table: vec![
-                    // 0 -> stdin
-                    Some(Rc::new(Stdin)),
-                    // 1 -> stdout
-                    Some(Rc::new(Stdout)),
-                    // 2 -> stderr
-                    Some(Rc::new(Stdout)),
-                ],
+                fd_table: inner.fd_table.clone(),
                 parent: Rc::downgrade(&self),
                 children: vec![],
                 exit_code: 0,
