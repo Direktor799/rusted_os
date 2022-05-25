@@ -17,6 +17,7 @@ const SYS_CALL_YIELD: usize = 124;
 const SYS_CALL_GETTIME: usize = 169;
 const SYS_CALL_FORK: usize = 220;
 const SYS_CALL_EXEC: usize = 221;
+const SYS_CALL_WAITPID: usize = 260;
 
 fn sys_call(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
@@ -108,4 +109,8 @@ pub fn sys_fork() -> isize {
 
 pub fn sys_exec(path: *const u8) -> isize {
     sys_call(SYS_CALL_EXEC, [path as usize, 0, 0])
+}
+
+pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut u8) -> isize {
+    sys_call(SYS_CALL_WAITPID, [pid as usize, exit_code_ptr as usize, 0])
 }

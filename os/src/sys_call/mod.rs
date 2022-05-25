@@ -22,8 +22,8 @@ const SYS_CALL_GETTIME: usize = 169;
 const SYS_CALL_GETPID: usize = 172;
 const SYS_CALL_FORK: usize = 220;
 const SYS_CALL_EXEC: usize = 221;
+const SYS_CALL_WAITPID: usize = 260;
 
-// TODO: sys_wait
 pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
     match which {
         SYS_CALL_GETCWD => sys_getcwd(args[0] as *const u8, args[1] as usize),
@@ -46,6 +46,7 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_GETPID => sys_getpid(),
         SYS_CALL_FORK => sys_fork(),
         SYS_CALL_EXEC => sys_exec(args[0] as *const u8),
+        SYS_CALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut u8),
         _ => panic!("sys_call with unknown id: {}", which),
     }
 }

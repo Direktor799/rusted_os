@@ -1,14 +1,13 @@
 //! 进程相关系统调用子模块
 
+use alloc::rc::Rc;
+use alloc::vec;
 use core::mem::size_of;
 use core::ptr::slice_from_raw_parts;
 
-use alloc::rc::Rc;
-use alloc::vec;
-
 use crate::fs::rfs::{find_inode, get_full_path};
 use crate::interrupt::timer::get_time_ms;
-use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
+use crate::memory::frame::user_buffer::{get_user_buffer, get_user_string};
 use crate::task::{
     add_new_task, exit_current_and_run_next, get_current_process, suspend_current_and_run_next,
     TaskStatus,
@@ -52,7 +51,7 @@ pub fn sys_fork() -> isize {
 pub fn sys_exec(path: *const u8) -> isize {
     let proc = get_current_process();
     let proc_inner = proc.inner.borrow();
-    let path = get_user_string_in_kernel(proc_inner.token(), path);
+    let path = get_user_string(proc_inner.token(), path);
     let path = get_full_path(&proc_inner.cwd, &path);
     drop(proc_inner);
     // let mut args_vec: Vec<String> = Vec::new();
@@ -81,7 +80,7 @@ pub fn sys_exec(path: *const u8) -> isize {
 pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut u8) -> isize {
     let process = get_current_process();
     let mut inner = process.inner.borrow_mut();
-    let user_buffer = get_user_buffer_in_kernel(inner.token(), exit_code_ptr, size_of::<i32>());
+    let user_buffer = get_user_buffer(inner.token(), exit_code_ptr, size_of::<i32>());
 
     if !inner
         .children

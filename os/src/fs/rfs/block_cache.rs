@@ -2,8 +2,8 @@
 
 use super::{block_dev::BlockDevice, BLOCK_SZ};
 use crate::tools::uninit_cell::UninitCell;
-use alloc::collections::VecDeque;
 use alloc::rc::Rc;
+use alloc::vec::Vec;
 use core::cell::RefCell;
 
 /// 内存中的块缓存
@@ -33,7 +33,7 @@ impl BlockCache {
     }
 
     /// 获取只读的缓存引用
-    pub fn get_ref<T>(&self, offset: usize) -> &T
+    fn get_ref<T>(&self, offset: usize) -> &T
     where
         T: Sized,
     {
@@ -44,7 +44,7 @@ impl BlockCache {
     }
 
     /// 获取可变的的缓存引用
-    pub fn get_mut<T>(&mut self, offset: usize) -> &mut T
+    fn get_mut<T>(&mut self, offset: usize) -> &mut T
     where
         T: Sized,
     {
@@ -85,43 +85,38 @@ const BLOCK_CACHE_SIZE: usize = 16;
 
 /// 块缓存管理器
 pub struct BlockCacheManager {
-    queue: VecDeque<(usize, Rc<RefCell<BlockCache>>)>,
+    queue: Vec<(usize, Rc<RefCell<BlockCache>>)>,
 }
 
 impl BlockCacheManager {
-    /// 新建块缓存管理器
     pub fn new() -> Self {
-        Self {
-            queue: VecDeque::new(),
-        }
+        Self { queue: Vec::new() }
     }
-
-    /// 加载对应块到缓存
     pub fn get_block_cache(
         &mut self,
         block_id: usize,
-        device: Rc<dyn BlockDevice>,
+        block_device: Rc<dyn BlockDevice>,
     ) -> Rc<RefCell<BlockCache>> {
-        if let Some(pair) = self.queue.iter().find(|pair| pair.0 == block_id) {
-            Rc::clone(&pair.1)
+        if let Some((_, cache)) = self.queue.iter().find(|(id, _)| *id == block_id) {
+            cache.clone()
         } else {
-            // 需要替换
             if self.queue.len() == BLOCK_CACHE_SIZE {
-                // 删除当前未被使用的块
                 if let Some((idx, _)) = self
                     .queue
                     .iter()
                     .enumerate()
-                    .find(|(_, pair)| Rc::strong_count(&pair.1) == 1)
+                    .find(|(_, (_, cache))| Rc::strong_count(cache) == 1)
                 {
-                    self.queue.remove(idx);
+                    self.queue.swap_remove(idx);
                 } else {
                     panic!("Run out of BlockCache!");
                 }
             }
-            // 加载新的缓存
-            let block_cache = Rc::new(RefCell::new(BlockCache::new(block_id, Rc::clone(&device))));
-            self.queue.push_back((block_id, Rc::clone(&block_cache)));
+            let block_cache = Rc::new(RefCell::new(BlockCache::new(
+                block_id,
+                block_device.clone(),
+            )));
+            self.queue.push((block_id, Rc::clone(&block_cache)));
             block_cache
         }
     }

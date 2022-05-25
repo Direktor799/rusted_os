@@ -5,8 +5,6 @@ use super::{
     rfs::RustedFileSystem,
 };
 use alloc::rc::Rc;
-use alloc::string::String;
-use alloc::vec::Vec;
 use core::cell::RefCell;
 
 /// Inode句柄
@@ -105,6 +103,7 @@ impl InodeHandler {
             .into_iter()
             .for_each(|block_id| fs.dealloc_data(block_id));
     }
+
     pub fn create(&self, name: &str, filetype: InodeType) -> Option<Rc<InodeHandler>> {
         let mut fs = self.fs.borrow_mut();
         let op = |dir_inode: &Inode| {
@@ -182,6 +181,7 @@ impl InodeHandler {
             cur_dir_inode.write_at(DIRENT_SZ, dirent_parent.as_bytes(), &self.block_device);
         });
     }
+
     pub fn delete(&self, name: &str) {
         let mut fs = self.fs.borrow_mut();
         self.modify_disk_inode(|dir_inode| {
@@ -209,23 +209,6 @@ impl InodeHandler {
             let new_size = (file_count - 1) * DIRENT_SZ;
             self.decrease_size(new_size as u32, dir_inode, &mut fs);
         });
-    }
-
-    pub fn ls(&self) -> Vec<String> {
-        let _fs = self.fs.borrow();
-        self.read_disk_inode(|disk_inode| {
-            let file_count = (disk_inode.size as usize) / DIRENT_SZ;
-            let mut v: Vec<String> = Vec::new();
-            for i in 0..file_count {
-                let mut dirent = Dirent::empty();
-                assert_eq!(
-                    disk_inode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device,),
-                    DIRENT_SZ,
-                );
-                v.push(String::from(dirent.name()));
-            }
-            v
-        })
     }
 
     pub fn is_dir(&self) -> bool {

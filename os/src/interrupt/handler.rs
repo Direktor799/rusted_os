@@ -1,6 +1,4 @@
 //! 中断处理子模块
-
-use super::context::Context;
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::sys_call::sys_call;
 use crate::task::{exit_current_and_run_next, get_current_process, schedule_callback};
@@ -11,6 +9,7 @@ global_asm!(include_str!("./interrupt.asm"));
 const ILLEGAL_INSTRUCTION: usize = 2;
 const BREAKPOINT: usize = 3;
 const ENVIRONMENT_CALL: usize = 8;
+const INSTRUCTION_PAGE_FAULT: usize = 12;
 const SUPERVISOR_TIMER_INTERRUPT: usize = (1 << 63) + 5;
 
 /// 初始化中断向量
@@ -74,11 +73,17 @@ pub fn interrupt_handler() -> ! {
         }
         ILLEGAL_INSTRUCTION => {
             println!(
-                "[kernel] IllegalInstruction at {:x}: {:x}, kernel killed it.",
+                "[kernel] IllegalInstruction at 0x{:x}, kernel killed it.",
                 context.sepc,
-                unsafe { *(context.sepc as *const usize) }
             );
             exit_current_and_run_next(-1);
+        }
+        INSTRUCTION_PAGE_FAULT => {
+            println!(
+                "[kernel] InstructionPageFault at 0x{:x}, kernel killed it.",
+                context.sepc,
+            );
+            exit_current_and_run_next(-2);
         }
         _ => {
             panic!(

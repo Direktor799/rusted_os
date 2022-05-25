@@ -2,16 +2,12 @@ use core::cell::RefCell;
 
 use super::context::TaskContext;
 use super::id::{pid_alloc, KernelStack, PidHandle};
-use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE, TRAP_CONTEXT};
+use crate::config::TRAP_CONTEXT;
 use crate::fs::stdio::{Stdin, Stdout};
 use crate::fs::File;
 use crate::interrupt::{context::Context, handler::interrupt_handler};
 use crate::memory::frame::address::*;
-use crate::memory::frame::{
-    memory_set::MemorySet,
-    memory_set::KERNEL_MEMORY_SET,
-    page_table::{R, W},
-};
+use crate::memory::frame::{memory_set::MemorySet, memory_set::KERNEL_MEMORY_SET};
 use alloc::rc::{Rc, Weak};
 use alloc::string::String;
 use alloc::vec;
@@ -59,7 +55,7 @@ impl ProcessControlBlock {
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");
-        let trap_cx = trap_cx_ppn.get_mut();
+        let trap_cx = trap_cx_ppn.addr().get_mut();
         *trap_cx = Context::app_init_context(
             entry,
             user_sp,
@@ -101,7 +97,7 @@ impl ProcessControlBlock {
         let mut inner = self.inner.borrow_mut();
         inner.memory_set = memory_set;
         inner.trap_cx_ppn = trap_cx_ppn;
-        let trap_cx = trap_cx_ppn.get_mut();
+        let trap_cx = trap_cx_ppn.addr().get_mut();
         *trap_cx = Context::app_init_context(
             entry_point,
             user_sp,
@@ -149,7 +145,7 @@ impl ProcessControlBlockInner {
     }
 
     pub fn trap_cx(&self) -> &'static mut Context {
-        self.trap_cx_ppn.get_mut()
+        self.trap_cx_ppn.addr().get_mut()
     }
 
     pub fn alloc_fd(&mut self) -> usize {
