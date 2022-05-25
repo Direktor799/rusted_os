@@ -47,6 +47,7 @@ pub struct ProcessControlBlockInner {
     pub fd_table: Vec<Option<Rc<dyn File>>>,
     pub parent: Weak<ProcessControlBlock>,
     pub children: Vec<Rc<ProcessControlBlock>>,
+    pub exit_code: i32,
 }
 
 impl ProcessControlBlock {
@@ -54,19 +55,7 @@ impl ProcessControlBlock {
         let pid = pid_alloc();
         let kernel_stack = KernelStack::new(&pid);
         let (memory_set, user_sp, entry) = MemorySet::from_elf(elf_data);
-        // guard page
-        let kernel_stack_end = TRAMPOLINE - pid.0 * (KERNEL_STACK_SIZE + PAGE_SIZE);
-        let kernel_stack_start = kernel_stack_end - KERNEL_STACK_SIZE;
-        unsafe {
-            KERNEL_MEMORY_SET.insert_segment(
-                VPNRange::new(
-                    VirtAddr(kernel_stack_start).vpn(),
-                    VirtAddr(kernel_stack_end).vpn(),
-                ),
-                R | W,
-                None,
-            );
-        }
+        let kernel_stack_top = kernel_stack.get_top();
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");
@@ -75,7 +64,7 @@ impl ProcessControlBlock {
             entry,
             user_sp,
             unsafe { KERNEL_MEMORY_SET.satp_token() },
-            kernel_stack_end,
+            kernel_stack_top,
             interrupt_handler as usize,
         );
         Self {
@@ -83,7 +72,7 @@ impl ProcessControlBlock {
             kernel_stack,
             inner: RefCell::new(ProcessControlBlockInner {
                 task_status: TaskStatus::Ready,
-                task_cx: TaskContext::goto_trap_return(kernel_stack_end),
+                task_cx: TaskContext::goto_trap_return(kernel_stack_top),
                 task_pos: TaskPos::Fcfs1,
                 memory_set,
                 trap_cx_ppn,
@@ -98,6 +87,7 @@ impl ProcessControlBlock {
                 ],
                 parent: Weak::new(),
                 children: vec![],
+                exit_code: 0,
             }),
         }
     }
@@ -140,16 +130,10 @@ impl ProcessControlBlock {
                 memory_set,
                 trap_cx_ppn,
                 cwd: inner.cwd.clone(),
-                fd_table: vec![
-                    // 0 -> stdin
-                    Some(Rc::new(Stdin)),
-                    // 1 -> stdout
-                    Some(Rc::new(Stdout)),
-                    // 2 -> stderr
-                    Some(Rc::new(Stdout)),
-                ],
+                fd_table: inner.fd_table.clone(),
                 parent: Rc::downgrade(&self),
                 children: vec![],
+                exit_code: 0,
             }),
         });
         inner.children.push(new_pcb.clone());

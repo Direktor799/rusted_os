@@ -60,16 +60,25 @@ pub fn interrupt_handler() -> ! {
         core::arch::asm!("csrr {}, scause","csrr {}, stval", out(reg) scause, out(reg) stval);
     }
     match scause {
-        BREAKPOINT => breakpoint(context),
-        SUPERVISOR_TIMER_INTERRUPT => supervisor_timer(context),
-        ENVIRONMENT_CALL => user_env_call(context),
+        BREAKPOINT => {
+            println!("Breakpoint at 0x{:x}", context.sepc);
+            context.sepc += 2;
+        }
+        SUPERVISOR_TIMER_INTERRUPT => schedule_callback(),
+        ENVIRONMENT_CALL => {
+            context.sepc += 4;
+            let ret_code =
+                sys_call(context.x[17], [context.x[10], context.x[11], context.x[12]]) as usize;
+            let context = get_current_process().inner.borrow_mut().trap_cx();
+            context.x[10] = ret_code as usize;
+        }
         ILLEGAL_INSTRUCTION => {
             println!(
                 "[kernel] IllegalInstruction at {:x}: {:x}, kernel killed it.",
                 context.sepc,
                 unsafe { *(context.sepc as *const usize) }
             );
-            exit_current_and_run_next();
+            exit_current_and_run_next(-1);
         }
         _ => {
             panic!(
@@ -101,22 +110,4 @@ pub fn interrupt_return() -> ! {
             options(noreturn)
         );
     }
-}
-
-/// breakpoint处理
-fn breakpoint(context: &mut Context) {
-    println!("Breakpoint at 0x{:x}", context.sepc);
-    context.sepc += 2;
-}
-
-/// timer处理
-fn supervisor_timer(_: &Context) {
-    // println!("timer called");
-    schedule_callback();
-}
-
-/// ecall处理
-fn user_env_call(context: &mut Context) {
-    context.sepc += 4;
-    context.x[10] = sys_call(context.x[17], [context.x[10], context.x[11], context.x[12]]) as usize;
 }

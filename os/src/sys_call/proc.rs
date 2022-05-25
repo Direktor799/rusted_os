@@ -1,12 +1,17 @@
 //! 进程相关系统调用子模块
 
+use core::mem::size_of;
+use core::ptr::slice_from_raw_parts;
+
+use alloc::rc::Rc;
 use alloc::vec;
 
 use crate::fs::rfs::{find_inode, get_full_path};
 use crate::interrupt::timer::get_time_ms;
-use crate::memory::frame::page_table::get_user_string_in_kernel;
+use crate::memory::frame::page_table::{get_user_buffer_in_kernel, get_user_string_in_kernel};
 use crate::task::{
     add_new_task, exit_current_and_run_next, get_current_process, suspend_current_and_run_next,
+    TaskStatus,
 };
 
 pub fn sys_exit(exit_code: i32) -> ! {
@@ -15,7 +20,8 @@ pub fn sys_exit(exit_code: i32) -> ! {
         "[kernel] Process {} exit with code {}",
         proc.pid.0, exit_code
     );
-    exit_current_and_run_next();
+    drop(proc);
+    exit_current_and_run_next(exit_code);
     panic!("Unreachable in sys_exit!");
 }
 
@@ -42,7 +48,7 @@ pub fn sys_fork() -> isize {
     new_proc.pid.0 as isize
 }
 
-// TODO: args and ret
+// TODO: args
 pub fn sys_exec(path: *const u8) -> isize {
     let proc = get_current_process();
     let proc_inner = proc.inner.borrow();
@@ -69,5 +75,43 @@ pub fn sys_exec(path: *const u8) -> isize {
         0
     } else {
         -1
+    }
+}
+
+pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut u8) -> isize {
+    let process = get_current_process();
+    let mut inner = process.inner.borrow_mut();
+    let user_buffer = get_user_buffer_in_kernel(inner.token(), exit_code_ptr, size_of::<i32>());
+
+    if !inner
+        .children
+        .iter()
+        .any(|child| pid == -1 || pid as usize == child.pid.0)
+    {
+        // child not found
+        return -1;
+    }
+
+    let pair = inner.children.iter().enumerate().find(|(_, child)| {
+        child.inner.borrow().task_status == TaskStatus::Exited
+            && (pid == -1 || pid as usize == child.pid.0)
+    });
+
+    if let Some((idx, _)) = pair {
+        let child = inner.children.remove(idx);
+        assert_eq!(Rc::strong_count(&child), 1);
+        let child_pid = child.pid.0;
+        let exit_code = child.inner.borrow().exit_code;
+        let exit_code_buf =
+            slice_from_raw_parts(&exit_code as *const _ as *const u8, size_of::<i32>());
+        for (i, byte) in user_buffer.into_iter().enumerate() {
+            unsafe {
+                *byte = (*exit_code_buf)[i];
+            }
+        }
+        child_pid as isize
+    } else {
+        // child running
+        -2
     }
 }
