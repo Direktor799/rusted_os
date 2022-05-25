@@ -3,7 +3,6 @@
 use crate::memory::frame::address::*;
 use crate::memory::frame::frame_allocator::*;
 use crate::memory::frame::memory_set::KERNEL_MEMORY_SET;
-use crate::memory::frame::page_table::PageTable;
 use alloc::vec::Vec;
 use core::cell::RefCell;
 pub mod virtio_block;
@@ -50,9 +49,7 @@ pub extern "C" fn virtio_phys_to_virt(paddr: PhysAddr) -> VirtAddr {
 #[no_mangle]
 pub extern "C" fn virtio_virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
     let vpn = vaddr.vpn();
-    let ppn = PageTable::from_token(unsafe { KERNEL_MEMORY_SET.satp_token() })
-        .translate(vpn)
-        .unwrap();
+    let ppn = unsafe { KERNEL_MEMORY_SET.translate(vpn).unwrap() };
     PhysAddr(ppn.addr().0 + vaddr.page_offset())
 }
 
