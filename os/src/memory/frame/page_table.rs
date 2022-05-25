@@ -4,6 +4,7 @@ use super::address::*;
 use super::frame_allocator::{FrameTracker, FRAME_ALLOCATOR};
 use alloc::vec;
 use alloc::vec::Vec;
+use core::fmt::Debug;
 
 /// SV39页表项有效标志位
 const V: u8 = 1 << 0;
@@ -30,7 +31,6 @@ pub type PTEFlags = u8;
 pub struct PageTableEntry(usize);
 
 /// SV39页表
-#[derive(Debug)]
 pub struct PageTable {
     root_ppn: PhysPageNum,
     frames: Vec<FrameTracker>,
@@ -143,5 +143,31 @@ impl PageTable {
     /// 获取页表token
     pub fn satp_token(&self) -> usize {
         8usize << 60 | self.root_ppn.0
+    }
+}
+
+impl Debug for PageTable {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut stack = vec![];
+        let mut content = vec![];
+        stack.push((0, self.root_ppn));
+        while !stack.is_empty() {
+            let (base, ppn) = stack.pop().unwrap();
+            for (i, pte) in ppn.get_pte_array().iter().enumerate() {
+                let vpn = (base << 9) + i;
+                if pte.flags() == 1 {
+                    stack.push((vpn, pte.ppn()));
+                } else if pte.flags() != 0 {
+                    if vpn != pte.ppn().0 {
+                        content.push((VirtPageNum(vpn), pte.ppn(), pte.flags()));
+                    }
+                }
+            }
+        }
+        f.debug_struct("PageTable")
+            .field("root_ppn", &self.root_ppn)
+            .field("frames", &self.frames)
+            .field("non-identical", &content)
+            .finish()
     }
 }
