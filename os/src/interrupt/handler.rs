@@ -66,8 +66,7 @@ pub fn interrupt_handler() -> ! {
         SUPERVISOR_TIMER_INTERRUPT => schedule_callback(),
         ENVIRONMENT_CALL => {
             context.sepc += 4;
-            let ret_code =
-                sys_call(context.x[17], [context.x[10], context.x[11], context.x[12]]) as usize;
+            let ret_code = sys_call(context.x[17], [context.x[10], context.x[11], context.x[12]]);
             let context = get_current_process().inner.borrow_mut().trap_cx();
             context.x[10] = ret_code as usize;
         }

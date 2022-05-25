@@ -50,8 +50,8 @@ impl ProcessControlBlock {
     pub fn new(elf_data: &[u8]) -> Self {
         let pid = pid_alloc();
         let kernel_stack = KernelStack::new(&pid);
-        let (memory_set, user_sp, entry) = MemorySet::from_elf(elf_data);
         let kernel_stack_top = kernel_stack.get_top();
+        let (memory_set, user_sp, entry) = MemorySet::from_elf(elf_data);
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");

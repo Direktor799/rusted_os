@@ -57,10 +57,7 @@ impl InodeHandler {
         let file_count = (disk_inode.size as usize) / DIRENT_SZ;
         let mut dirent = Dirent::empty();
         for i in 0..file_count {
-            assert_eq!(
-                disk_inode.read_at(DIRENT_SZ * i, dirent.as_bytes_mut(), &self.block_device,),
-                DIRENT_SZ,
-            );
+            disk_inode.read_at(DIRENT_SZ * i, dirent.as_bytes_mut(), &self.block_device);
             if dirent.name() == name {
                 return Some(dirent.inode_number() as u32);
             }
@@ -71,15 +68,14 @@ impl InodeHandler {
     pub fn find(&self, name: &str) -> Option<Rc<InodeHandler>> {
         let fs = self.fs.borrow();
         self.read_disk_inode(|disk_inode| {
-            self.find_inode_id(name, disk_inode).map(|inode_id| {
-                let (block_id, block_offset) = fs.get_disk_inode_pos(inode_id);
-                Rc::new(Self::new(
-                    block_id,
-                    block_offset,
-                    self.fs.clone(),
-                    self.block_device.clone(),
-                ))
-            })
+            let inode_id = self.find_inode_id(name, disk_inode)?;
+            let (block_id, block_offset) = fs.get_disk_inode_pos(inode_id);
+            Some(Rc::new(Self::new(
+                block_id,
+                block_offset,
+                self.fs.clone(),
+                self.block_device.clone(),
+            )))
         })
     }
 
