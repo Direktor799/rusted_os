@@ -30,8 +30,12 @@ fn main() -> i32 {
                 "rmdir" => app_rmdir(&args),
                 "stat" => app_stat(&args),
                 "ls" => {
-                    if fork() == 0 {
+                    let pid = fork();
+                    if pid == 0 {
                         exec("/bin/ls");
+                    } else {
+                        let mut exit_code = 0;
+                        waitpid(pid as usize, &mut exit_code);
                     }
                 }
                 "write" => write_test(&args),

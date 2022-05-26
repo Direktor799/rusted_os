@@ -38,18 +38,7 @@ impl TaskManager {
             self.schd.requeue_current(current_task);
         } else {
             drop(current_task_inner);
-            unsafe {
-                id::PID_ALLOCATOR.dealloc(current_task.pid.0);
-                let (kernel_stack_bottom, _) = id::kernel_stack_position(current_task.pid.0);
-                let kernel_stack_bottom_vpn =
-                    crate::memory::frame::address::VirtAddr(kernel_stack_bottom).vpn();
-                crate::memory::frame::memory_set::KERNEL_MEMORY_SET
-                    .remove_segment(kernel_stack_bottom_vpn);
-                println!("remove done");
-
-                NO_DROP.push(current_task);
-            }
-            // drop(current_task);
+            drop(current_task);
         }
         let next_task = self.schd.get_next().unwrap();
         let mut next_task_inner = next_task.inner.borrow_mut();
@@ -61,7 +50,6 @@ impl TaskManager {
             if current_task_status != TaskStatus::Exited {
                 __switch(current_task_cx, next_task_cx);
             } else {
-                println!("switched");
                 let mut _unused = TaskContext::zero_init();
                 __switch(&mut _unused, next_task_cx);
             }
@@ -72,8 +60,6 @@ impl TaskManager {
         self.current_task.clone()
     }
 }
-
-static mut NO_DROP: Vec<Rc<ProcessControlBlock>> = Vec::new();
 
 pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
 
