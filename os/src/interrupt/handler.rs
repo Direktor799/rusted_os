@@ -45,7 +45,7 @@ pub fn interrupt_kernel() -> ! {
     panic!(
         "[kernel] Multi-interrupt:\nscause: {:?} stval: {:x}",
         scause, stval
-    )
+    );
 }
 
 /// 用户态中断处理程序
@@ -71,10 +71,19 @@ pub fn interrupt_handler() -> ! {
             context.x[10] = ret_code as usize;
         }
         ILLEGAL_INSTRUCTION => {
-            println!(
-                "[kernel] IllegalInstruction at 0x{:x}, kernel killed it.",
-                context.sepc,
-            );
+            unsafe {
+                let vaddr = crate::memory::frame::address::VirtAddr(context.sepc);
+                let token = get_current_process().inner.borrow().token();
+                let ppn = crate::memory::frame::page_table::PageTable::from_token(token)
+                    .translate(vaddr.vpn())
+                    .unwrap();
+                let paddr = ppn.addr().0 + vaddr.page_offset();
+                println!(
+                    "[kernel] IllegalInstruction at 0x{:x}: {}, kernel killed it.",
+                    context.sepc,
+                    *(paddr as *const u32)
+                );
+            }
             exit_current_and_run_next(-1);
         }
         INSTRUCTION_PAGE_FAULT => {

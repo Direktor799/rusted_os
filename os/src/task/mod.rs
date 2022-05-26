@@ -8,7 +8,6 @@ use crate::tools::uninit_cell::UninitCell;
 use crate::{fs::rfs::find_inode, interrupt::timer};
 use alloc::rc::Rc;
 use alloc::vec;
-use alloc::vec::Vec;
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;

@@ -192,7 +192,6 @@ impl MemorySet {
     /// 切换到此地址空间
     pub fn activate(&self) {
         let satp = self.page_table.satp_token();
-        // self.test();
         unsafe {
             core::arch::asm!("csrw satp, {}", "sfence.vma", in(reg) satp);
         }
