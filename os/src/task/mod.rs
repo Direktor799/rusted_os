@@ -8,49 +8,72 @@ use crate::tools::uninit_cell::UninitCell;
 use crate::{fs::rfs::find_inode, interrupt::timer};
 use alloc::rc::Rc;
 use alloc::vec;
+use alloc::vec::Vec;
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
 pub use task::{ProcessControlBlock, TaskPos, TaskStatus};
 
 pub struct TaskManager {
-    current_task: Option<Rc<ProcessControlBlock>>,
+    current_task: Rc<ProcessControlBlock>,
     schd: SchdMaster,
 }
 
 impl TaskManager {
     fn new(deamon: Rc<ProcessControlBlock>) -> Self {
         Self {
-            current_task: Some(deamon),
+            current_task: deamon,
             schd: SchdMaster::new(),
         }
     }
 
     fn switch_to_next_task(&mut self) {
-        let current_task = self.current_task.take().expect("[kernel] No task");
+        let current_task = self.current_task.clone();
         let mut current_task_inner = current_task.inner.borrow_mut();
         let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
-        drop(current_task_inner);
-        let next_task = self
-            .schd
-            .get_next_and_requeue_current(current_task)
-            .expect("[kernel] All tasks have completed!");
+        let current_task_status = current_task_inner.task_status;
+        if current_task_status != TaskStatus::Exited {
+            current_task_inner.task_status = TaskStatus::Ready;
+            drop(current_task_inner);
+            self.schd.requeue_current(current_task);
+        } else {
+            drop(current_task_inner);
+            unsafe {
+                id::PID_ALLOCATOR.dealloc(current_task.pid.0);
+                let (kernel_stack_bottom, _) = id::kernel_stack_position(current_task.pid.0);
+                let kernel_stack_bottom_vpn =
+                    crate::memory::frame::address::VirtAddr(kernel_stack_bottom).vpn();
+                crate::memory::frame::memory_set::KERNEL_MEMORY_SET
+                    .remove_segment(kernel_stack_bottom_vpn);
+                println!("remove done");
+
+                NO_DROP.push(current_task);
+            }
+            // drop(current_task);
+        }
+        let next_task = self.schd.get_next().unwrap();
         let mut next_task_inner = next_task.inner.borrow_mut();
         let next_task_cx = &mut next_task_inner.task_cx as *mut TaskContext;
         timer::set_next_timeout(get_time_slice(next_task_inner.task_pos));
         drop(next_task_inner);
-        self.current_task = Some(next_task);
+        self.current_task = next_task;
         unsafe {
-            // println!("{:x?}", *current_task_cx);
-            // println!("{:x?}", *next_task_cx);
-            __switch(current_task_cx, next_task_cx);
+            if current_task_status != TaskStatus::Exited {
+                __switch(current_task_cx, next_task_cx);
+            } else {
+                println!("switched");
+                let mut _unused = TaskContext::zero_init();
+                __switch(&mut _unused, next_task_cx);
+            }
         }
     }
 
     pub fn get_current_process(&self) -> Rc<ProcessControlBlock> {
-        self.current_task.as_ref().unwrap().clone()
+        self.current_task.clone()
     }
 }
+
+static mut NO_DROP: Vec<Rc<ProcessControlBlock>> = Vec::new();
 
 pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
 
@@ -65,6 +88,10 @@ pub fn add_new_task(task: Rc<ProcessControlBlock>) {
 pub fn exit_current_and_run_next(exit_code: i32) {
     let proc = get_current_process();
     let mut inner = proc.inner.borrow_mut();
+    println!(
+        "[kernel] Process {} exit with code {}",
+        proc.pid.0, exit_code
+    );
     inner.task_status = TaskStatus::Exited;
     inner.exit_code = exit_code;
     unsafe {
@@ -112,7 +139,7 @@ pub fn init() {
 
 pub fn run() {
     unsafe {
-        let current_task = TASK_MANAGER.current_task.as_mut().unwrap();
+        let current_task = TASK_MANAGER.current_task.clone();
         let mut current_task_inner = current_task.inner.borrow_mut();
         let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
         drop(current_task_inner);

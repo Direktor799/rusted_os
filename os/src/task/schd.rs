@@ -66,19 +66,12 @@ impl SchdMaster {
             mlfq: MultilevelFeedbackQueue::new(),
         }
     }
-    /// push current task control block into MLFQ and return the next task to be executed
-    ///
-    /// next task can be None
-    pub fn get_next_and_requeue_current(
-        &mut self,
-        current_task_cb: Rc<ProcessControlBlock>,
-    ) -> Option<Rc<ProcessControlBlock>> {
-        let mut inner = current_task_cb.inner.borrow_mut();
-        if inner.task_status != TaskStatus::Exited {
-            inner.task_status = TaskStatus::Ready;
-            drop(inner);
-            self.mlfq.requeue(current_task_cb);
-        }
+
+    pub fn requeue_current(&mut self, current_task_cb: Rc<ProcessControlBlock>) {
+        self.mlfq.requeue(current_task_cb);
+    }
+
+    pub fn get_next(&mut self) -> Option<Rc<ProcessControlBlock>> {
         self.mlfq.get_task()
     }
 

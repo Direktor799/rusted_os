@@ -1,5 +1,3 @@
-use core::cell::RefCell;
-
 use super::context::TaskContext;
 use super::id::{pid_alloc, KernelStack, PidHandle};
 use crate::config::TRAP_CONTEXT;
@@ -12,6 +10,7 @@ use alloc::rc::{Rc, Weak};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::cell::RefCell;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
