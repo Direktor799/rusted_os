@@ -140,6 +140,9 @@ pub fn readlink(path: &str, s: &mut String) -> isize {
     let path = String::from(path) + "\0";
     let mut buffer = [0u8; 128];
     let len = sys_readlink(path.as_ptr(), &mut buffer);
+    if len < 0 {
+        return len;
+    }
     *s = str::from_utf8(&buffer[0..len as usize])
         .unwrap()
         .to_string();
