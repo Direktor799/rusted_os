@@ -39,12 +39,13 @@ fn set_user_trap_entry() {
 pub fn interrupt_kernel() -> ! {
     let mut scause: usize;
     let mut stval: usize;
+    let mut sepc: usize;
     unsafe {
-        core::arch::asm!("csrr {}, scause","csrr {}, stval", out(reg) scause, out(reg) stval);
+        core::arch::asm!("csrr {}, scause","csrr {}, stval","csrr {}, sepc", out(reg) scause, out(reg) stval, out(reg) sepc);
     }
     panic!(
-        "[kernel] Multi-interrupt:\nscause: {:?} stval: {:x}",
-        scause, stval
+        "[kernel] Multi-interrupt:\nscause: {:?} stval: {:x} sepc: {:x}",
+        scause, stval, sepc
     );
 }
 

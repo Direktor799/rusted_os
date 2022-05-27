@@ -3,12 +3,13 @@
 use super::{block_dev::BlockDevice, BLOCK_SZ};
 use crate::tools::uninit_cell::UninitCell;
 use alloc::rc::Rc;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefCell;
 
 /// 内存中的块缓存
 pub struct BlockCache {
-    cache: [u8; BLOCK_SZ],
+    cache: Vec<u8>,
     modified: bool,
     device: Rc<dyn BlockDevice>,
     block_id: usize,
@@ -17,7 +18,7 @@ pub struct BlockCache {
 impl BlockCache {
     /// 从磁盘块读到缓存中
     pub fn new(block_id: usize, device: Rc<dyn BlockDevice>) -> Self {
-        let mut cache = [0u8; BLOCK_SZ];
+        let mut cache = vec![0u8; BLOCK_SZ];
         device.read_block(block_id, &mut cache);
         Self {
             cache,
