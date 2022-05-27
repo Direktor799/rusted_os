@@ -2,11 +2,10 @@
 use super::address::{PhysAddr, PhysPageNum};
 use crate::config::{MEMORY_END_ADDR, PAGE_SIZE};
 use crate::tools::uninit_cell::UninitCell;
-use alloc::vec;
-use alloc::vec::Vec;
+use alloc::collections::VecDeque;
 
 /// 物理页帧（方便通过RAII自动管理内存）
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FrameTracker(PhysPageNum);
 
 impl FrameTracker {
@@ -40,22 +39,22 @@ pub static mut FRAME_ALLOCATOR: UninitCell<FrameAllocator> = UninitCell::uninit(
 pub struct FrameAllocator {
     curr_ppn: PhysPageNum,
     end_ppn: PhysPageNum,
-    recycled: Vec<PhysPageNum>,
+    recycled: VecDeque<PhysPageNum>,
 }
 
 impl FrameAllocator {
     /// 根据传入的物理页面区间创建新的分配器
-    pub const fn new(start_ppn: PhysPageNum, end_ppn: PhysPageNum) -> Self {
+    pub fn new(start_ppn: PhysPageNum, end_ppn: PhysPageNum) -> Self {
         FrameAllocator {
             curr_ppn: start_ppn,
             end_ppn,
-            recycled: vec![],
+            recycled: VecDeque::new(),
         }
     }
 
     /// 分配物理页面
     pub fn alloc(&mut self) -> Option<FrameTracker> {
-        if let Some(ppn) = self.recycled.pop() {
+        if let Some(ppn) = self.recycled.pop_back() {
             // 优先使用已回收的页面
             Some(FrameTracker::new(ppn))
         } else if self.curr_ppn < self.end_ppn {
@@ -73,7 +72,7 @@ impl FrameAllocator {
         if ppn >= self.curr_ppn || self.recycled.iter().any(|&v| v == ppn) {
             panic!("{:?} is not allocated!", ppn);
         }
-        self.recycled.push(ppn);
+        self.recycled.push_back(ppn);
     }
 }
 

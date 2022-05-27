@@ -133,11 +133,7 @@ impl MemorySet {
             R | W,
             None,
         );
-        (
-            memory_set,
-            user_stack_end_vpn.addr().0 - 1,
-            elf.header.entry(),
-        )
+        (memory_set, user_stack_end_vpn.addr().0, elf.header.entry())
     }
 
     /// 在此地址空间中添加映射并分配物理页
@@ -203,15 +199,19 @@ impl Clone for MemorySet {
         let mut new_memory_set = MemorySet::new();
         new_memory_set.map_trampoline();
         for segment in &self.segments {
-            new_memory_set.insert_segment(segment.vpn_range, segment.flags, None);
-            // copy data from another space
+            let mut data = Vec::new();
             for vpn in segment.vpn_range {
-                let src_ppn = self.translate(vpn).unwrap();
-                let dst_ppn = new_memory_set.translate(vpn).unwrap();
-                dst_ppn
-                    .get_bytes_array()
-                    .copy_from_slice(src_ppn.get_bytes_array());
+                data.extend_from_slice(self.translate(vpn).unwrap().get_bytes_array());
             }
+            new_memory_set.insert_segment(segment.vpn_range, segment.flags, Some(&data));
+            // copy data from another space
+            // for vpn in segment.vpn_range {
+            //     let src_ppn = self.translate(vpn).unwrap();
+            //     let dst_ppn = new_memory_set.translate(vpn).unwrap();
+            //     dst_ppn
+            //         .get_bytes_array()
+            //         .copy_from_slice(src_ppn.get_bytes_array());
+            // }
         }
         new_memory_set
     }

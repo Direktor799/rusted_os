@@ -23,10 +23,10 @@ pub const TASK_QUEUE_RR_SLICE: usize = 12000;
 pub const CLOCK_FREQ: usize = 10000000;
 
 /// 8K用户栈空间
-pub const USER_STACK_SIZE: usize = 4096 * 2;
+pub const USER_STACK_SIZE: usize = 4096 * 4;
 
 /// 8K内核栈空间
-pub const KERNEL_STACK_SIZE: usize = 4096 * 2;
+pub const KERNEL_STACK_SIZE: usize = 4096 * 4;
 
 /// 跳板地址
 pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
