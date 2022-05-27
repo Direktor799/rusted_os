@@ -198,12 +198,11 @@ impl InodeHandler {
                 if dirent.name() == name {
                     fs.dealloc_inode(dirent.inode_number());
                     dir_inode.write_at(i * DIRENT_SZ, last_dirent.as_bytes(), &self.block_device);
-                    break;
+                    let new_size = (file_count - 1) * DIRENT_SZ;
+                    self.decrease_size(new_size as u32, dir_inode, &mut fs);
+                    return;
                 }
             }
-            // decrease size
-            let new_size = (file_count - 1) * DIRENT_SZ;
-            self.decrease_size(new_size as u32, dir_inode, &mut fs);
         });
     }
 

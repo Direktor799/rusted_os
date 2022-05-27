@@ -17,6 +17,7 @@ use crate::uninit_cell::UninitCell;
 use alloc::alloc::Layout;
 use alloc::string::String;
 use alloc::string::ToString;
+use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::mem::size_of;
@@ -96,7 +97,7 @@ pub fn gettime() -> isize {
 }
 
 pub fn getcwd(s: &mut String) -> isize {
-    let mut buffer = [0u8; 128];
+    let mut buffer = vec![0u8; 128];
     let len = sys_getcwd(&mut buffer);
     *s = str::from_utf8(&buffer[0..len as usize])
         .unwrap()
@@ -138,7 +139,7 @@ pub fn lseek(fd: usize, offset: isize, whence: u32) -> isize {
 
 pub fn readlink(path: &str, s: &mut String) -> isize {
     let path = String::from(path) + "\0";
-    let mut buffer = [0u8; 128];
+    let mut buffer = vec![0u8; 128];
     let len = sys_readlink(path.as_ptr(), &mut buffer);
     if len < 0 {
         return len;

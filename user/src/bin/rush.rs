@@ -22,17 +22,17 @@ fn main() -> i32 {
         if !args.is_empty() {
             match args[0] {
                 "cd" => cd(&mut cwd, &args),
-                "mkdir" => run("/bin/mkdir", &args, &mut ret_code),
-                "cat" => run("/bin/cat", &args, &mut ret_code),
-                "ln" => run("/bin/ln", &args, &mut ret_code),
-                "readlink" => run("/bin/readlink", &args, &mut ret_code),
-                "rm" => run("/bin/rm", &args, &mut ret_code),
-                "rmdir" => run("/bin/rmdir", &args, &mut ret_code),
-                "stat" => run("/bin/stat", &args, &mut ret_code),
-                "ls" => run("/bin/ls", &args, &mut ret_code),
                 "write" => write_test(&args),
                 "exit" => break,
-                _ => println!("{}: command not found", args[0]),
+                _ => {
+                    let pid = fork();
+                    if pid == 0 {
+                        exec(&(String::from("/bin/") + args[0]), &args);
+                        println!("{}: command not found", args[0]);
+                    } else {
+                        waitpid(pid as usize, &mut ret_code);
+                    }
+                }
             }
         }
     }
@@ -56,15 +56,6 @@ fn cd(cwd: &mut String, args: &Vec<&str>) {
         _ => panic!(),
     }
     getcwd(cwd);
-}
-
-fn run(path: &str, args: &[&str], ret_code: &mut i32) {
-    let pid = fork();
-    if pid == 0 {
-        exec(path, args);
-    } else {
-        waitpid(pid as usize, ret_code);
-    }
 }
 
 fn write_test(args: &Vec<&str>) {

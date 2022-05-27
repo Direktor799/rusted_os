@@ -4,12 +4,13 @@
 extern crate alloc;
 extern crate user_lib;
 
+use alloc::vec;
 use core::str;
 use user_lib::*;
 
 #[no_mangle]
 fn main(args: &[&str]) -> i32 {
-    let mut buffer = [0u8; 128];
+    let mut buffer = vec![0u8; 128];
     if args.len() == 1 {
         println!("cat for stdin not supported");
         return 1;
@@ -32,6 +33,7 @@ fn main(args: &[&str]) -> i32 {
                 _ => print!("{}", str::from_utf8(&buffer[0..len as usize]).unwrap()),
             }
         }
+        println!("");
         close(fd as usize);
     }
     0

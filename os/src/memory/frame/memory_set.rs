@@ -180,6 +180,13 @@ impl MemorySet {
         self.page_table.translate(vpn)
     }
 
+    pub fn get_size(&self) -> usize {
+        self.segments
+            .iter()
+            .map(|seg| seg.vpn_range.end_vpn.addr().0 - seg.vpn_range.curr_vpn.addr().0)
+            .sum()
+    }
+
     /// 获取该地址空间token（用于写入satp寄存器）
     pub fn satp_token(&self) -> usize {
         self.page_table.satp_token()

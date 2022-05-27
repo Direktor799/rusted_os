@@ -4,6 +4,7 @@ pub mod schd;
 mod switch;
 mod task;
 
+use crate::fs::rfs::layout::InodeType;
 use crate::tools::uninit_cell::UninitCell;
 use crate::{fs::rfs::find_inode, interrupt::timer};
 use alloc::rc::Rc;
@@ -114,6 +115,9 @@ pub fn get_current_process() -> Rc<ProcessControlBlock> {
 pub fn init() {
     unsafe {
         id::init();
+        let root_inode = find_inode("/").expect("[kernel] No root inode??");
+        let proc_inode = root_inode.create("proc", InodeType::Directory).unwrap();
+        proc_inode.set_default_dirent(root_inode.get_inode_id());
         let app_inode = find_inode("/bin/deamon").expect("[kernel] deamon not found!");
         let size = app_inode.get_file_size() as usize;
         let mut app_data = vec![0u8; size];

@@ -1,6 +1,8 @@
 use super::context::TaskContext;
 use super::id::{pid_alloc, KernelStack, PidHandle};
 use crate::config::TRAP_CONTEXT;
+use crate::fs::rfs::find_inode;
+use crate::fs::rfs::layout::InodeType;
 use crate::fs::stdio::{Stdin, Stdout};
 use crate::fs::File;
 use crate::interrupt::{context::Context, handler::interrupt_handler};
@@ -8,7 +10,7 @@ use crate::memory::frame::address::*;
 use crate::memory::frame::user_buffer::put_user_value;
 use crate::memory::frame::{memory_set::MemorySet, memory_set::KERNEL_MEMORY_SET};
 use alloc::rc::{Rc, Weak};
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefCell;
@@ -91,6 +93,14 @@ impl ProcessControlBlock {
 
     pub fn exec(&self, elf_data: &[u8], args: &[String]) {
         let (memory_set, mut user_sp, entry_point) = MemorySet::from_elf(elf_data);
+        let mem_inode =
+            find_inode(&(String::from("/proc/") + &self.pid.0.to_string() + "/mem")).unwrap();
+        mem_inode.clear();
+        mem_inode.write_at(0, memory_set.get_size().to_string().as_bytes());
+        let cmd_inode =
+            find_inode(&(String::from("/proc/") + &self.pid.0.to_string() + "/cmd")).unwrap();
+        cmd_inode.clear();
+        cmd_inode.write_at(0, args[0].as_bytes());
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");
@@ -143,6 +153,23 @@ impl ProcessControlBlock {
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");
+        // write proc info
+        let procs_inode = find_inode("/proc").unwrap();
+        let proc_inode = procs_inode
+            .create(&pid_handle.0.to_string(), InodeType::Directory)
+            .unwrap();
+        proc_inode.set_default_dirent(procs_inode.get_inode_id());
+        let mem_inode = proc_inode.create("mem", InodeType::File).unwrap();
+        mem_inode.write_at(0, memory_set.get_size().to_string().as_bytes());
+        let cmd_inode = proc_inode.create("cmd", InodeType::File).unwrap();
+        if let Some(parent_cmd_inode) =
+            find_inode(&(String::from("/proc/") + &self.pid.0.to_string() + "/cmd"))
+        {
+            let mut cmd = vec![0u8; parent_cmd_inode.get_file_size() as usize];
+            parent_cmd_inode.read_at(0, &mut cmd);
+            cmd_inode.write_at(0, &cmd);
+        }
+
         let new_pcb = Rc::new(ProcessControlBlock {
             pid: pid_handle,
             kernel_stack,
@@ -182,5 +209,14 @@ impl ProcessControlBlockInner {
             self.fd_table.push(None);
             self.fd_table.len() - 1
         }
+    }
+}
+
+impl Drop for ProcessControlBlock {
+    fn drop(&mut self) {
+        let procs_inode = find_inode("/proc").unwrap();
+        let proc_inode = procs_inode.find(&self.pid.0.to_string()).unwrap();
+        proc_inode.delete("mem");
+        procs_inode.delete(&self.pid.0.to_string());
     }
 }
