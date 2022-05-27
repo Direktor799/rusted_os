@@ -4,14 +4,13 @@ use crate::memory::frame::address::*;
 use crate::memory::frame::frame_allocator::*;
 use crate::memory::frame::memory_set::KERNEL_MEMORY_SET;
 use alloc::vec::Vec;
-use core::cell::RefCell;
 pub mod virtio_block;
 use crate::fs::rfs::block_dev::BlockDevice;
 use crate::tools::uninit_cell::UninitCell;
 use alloc::rc::Rc;
 use virtio_block::VirtIOBlock;
 
-static mut QUEUE_FRAMES: RefCell<Vec<FrameTracker>> = RefCell::new(Vec::new());
+static mut QUEUE_FRAMES: Vec<FrameTracker> = Vec::new();
 
 pub static mut BLOCK_DEVICE: UninitCell<Rc<dyn BlockDevice>> = UninitCell::uninit();
 
@@ -25,7 +24,7 @@ pub extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {
         }
         assert_eq!(frame.ppn().0, ppn_base.0 + i);
         unsafe {
-            QUEUE_FRAMES.borrow_mut().push(frame);
+            QUEUE_FRAMES.push(frame);
         }
     }
     ppn_base.addr()

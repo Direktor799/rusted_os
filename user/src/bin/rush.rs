@@ -87,7 +87,6 @@ fn app_mkdir(args: &Vec<&str>) {
 fn app_cat(args: &Vec<&str>) {
     let mut buffer = [0u8; 128];
     if args.len() == 1 {
-        // TODO: maybe support this after sig & dev ?
         println!("cat for stdin not supported");
         return;
     }

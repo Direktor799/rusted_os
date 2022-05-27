@@ -14,7 +14,6 @@ impl File for Stdin {
         false
     }
     fn read(&self, mut user_buf: UserBuffer) -> usize {
-        // TODO: variable len
         assert_eq!(user_buf.len(), 1);
         // busy loop
         loop {

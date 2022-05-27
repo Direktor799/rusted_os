@@ -73,10 +73,12 @@ pub fn add_new_task(task: Rc<ProcessControlBlock>) {
 pub fn exit_current_and_run_next(exit_code: i32) {
     let proc = get_current_process();
     let mut inner = proc.inner.borrow_mut();
-    println!(
-        "[kernel] Process {} exit with code {}",
-        proc.pid.0, exit_code
-    );
+    if exit_code != 0 {
+        println!(
+            "[kernel] Process {} exit with code {}",
+            proc.pid.0, exit_code
+        );
+    }
     inner.task_status = TaskStatus::Exited;
     inner.exit_code = exit_code;
     unsafe {
