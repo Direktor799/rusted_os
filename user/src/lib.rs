@@ -17,6 +17,7 @@ use crate::uninit_cell::UninitCell;
 use alloc::alloc::Layout;
 use alloc::string::String;
 use alloc::string::ToString;
+use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::mem::size_of;
 use core::str;
@@ -38,18 +39,32 @@ fn alloc_error_handler(layout: Layout) -> ! {
 
 #[no_mangle]
 #[link_section = ".text.entry"]
-pub extern "C" fn _start() -> ! {
+pub extern "C" fn _start(argc: usize, argv: usize) -> ! {
     unsafe {
         HEAP_ALLOCATOR = UninitCell::init(HeapAllocator(RefCell::new(
             BuddySystemAllocator::<32>::new(HEAP_SPACE.as_ptr() as usize, USER_HEAP_SIZE),
         )));
     }
-    exit(main());
+    let mut v: Vec<&'static str> = Vec::new();
+    for i in 0..argc {
+        let str_start =
+            unsafe { ((argv + i * core::mem::size_of::<usize>()) as *const usize).read_volatile() };
+        let len = (0usize..)
+            .find(|i| unsafe { ((str_start + *i) as *const u8).read_volatile() == 0 })
+            .unwrap();
+        v.push(
+            core::str::from_utf8(unsafe {
+                core::slice::from_raw_parts(str_start as *const u8, len)
+            })
+            .unwrap(),
+        );
+    }
+    exit(main(&v))
 }
 
 #[linkage = "weak"]
 #[no_mangle]
-fn main() -> i32 {
+fn main(_args: &[&str]) -> i32 {
     panic!("Cannot find main!");
 }
 
@@ -178,9 +193,15 @@ pub fn fork() -> isize {
     sys_fork()
 }
 
-pub fn exec(path: &str) -> isize {
+pub fn exec(path: &str, args: &[&str]) -> isize {
     let path = String::from(path) + "\0";
-    sys_exec(path.as_ptr())
+    let args = args
+        .iter()
+        .map(|&arg| String::from(arg) + "\0")
+        .collect::<Vec<_>>();
+    let mut arg_ptrs = args.iter().map(|arg| arg.as_ptr()).collect::<Vec<_>>();
+    arg_ptrs.push(0 as *const _);
+    sys_exec(path.as_ptr(), arg_ptrs.as_ptr())
 }
 
 pub fn wait(exit_code: &mut i32) -> isize {
@@ -203,4 +224,8 @@ pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
             pid => return pid,
         }
     }
+}
+
+pub fn getpid() -> isize {
+    sys_getpid()
 }

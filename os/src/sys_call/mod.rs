@@ -45,7 +45,7 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_GETTIME => sys_gettime(),
         SYS_CALL_GETPID => sys_getpid(),
         SYS_CALL_FORK => sys_fork(),
-        SYS_CALL_EXEC => sys_exec(args[0] as *const u8),
+        SYS_CALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const *const u8),
         SYS_CALL_WAITPID => sys_waitpid(args[0] as isize, args[1] as *mut u8),
         _ => panic!("sys_call with unknown id: {}", which),
     }

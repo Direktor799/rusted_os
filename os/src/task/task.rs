@@ -5,12 +5,14 @@ use crate::fs::stdio::{Stdin, Stdout};
 use crate::fs::File;
 use crate::interrupt::{context::Context, handler::interrupt_handler};
 use crate::memory::frame::address::*;
+use crate::memory::frame::user_buffer::put_user_value;
 use crate::memory::frame::{memory_set::MemorySet, memory_set::KERNEL_MEMORY_SET};
 use alloc::rc::{Rc, Weak};
 use alloc::string::String;
 use alloc::vec;
 use alloc::vec::Vec;
 use core::cell::RefCell;
+use core::mem::size_of;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
@@ -87,23 +89,49 @@ impl ProcessControlBlock {
         }
     }
 
-    pub fn exec(&self, elf_data: &[u8]) {
-        let (memory_set, user_sp, entry_point) = MemorySet::from_elf(elf_data);
+    pub fn exec(&self, elf_data: &[u8], args: &[String]) {
+        let (memory_set, mut user_sp, entry_point) = MemorySet::from_elf(elf_data);
         let trap_cx_ppn = memory_set
             .translate(VirtAddr(TRAP_CONTEXT).vpn())
             .expect("[kernel] Trap context not mapped!");
 
+        // push arguments on user stack
+        user_sp -= (args.len() + 1) * size_of::<usize>();
+        let argv_base = user_sp;
+        let mut argv = vec![];
+        for arg in args {
+            user_sp -= (arg.len() + 1) * size_of::<usize>();
+            argv.push(user_sp);
+            let mut p = user_sp;
+            for &c in arg.as_bytes() {
+                put_user_value(memory_set.satp_token(), c, p as *mut u8);
+                p += 1;
+            }
+            put_user_value(memory_set.satp_token(), 0, p as *mut u8);
+        }
+        argv.push(0);
+        for (i, &arg_ptr) in argv.iter().enumerate() {
+            put_user_value(
+                memory_set.satp_token(),
+                arg_ptr,
+                (argv_base + i * size_of::<usize>()) as *mut u8,
+            );
+        }
+
         let mut inner = self.inner.borrow_mut();
         inner.memory_set = memory_set;
         inner.trap_cx_ppn = trap_cx_ppn;
-        let trap_cx = trap_cx_ppn.addr().get_mut();
-        *trap_cx = Context::app_init_context(
+
+        let mut trap_cx = Context::app_init_context(
             entry_point,
             user_sp,
             unsafe { KERNEL_MEMORY_SET.satp_token() },
             self.kernel_stack.get_top(),
             interrupt_handler as usize,
         );
+        trap_cx.x[10] = args.len();
+        trap_cx.x[11] = argv_base;
+        *trap_cx_ppn.addr().get_mut() = trap_cx;
     }
 
     pub fn fork(self: Rc<Self>) -> Rc<Self> {

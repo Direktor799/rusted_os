@@ -1,4 +1,7 @@
 //! 用户地址空间的封装
+use core::mem::size_of;
+use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut};
+
 use super::address::*;
 use super::page_table::PageTable;
 use alloc::string::String;
@@ -62,8 +65,12 @@ pub fn get_user_buffer(user_token: usize, ptr: *const u8, len: usize) -> UserBuf
             .translate(start_va.vpn())
             .expect("[kernel] User space address not mapped!");
         let end_va = core::cmp::min(VirtAddr(end), VirtPageNum(start_va.vpn().0 + 1).addr());
-        data_segments
-            .push(&mut ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()]);
+        if end_va.page_offset() == 0 {
+            data_segments.push(&mut ppn.get_bytes_array()[start_va.page_offset()..]);
+        } else {
+            data_segments
+                .push(&mut ppn.get_bytes_array()[start_va.page_offset()..end_va.page_offset()]);
+        }
         current_start = end_va.0;
     }
     UserBuffer(data_segments)
@@ -86,4 +93,24 @@ pub fn get_user_string(user_token: usize, ptr: *const u8) -> String {
         va = VirtAddr(va.0 + 1);
     }
     string
+}
+
+pub fn get_user_value<T: Copy>(user_token: usize, ptr: *const u8, value: &mut T) {
+    let value_buffer = slice_from_raw_parts_mut(value as *mut _ as *mut u8, size_of::<T>());
+    let user_buffer = get_user_buffer(user_token, ptr, size_of::<T>());
+    for (i, byte) in user_buffer.into_iter().enumerate() {
+        unsafe {
+            (*value_buffer)[i] = *byte;
+        }
+    }
+}
+
+pub fn put_user_value<T: Copy>(user_token: usize, value: T, ptr: *mut u8) {
+    let user_buffer = get_user_buffer(user_token, ptr, size_of::<T>());
+    let value_buffer = slice_from_raw_parts(&value as *const _ as *const u8, size_of::<T>());
+    for (i, byte) in user_buffer.into_iter().enumerate() {
+        unsafe {
+            *byte = (*value_buffer)[i];
+        }
+    }
 }
