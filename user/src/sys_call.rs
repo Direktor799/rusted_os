@@ -7,6 +7,7 @@ const SYS_CALL_SYMLINK: usize = 36;
 const SYS_CALL_CHDIR: usize = 49;
 const SYS_CALL_OPEN: usize = 56;
 const SYS_CALL_CLOSE: usize = 57;
+const SYS_CALL_PIPE: usize = 59;
 const SYS_CALL_LSEEK: usize = 62;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
@@ -76,6 +77,10 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 // 返回值为-1表示close失败，为0表示执行成功
 pub fn sys_close(fd: usize) -> isize {
     sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
+}
+
+pub fn sys_pipe(pipe:&mut [usize]) -> isize{
+    sys_call(SYS_CALL_PIPE, [pipe.as_mut_ptr() as usize, 0, 0])
 }
 
 pub fn sys_symlink(target_path: *const u8, link_path: *const u8) -> isize {

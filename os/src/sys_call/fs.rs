@@ -1,12 +1,13 @@
 //! 文件相关系统调用子模块
 use core::mem::size_of;
-use core::ptr::slice_from_raw_parts;
+use core::ptr::{read, slice_from_raw_parts};
 
 use crate::fs::inode::{open_file, OpenFlags};
+use crate::fs::pipe::make_pipe;
 use crate::fs::rfs::layout::DIRENT_SZ;
 use crate::fs::rfs::{find_inode, get_full_path, layout::InodeType};
 use crate::fs::Stat;
-use crate::memory::frame::user_buffer::{get_user_buffer, get_user_string};
+use crate::memory::frame::user_buffer::{get_user_buffer, get_user_string, put_user_value};
 use crate::task::get_current_process;
 
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
@@ -131,6 +132,21 @@ pub fn sys_mkdir(path: *const u8) -> isize {
         // no such file
         -1
     }
+}
+
+pub fn sys_pipe(pipe: *mut usize) -> isize {
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+    let (pipe_read, pipe_write) = make_pipe();
+    let read_fd = proc_inner.alloc_fd();
+    proc_inner.fd_table[read_fd] = Some(pipe_read);
+    let write_fd = proc_inner.alloc_fd();
+    proc_inner.fd_table[write_fd] = Some(pipe_write);
+
+    put_user_value(proc_inner.token(), read_fd, pipe as *mut u8);
+    put_user_value(proc_inner.token(), write_fd, unsafe { pipe.add(1) }
+        as *mut u8);
+    0
 }
 
 // target为源文件, link_path为link文件路径

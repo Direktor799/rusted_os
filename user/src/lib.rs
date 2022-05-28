@@ -123,6 +123,10 @@ pub fn close(fd: usize) -> isize {
     sys_close(fd)
 }
 
+pub fn pipe(pipe_fd: &mut [usize]) -> isize{
+    sys_pipe(pipe_fd)
+}
+
 pub fn symlink(target_path: &str, link_path: &str) -> isize {
     let target_path = String::from(target_path) + "\0";
     let link_path = String::from(link_path) + "\0";
