@@ -54,6 +54,13 @@ impl MultilevelFeedbackQueue {
         }
         self.rr_queue.pop_front()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Rc<ProcessControlBlock>> {
+        self.fcfs1_queue
+            .iter()
+            .chain(self.fcfs2_queue.iter())
+            .chain(self.rr_queue.iter())
+    }
 }
 
 pub struct SchdMaster {
@@ -77,6 +84,10 @@ impl SchdMaster {
 
     pub fn add_new_task(&mut self, tcb: Rc<ProcessControlBlock>) {
         self.mlfq.enqueue(tcb);
+    }
+
+    pub fn tasks(&self) -> impl Iterator<Item = &Rc<ProcessControlBlock>> {
+        self.mlfq.iter()
     }
 }
 

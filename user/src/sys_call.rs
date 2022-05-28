@@ -14,6 +14,7 @@ const SYS_CALL_READLINK: usize = 78;
 const SYS_CALL_FSTAT: usize = 80;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
+const SYS_CALL_KILL: usize = 129;
 const SYS_CALL_GETTIME: usize = 169;
 const SYS_CALL_GETPID: usize = 172;
 const SYS_CALL_FORK: usize = 220;
@@ -118,4 +119,8 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut u8) -> isize {
 
 pub fn sys_getpid() -> isize {
     sys_call(SYS_CALL_GETPID, [0, 0, 0])
+}
+
+pub fn sys_kill(pid: usize) -> isize {
+    sys_call(SYS_CALL_KILL, [pid as usize, 0, 0])
 }

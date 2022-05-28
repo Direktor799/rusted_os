@@ -233,3 +233,7 @@ pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
 pub fn getpid() -> isize {
     sys_getpid()
 }
+
+pub fn kill(pid: usize) -> isize {
+    sys_kill(pid)
+}

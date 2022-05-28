@@ -59,6 +59,10 @@ impl TaskManager {
     pub fn get_current_process(&self) -> Rc<ProcessControlBlock> {
         self.current_task.clone()
     }
+
+    pub fn tasks(&self) -> impl Iterator<Item = &Rc<ProcessControlBlock>> {
+        self.schd.tasks()
+    }
 }
 
 pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();

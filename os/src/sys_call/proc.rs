@@ -8,7 +8,7 @@ use crate::interrupt::timer::get_time_ms;
 use crate::memory::frame::user_buffer::{get_user_string, get_user_value, put_user_value};
 use crate::task::{
     add_new_task, exit_current_and_run_next, get_current_process, suspend_current_and_run_next,
-    TaskStatus,
+    TaskStatus, TASK_MANAGER,
 };
 
 pub fn sys_exit(exit_code: i32) -> ! {
@@ -90,7 +90,6 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut u8) -> isize {
 
     if let Some((idx, _)) = pair {
         let child = inner.children.remove(idx);
-        assert_eq!(Rc::strong_count(&child), 1);
         let child_pid = child.pid.0;
         put_user_value(inner.token(), child.inner.borrow().exit_code, exit_code_ptr);
         child_pid as isize
@@ -98,4 +97,18 @@ pub fn sys_waitpid(pid: isize, exit_code_ptr: *mut u8) -> isize {
         // child running
         -2
     }
+}
+
+pub fn sys_kill(pid: usize) -> isize {
+    if get_current_process().pid.0 == pid {
+        exit_current_and_run_next(0);
+        return 0;
+    }
+    unsafe {
+        if let Some(proc) = TASK_MANAGER.tasks().find(|task| task.pid.0 == pid) {
+            proc.inner.borrow_mut().task_status = TaskStatus::Exited;
+            return 0;
+        }
+    }
+    -1
 }

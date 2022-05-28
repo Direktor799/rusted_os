@@ -18,6 +18,7 @@ const SYS_CALL_READLINK: usize = 78;
 const SYS_CALL_FSTAT: usize = 80;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
+const SYS_CALL_KILL: usize = 129;
 const SYS_CALL_GETTIME: usize = 169;
 const SYS_CALL_GETPID: usize = 172;
 const SYS_CALL_FORK: usize = 220;
@@ -42,6 +43,7 @@ pub fn sys_call(which: usize, args: [usize; 3]) -> isize {
         SYS_CALL_FSTAT => sys_fstat(args[0] as usize, args[1] as *mut u8),
         SYS_CALL_EXIT => sys_exit(args[0] as i32),
         SYS_CALL_YIELD => sys_yield(),
+        SYS_CALL_KILL => sys_kill(args[0] as usize),
         SYS_CALL_GETTIME => sys_gettime(),
         SYS_CALL_GETPID => sys_getpid(),
         SYS_CALL_FORK => sys_fork(),
