@@ -28,7 +28,7 @@ pub fn enable_timer_interrupt() {
 
 /// 设置下一个时钟间隔
 pub fn set_next_timeout(interval: usize) {
-    set_timer(get_time() + interval);
+    set_timer(get_time() + interval * (CLOCK_FREQ / 1000));
 }
 
 /// 时钟初始化

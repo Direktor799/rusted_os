@@ -1,5 +1,5 @@
 use super::task::*;
-use crate::config::{TASK_QUEUE_FCFS1_SLICE, TASK_QUEUE_FCFS2_SLICE, TASK_QUEUE_RR_SLICE};
+use crate::config::{TASK_QUEUE_FCFS1_SLICE_MS, TASK_QUEUE_FCFS2_SLICE_MS, TASK_QUEUE_RR_SLICE_MS};
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
 
@@ -94,13 +94,13 @@ impl SchdMaster {
 #[inline(always)]
 pub fn get_time_slice(pos: TaskPos) -> usize {
     match pos {
-        TaskPos::Fcfs1 => TASK_QUEUE_FCFS1_SLICE,
-        TaskPos::Fcfs2 => TASK_QUEUE_FCFS2_SLICE,
-        TaskPos::Rr => TASK_QUEUE_RR_SLICE,
+        TaskPos::Fcfs1 => TASK_QUEUE_FCFS1_SLICE_MS,
+        TaskPos::Fcfs2 => TASK_QUEUE_FCFS2_SLICE_MS,
+        TaskPos::Rr => TASK_QUEUE_RR_SLICE_MS,
     }
 }
 
 #[inline(always)]
 pub fn get_default_time_slice() -> usize {
-    TASK_QUEUE_FCFS1_SLICE
+    TASK_QUEUE_FCFS1_SLICE_MS
 }

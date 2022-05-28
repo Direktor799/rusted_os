@@ -11,13 +11,13 @@ pub const PAGE_SIZE_BITS: usize = 12;
 pub const MEMORY_END_ADDR: usize = 0x8800_0000;
 
 /// 第一级队列时间片
-pub const TASK_QUEUE_FCFS1_SLICE: usize = 4000;
+pub const TASK_QUEUE_FCFS1_SLICE_MS: usize = 10;
 
 /// 第二级队列时间片
-pub const TASK_QUEUE_FCFS2_SLICE: usize = 8000;
+pub const TASK_QUEUE_FCFS2_SLICE_MS: usize = 20;
 
 /// 第三级队列时间片
-pub const TASK_QUEUE_RR_SLICE: usize = 12000;
+pub const TASK_QUEUE_RR_SLICE_MS: usize = 50;
 
 /// QEMU时钟频率
 pub const CLOCK_FREQ: usize = 10000000;
