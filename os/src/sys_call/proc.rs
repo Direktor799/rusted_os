@@ -1,8 +1,5 @@
 //! 进程相关系统调用子模块
 
-use alloc::rc::Rc;
-use alloc::vec;
-
 use crate::fs::rfs::{find_inode, get_full_path};
 use crate::interrupt::timer::get_time_ms;
 use crate::memory::frame::user_buffer::{get_user_string, get_user_value, put_user_value};
@@ -10,6 +7,7 @@ use crate::task::{
     add_new_task, exit_current_and_run_next, get_current_process, suspend_current_and_run_next,
     TaskStatus, TASK_MANAGER,
 };
+use alloc::vec;
 
 pub fn sys_exit(exit_code: i32) -> ! {
     exit_current_and_run_next(exit_code);

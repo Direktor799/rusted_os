@@ -92,8 +92,8 @@ pub fn r#yield() -> isize {
     sys_yield()
 }
 
-pub fn gettime() -> isize {
-    sys_gettime()
+pub fn gettime() -> usize {
+    sys_gettime() as usize
 }
 
 pub fn getcwd(s: &mut String) -> isize {
@@ -114,6 +114,7 @@ pub fn mkdir(path: &str) -> isize {
     let path = String::from(path) + "\0";
     sys_mkdir(path.as_ptr())
 }
+
 pub fn open(path: &str, flags: u32) -> isize {
     let path = String::from(path) + "\0";
     sys_open(path.as_ptr(), flags)
@@ -219,11 +220,15 @@ pub fn wait(exit_code: &mut i32) -> isize {
     }
 }
 
-pub fn waitpid(pid: usize, exit_code: &mut i32) -> isize {
+pub fn waitpid(pid: usize, exit_code: &mut i32, whnohang: bool) -> isize {
     loop {
         match sys_waitpid(pid as isize, exit_code as *mut _ as *mut _) {
             -2 => {
-                sys_yield();
+                if whnohang {
+                    return -2;
+                } else {
+                    sys_yield();
+                }
             }
             pid => return pid,
         }
@@ -236,4 +241,16 @@ pub fn getpid() -> isize {
 
 pub fn kill(pid: usize) -> isize {
     sys_kill(pid)
+}
+
+pub fn sleep(ms: usize) {
+    let start_time = gettime();
+    loop {
+        let curr_time = gettime();
+        if start_time + ms >= curr_time {
+            r#yield();
+        } else {
+            break;
+        }
+    }
 }

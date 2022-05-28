@@ -14,8 +14,16 @@ use user_lib::*;
 fn main() -> i32 {
     let mut cwd = String::new();
     let mut ret_code = 0;
+    let mut backgroud_pids = Vec::new();
     getcwd(&mut cwd);
     loop {
+        for i in (0..backgroud_pids.len()).rev() {
+            let ret = waitpid(backgroud_pids[i], &mut ret_code, true);
+            if ret > 0 {
+                println!("[{}] Done", backgroud_pids.len());
+                backgroud_pids.remove(i);
+            }
+        }
         print!("root@rusted_os:{}# ", cwd);
         let input = get_line();
         let args = input.split_whitespace().collect::<Vec<_>>();
@@ -24,15 +32,27 @@ fn main() -> i32 {
                 "cd" => cd(&mut cwd, &args),
                 "write" => write_test(&args),
                 "exit" => break,
-                _ => {
-                    let pid = fork();
-                    if pid == 0 {
-                        exec(&(String::from("/bin/") + args[0]), &args);
-                        println!("{}: command not found", args[0]);
-                    } else {
-                        waitpid(pid as usize, &mut ret_code);
+                _ => match args.last().unwrap() {
+                    &"&" => {
+                        let pid = fork();
+                        if pid == 0 {
+                            exec(&(String::from("/bin/") + args[0]), &args);
+                            println!("{}: command not found", args[0]);
+                        } else {
+                            backgroud_pids.push(pid as usize);
+                            println!("[{}] {}", backgroud_pids.len(), pid);
+                        }
                     }
-                }
+                    _ => {
+                        let pid = fork();
+                        if pid == 0 {
+                            exec(&(String::from("/bin/") + args[0]), &args);
+                            println!("{}: command not found", args[0]);
+                        } else {
+                            waitpid(pid as usize, &mut ret_code, false);
+                        }
+                    }
+                },
             }
         }
     }
