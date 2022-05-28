@@ -19,19 +19,15 @@ sudo make install
 ```
 ---
 ## Run
-### Build user lib
+### Build fs_tool
 ```bash
-cd user
-make build
+cd fs_tool
+cargo build
 ```
 
 ### Run
 ```bash
-cd os
-make run
+./rebuild-and-run.sh 
 ```
 ### Force quit
 <kbd>Ctrl + a</kbd> + <kbd>x</kbd>
-
-### Test
-[About test](https://cvi3z1pqli.feishu.cn/wiki/wikcnWwUq3Okr3Rp34s5Fm1WnQf)
