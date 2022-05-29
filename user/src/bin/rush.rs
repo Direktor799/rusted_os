@@ -36,7 +36,7 @@ fn main() -> i32 {
                     &"&" => {
                         let pid = fork();
                         if pid == 0 {
-                            exec(&(String::from("/bin/") + args[0]), &args);
+                            exec(&(String::from("/bin/") + args[0]), &args[..args.len() - 1]);
                             println!("{}: command not found", args[0]);
                         } else {
                             backgroud_pids.push(pid as usize);
