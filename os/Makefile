@@ -1,5 +1,5 @@
 TARGET	    := riscv64gc-unknown-none-elf
-MODE		:= debug
+MODE		:= release
 KERNEL_FILE := target/$(TARGET)/$(MODE)/rusted_os
 BIN_FILE	:= target/$(TARGET)/$(MODE)/kernel.bin
 FS_IMG		:= fs.img
@@ -18,7 +18,7 @@ doc:
 
 # 编译 kernel
 kernel:
-	@cargo build
+	@cargo build --release
 
 # 生成 kernel 的二进制文件
 $(BIN_FILE): kernel
