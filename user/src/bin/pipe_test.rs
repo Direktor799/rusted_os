@@ -24,7 +24,6 @@ pub fn main() -> i32 {
         // close write_end
         close(pipe_fd[1]);
         let mut buffer = [0u8; 32];
-        
         let len_read = read(3, &mut buffer) as usize;
         // close read_end
         close(3);

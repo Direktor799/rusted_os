@@ -1,7 +1,7 @@
 use super::File;
 use crate::memory::frame::user_buffer::UserBuffer;
-use core::cell::RefCell;
 use alloc::rc::{Rc, Weak};
+use core::cell::RefCell;
 
 use crate::task::suspend_current_and_run_next;
 
@@ -43,7 +43,7 @@ pub struct PipeRingBuffer {
     tail: usize,
     status: RingBufferStatus,
     // 通过此字段判断管道所有写端是否都已经被关闭
-    write_end: Option<Weak<Pipe>>,
+    write_end: Weak<Pipe>,
 }
 
 impl PipeRingBuffer {
@@ -53,12 +53,12 @@ impl PipeRingBuffer {
             head: 0,
             tail: 0,
             status: RingBufferStatus::Empty,
-            write_end: None,
+            write_end: Weak::new(),
         }
     }
     //返回write_end的weak
     pub fn set_write_end(&mut self, write_end: &Rc<Pipe>) {
-        self.write_end = Some(Rc::downgrade(write_end));
+        self.write_end = Rc::downgrade(write_end);
     }
     pub fn write_byte(&mut self, byte: u8) {
         self.status = RingBufferStatus::Normal;
@@ -94,13 +94,13 @@ impl PipeRingBuffer {
         }
     }
     pub fn all_write_ends_closed(&self) -> bool {
-        self.write_end.as_ref().unwrap().upgrade().is_none()
+        self.write_end.upgrade().is_none()
     }
 }
 
 /// Return (read_end, write_end)
 pub fn make_pipe() -> (Rc<Pipe>, Rc<Pipe>) {
-    let buffer = Rc::new(unsafe { RefCell::new(PipeRingBuffer::new()) });
+    let buffer = Rc::new(RefCell::new(PipeRingBuffer::new()));
     let read_end = Rc::new(Pipe::read_end_with_buffer(buffer.clone()));
     let write_end = Rc::new(Pipe::write_end_with_buffer(buffer.clone()));
     buffer.borrow_mut().set_write_end(&write_end);
@@ -132,9 +132,7 @@ impl File for Pipe {
             // read at most loop_read bytes
             for _ in 0..loop_read {
                 if let Some(byte_ref) = buf_iter.next() {
-                    unsafe {
-                        *byte_ref = ring_buffer.read_byte();
-                    }
+                    *byte_ref = ring_buffer.read_byte();
                     read_size += 1;
                 } else {
                     return read_size;
@@ -157,7 +155,7 @@ impl File for Pipe {
             // write at most loop_write bytes
             for _ in 0..loop_write {
                 if let Some(byte_ref) = buf_iter.next() {
-                    ring_buffer.write_byte(unsafe { *byte_ref });
+                    ring_buffer.write_byte(*byte_ref);
                     write_size += 1;
                 } else {
                     return write_size;

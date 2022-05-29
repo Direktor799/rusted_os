@@ -1,6 +1,6 @@
 //! 文件相关系统调用子模块
 use core::mem::size_of;
-use core::ptr::{read, slice_from_raw_parts};
+use core::ptr::slice_from_raw_parts;
 
 use crate::fs::inode::{open_file, OpenFlags};
 use crate::fs::pipe::make_pipe;
@@ -42,14 +42,14 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
     let mut proc_inner = proc.inner.borrow_mut();
     let user_buffer = get_user_buffer(proc_inner.token(), buf, len);
     let fd_table = &mut proc_inner.fd_table;
-
     if fd >= fd_table.len() {
         return -1;
     }
-    if let Some(file) = &fd_table[fd] {
+    if let Some(file) = fd_table[fd].clone() {
         if !file.readable() {
             return -1;
         }
+        drop(proc_inner);
         file.read(user_buffer) as isize
     } else {
         -1
