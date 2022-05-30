@@ -33,7 +33,7 @@ impl Drop for FrameTracker {
 }
 
 /// 全局物理页分配器实例
-pub static mut FRAME_ALLOCATOR: UninitCell<FrameAllocator> = UninitCell::uninit();
+static mut FRAME_ALLOCATOR: UninitCell<FrameAllocator> = UninitCell::uninit();
 
 /// 栈式物理页面分配器
 pub struct FrameAllocator {
@@ -76,6 +76,10 @@ impl FrameAllocator {
     }
 }
 
+pub fn frame_alloc() -> Option<FrameTracker> {
+    unsafe { FRAME_ALLOCATOR.alloc() }
+}
+
 pub fn init() {
     extern "C" {
         fn kernel_end(); // 在linker script中定义的内存地址
@@ -90,41 +94,45 @@ pub fn init() {
     }
 }
 
-test!(test_frame_allocator, {
-    unsafe {
-        let start_ppn = FRAME_ALLOCATOR.curr_ppn;
-        let f1 = FRAME_ALLOCATOR.alloc().expect("No space");
-        test_assert!(
-            f1.ppn() == PhysPageNum(start_ppn.0),
-            "Wrong frame allocated"
-        );
-        {
-            let f2 = FRAME_ALLOCATOR.alloc().expect("No space");
+#[cfg(test)]
+mod test {
+    use super::*;
+    test!(test_frame_allocator, {
+        unsafe {
+            let start_ppn = FRAME_ALLOCATOR.curr_ppn;
+            let f1 = frame_alloc().expect("No space");
+            test_assert!(
+                f1.ppn() == PhysPageNum(start_ppn.0),
+                "Wrong frame allocated"
+            );
+            {
+                let f2 = frame_alloc().expect("No space");
+                test_assert!(
+                    f2.ppn() == PhysPageNum(start_ppn.0 + 1),
+                    "Wrong frame allocated"
+                );
+                test_assert!(
+                    FRAME_ALLOCATOR.curr_ppn == PhysPageNum(start_ppn.0 + 2)
+                        && FRAME_ALLOCATOR.recycled.is_empty(),
+                    "Alloc error"
+                );
+            }
+            test_assert!(
+                FRAME_ALLOCATOR.curr_ppn == PhysPageNum(start_ppn.0 + 2)
+                    && FRAME_ALLOCATOR.recycled.len() == 1,
+                "Dealloc error"
+            );
+            let f2 = frame_alloc().expect("No space");
             test_assert!(
                 f2.ppn() == PhysPageNum(start_ppn.0 + 1),
                 "Wrong frame allocated"
             );
-            test_assert!(
+            assert!(
                 FRAME_ALLOCATOR.curr_ppn == PhysPageNum(start_ppn.0 + 2)
                     && FRAME_ALLOCATOR.recycled.is_empty(),
                 "Alloc error"
             );
         }
-        test_assert!(
-            FRAME_ALLOCATOR.curr_ppn == PhysPageNum(start_ppn.0 + 2)
-                && FRAME_ALLOCATOR.recycled.len() == 1,
-            "Dealloc error"
-        );
-        let f2 = FRAME_ALLOCATOR.alloc().expect("No space");
-        test_assert!(
-            f2.ppn() == PhysPageNum(start_ppn.0 + 1),
-            "Wrong frame allocated"
-        );
-        assert!(
-            FRAME_ALLOCATOR.curr_ppn == PhysPageNum(start_ppn.0 + 2)
-                && FRAME_ALLOCATOR.recycled.is_empty(),
-            "Alloc error"
-        );
-    }
-    Ok("passed")
-});
+        Ok("passed")
+    });
+}

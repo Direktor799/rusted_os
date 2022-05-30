@@ -137,37 +137,41 @@ impl VPNRange {
     }
 }
 
-test!(test_phys_page_num, {
-    let ppn = PhysPageNum(0x81000);
-    test_assert!(ppn.addr().0 == 0x81000_000, "Addr doesn't match");
-    let bytes = ppn.get_bytes_array();
-    for byte in bytes {
-        *byte = u8::MAX;
-    }
-    let first_usize = ppn.addr().get_mut::<usize>();
-    test_assert!(*first_usize == usize::MAX, "Read / write failed");
-    Ok("passed")
-});
+#[cfg(test)]
+mod test {
+    use super::*;
+    test!(test_phys_page_num, {
+        let ppn = PhysPageNum(0x81000);
+        test_assert!(ppn.addr().0 == 0x81000_000, "Addr doesn't match");
+        let bytes = ppn.get_bytes_array();
+        for byte in bytes {
+            *byte = u8::MAX;
+        }
+        let first_usize = ppn.addr().get_mut::<usize>();
+        test_assert!(*first_usize == usize::MAX, "Read / write failed");
+        Ok("passed")
+    });
 
-test!(test_virt_page_num, {
-    let vpn = VirtPageNum(0b111111111_101010101_000000000);
-    test_assert!(
-        vpn.addr().0 == 0b111111111_101010101_000000000_000000000000,
-        "Addr doesn't match"
-    );
-    let indices = vpn.indices();
-    test_assert!(
-        indices[0] == 0b111111111 && indices[1] == 0b101010101 && indices[2] == 0b000000000,
-        "Convertion from VPN to indices failed"
-    );
-    Ok("passed")
-});
+    test!(test_virt_page_num, {
+        let vpn = VirtPageNum(0b111111111_101010101_000000000);
+        test_assert!(
+            vpn.addr().0 == 0b111111111_101010101_000000000_000000000000,
+            "Addr doesn't match"
+        );
+        let indices = vpn.indices();
+        test_assert!(
+            indices[0] == 0b111111111 && indices[1] == 0b101010101 && indices[2] == 0b000000000,
+            "Convertion from VPN to indices failed"
+        );
+        Ok("passed")
+    });
 
-test!(test_vpn_range, {
-    let start_vpn = VirtPageNum(0);
-    let end_vpn = VirtPageNum(100);
-    for (i, vpn) in VPNRange::new(start_vpn, end_vpn).enumerate() {
-        test_assert!(vpn.0 == i, "Iteration failed")
-    }
-    Ok("passed")
-});
+    test!(test_vpn_range, {
+        let start_vpn = VirtPageNum(0);
+        let end_vpn = VirtPageNum(100);
+        for (i, vpn) in VPNRange::new(start_vpn, end_vpn).enumerate() {
+            test_assert!(vpn.0 == i, "Iteration failed")
+        }
+        Ok("passed")
+    });
+}

@@ -18,7 +18,7 @@ pub static mut BLOCK_DEVICE: UninitCell<Rc<dyn BlockDevice>> = UninitCell::unini
 pub extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {
     let mut ppn_base = PhysPageNum(0);
     for i in 0..pages {
-        let frame = unsafe { FRAME_ALLOCATOR.alloc().unwrap() };
+        let frame = frame_alloc().unwrap();
         if i == 0 {
             ppn_base = frame.ppn();
         }
@@ -32,10 +32,10 @@ pub extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {
 
 #[no_mangle]
 pub extern "C" fn virtio_dma_dealloc(pa: PhysAddr, pages: usize) -> i32 {
-    let mut ppn_base: PhysPageNum = pa.ppn();
-    for _ in 0..pages {
-        unsafe { FRAME_ALLOCATOR.dealloc(ppn_base) };
-        ppn_base = PhysPageNum(ppn_base.0 + 1);
+    let start_ppn = pa.ppn();
+    let end_ppn = PhysPageNum(pa.ppn().0 + pages);
+    unsafe {
+        QUEUE_FRAMES.retain(|frame| !(start_ppn..end_ppn).contains(&frame.ppn()));
     }
     0
 }

@@ -1,5 +1,5 @@
 use super::address::{VPNRange, VirtPageNum};
-use super::frame_allocator::{FrameTracker, FRAME_ALLOCATOR};
+use super::frame_allocator::{frame_alloc, FrameTracker};
 use crate::config::PAGE_SIZE;
 use alloc::collections::BTreeMap;
 use core::cmp::min;
@@ -17,7 +17,7 @@ impl MemorySegment {
     pub fn new(vpn_range: VPNRange, flags: SegFlags) -> Self {
         let mut data_frames = BTreeMap::new();
         for vpn in vpn_range {
-            let frame = unsafe { FRAME_ALLOCATOR.alloc().unwrap() };
+            let frame = frame_alloc().unwrap();
             data_frames.insert(vpn, frame);
         }
         Self {
@@ -38,4 +38,24 @@ impl MemorySegment {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::memory::frame::page_table::*;
+    test!(test_memory_segment, {
+        let seg = MemorySegment::new(VPNRange::new(VirtPageNum(0), VirtPageNum(1)), R | W);
+        let mut data = [0u8; PAGE_SIZE];
+        for byte in data.iter_mut().step_by(2) {
+            *byte = u8::MAX;
+        }
+        seg.copy_data(&data);
+        let mut should_be = u8::MAX;
+        for byte in seg.data_frames[&VirtPageNum(0)].ppn().get_bytes_array() {
+            test_assert!(*byte == should_be);
+            should_be = !should_be;
+        }
+        Ok("passed")
+    });
 }

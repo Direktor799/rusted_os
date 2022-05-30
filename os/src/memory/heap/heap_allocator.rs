@@ -154,56 +154,60 @@ pub fn init() {
     }
 }
 
-test!(test_heap_allocator, {
-    let start_addr = 0x8100_0000;
-    let end_addr = 0x8200_0000;
-    let mut allocator = BuddySystemAllocator::<32>::new(start_addr, end_addr - start_addr);
-    test_assert!(
-        allocator.total == end_addr - start_addr && allocator.allocated == 0,
-        "Init failed"
-    );
-    let size = get_size(Layout::new::<usize>());
-    test_assert!(
-        allocator.free_list[size.trailing_zeros() as usize].is_empty(),
-        "Allocator internel failure"
-    );
-    let addr = allocator.alloc(Layout::new::<usize>());
-    for order in 0..32 {
-        if (size.trailing_zeros() as usize..(end_addr - start_addr).trailing_zeros() as usize)
-            .contains(&order)
-        {
-            test_assert!(
-                allocator.free_list[order].iter().count() == 1,
-                "Allocator internel failure"
-            );
-        } else {
-            test_assert!(
-                allocator.free_list[order].is_empty(),
-                "Allocator internel failure"
-            );
+#[cfg(test)]
+mod test {
+    use super::*;
+    test!(test_heap_allocator, {
+        let start_addr = 0x8100_0000;
+        let end_addr = 0x8200_0000;
+        let mut allocator = BuddySystemAllocator::<32>::new(start_addr, end_addr - start_addr);
+        test_assert!(
+            allocator.total == end_addr - start_addr && allocator.allocated == 0,
+            "Init failed"
+        );
+        let size = get_size(Layout::new::<usize>());
+        test_assert!(
+            allocator.free_list[size.trailing_zeros() as usize].is_empty(),
+            "Allocator internel failure"
+        );
+        let addr = allocator.alloc(Layout::new::<usize>());
+        for order in 0..32 {
+            if (size.trailing_zeros() as usize..(end_addr - start_addr).trailing_zeros() as usize)
+                .contains(&order)
+            {
+                test_assert!(
+                    allocator.free_list[order].iter().count() == 1,
+                    "Allocator internel failure"
+                );
+            } else {
+                test_assert!(
+                    allocator.free_list[order].is_empty(),
+                    "Allocator internel failure"
+                );
+            }
         }
-    }
-    allocator.dealloc(addr, Layout::new::<usize>());
-    for order in 0..32 {
-        if order == (end_addr - start_addr).trailing_zeros() as usize {
-            test_assert!(
-                allocator.free_list[order].iter().count() == 1,
-                "Allocator internel failure"
-            );
-        } else {
-            test_assert!(
-                allocator.free_list[order].is_empty(),
-                "Allocator internel failure"
-            );
+        allocator.dealloc(addr, Layout::new::<usize>());
+        for order in 0..32 {
+            if order == (end_addr - start_addr).trailing_zeros() as usize {
+                test_assert!(
+                    allocator.free_list[order].iter().count() == 1,
+                    "Allocator internel failure"
+                );
+            } else {
+                test_assert!(
+                    allocator.free_list[order].is_empty(),
+                    "Allocator internel failure"
+                );
+            }
         }
-    }
-    let v = alloc::vec![u32::MAX;100];
-    for num in v {
-        test_assert!(num == u32::MAX, "Allocation failed");
-    }
-    let s1 = alloc::string::String::from("1234");
-    let s2 = alloc::string::String::from("5678");
-    let s3 = s1 + &s2;
-    test_assert!(s3 == "12345678", "Allocation failed");
-    Ok("passed")
-});
+        let v = alloc::vec![u32::MAX;100];
+        for num in v {
+            test_assert!(num == u32::MAX, "Allocation failed");
+        }
+        let s1 = alloc::string::String::from("1234");
+        let s2 = alloc::string::String::from("5678");
+        let s3 = s1 + &s2;
+        test_assert!(s3 == "12345678", "Allocation failed");
+        Ok("passed")
+    });
+}

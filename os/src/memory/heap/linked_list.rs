@@ -132,29 +132,33 @@ impl<'a> Iterator for IterMut<'a> {
     }
 }
 
-test!(test_linked_list, {
-    let mut linked_list = LinkedList::new();
-    test_assert!(linked_list.is_empty(), "New LinkedList is not empty!");
-    let addrs: [*mut usize; 3] = [
-        0x8100_0000 as *mut usize,
-        0x8100_1000 as *mut usize,
-        0x8100_2000 as *mut usize,
-    ];
-    for addr in addrs {
-        linked_list.push(addr);
-    }
-    for (i, addr) in linked_list.iter().enumerate() {
-        test_assert!(addr == addrs[2 - i], "Iteration failed");
-    }
-    let mut mut_iter = linked_list.iter_mut();
-    let first = mut_iter.next();
-    test_assert!(
-        first.is_some() && first.unwrap().pop() == addrs[2],
-        "Modify via iter_mut failed"
-    );
-    for i in (0..2).rev() {
-        let addr = linked_list.pop();
-        test_assert!(addr.is_some() && addr.unwrap() == addrs[i], "Pop failed");
-    }
-    Ok("passed")
-});
+#[cfg(test)]
+mod test {
+    use super::*;
+    test!(test_linked_list, {
+        let mut linked_list = LinkedList::new();
+        test_assert!(linked_list.is_empty(), "New LinkedList is not empty!");
+        let addrs: [*mut usize; 3] = [
+            0x8100_0000 as *mut usize,
+            0x8100_1000 as *mut usize,
+            0x8100_2000 as *mut usize,
+        ];
+        for addr in addrs {
+            linked_list.push(addr);
+        }
+        for (i, addr) in linked_list.iter().enumerate() {
+            test_assert!(addr == addrs[2 - i], "Iteration failed");
+        }
+        let mut mut_iter = linked_list.iter_mut();
+        let first = mut_iter.next();
+        test_assert!(
+            first.is_some() && first.unwrap().pop() == addrs[2],
+            "Modify via iter_mut failed"
+        );
+        for i in (0..2).rev() {
+            let addr = linked_list.pop();
+            test_assert!(addr.is_some() && addr.unwrap() == addrs[i], "Pop failed");
+        }
+        Ok("passed")
+    });
+}

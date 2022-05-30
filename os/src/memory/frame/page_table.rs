@@ -1,7 +1,7 @@
 //! 页表子模块
 
 use super::address::*;
-use super::frame_allocator::{FrameTracker, FRAME_ALLOCATOR};
+use super::frame_allocator::{frame_alloc, FrameTracker};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::fmt::Debug;
@@ -66,12 +66,10 @@ impl PageTableEntry {
 impl PageTable {
     /// 创建空页表
     pub fn new() -> Self {
-        unsafe {
-            let frame = FRAME_ALLOCATOR.alloc().unwrap();
-            Self {
-                root_ppn: frame.ppn(),
-                frames: vec![frame],
-            }
+        let frame = frame_alloc().unwrap();
+        Self {
+            root_ppn: frame.ppn(),
+            frames: vec![frame],
         }
     }
 
@@ -124,11 +122,9 @@ impl PageTable {
                 return Some(pte);
             }
             if !pte.valid() {
-                unsafe {
-                    let frame = FRAME_ALLOCATOR.alloc().unwrap();
-                    *pte = PageTableEntry::new(frame.ppn(), V);
-                    self.frames.push(frame);
-                }
+                let frame = frame_alloc().unwrap();
+                *pte = PageTableEntry::new(frame.ppn(), V);
+                self.frames.push(frame);
             }
             ppn = pte.ppn();
         }
@@ -170,4 +166,21 @@ impl Debug for PageTable {
             .field("non-identical", &content)
             .finish()
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::memory::frame::frame_allocator::frame_alloc;
+    test!(test_page_table, {
+        let mut page_table = PageTable::new();
+        let frame = frame_alloc().unwrap();
+        page_table.map(VirtPageNum(0), frame.ppn(), R);
+        let ppn = page_table.translate(VirtPageNum(0));
+        test_assert!(ppn.is_some() && ppn.unwrap() == frame.ppn());
+        page_table.unmap(VirtPageNum(0));
+        let ppn = page_table.translate(VirtPageNum(0));
+        test_assert!(ppn.is_none());
+        Ok("passed")
+    });
 }

@@ -230,3 +230,40 @@ pub fn init() {
         KERNEL_MEMORY_SET.activate();
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    test!(test_memory_set_kernel, {
+        for vpn in VPNRange::new(
+            VirtAddr(text_start as usize).vpn(),
+            VirtAddr(MEMORY_END_ADDR).vpn(),
+        ) {
+            let ppn = unsafe { KERNEL_MEMORY_SET.translate(vpn) };
+            test_assert!(ppn.is_some() && ppn.unwrap().0 == vpn.0);
+        }
+        Ok("passed")
+    });
+
+    test!(test_memory_set_clone, {
+        let mut memory_set = MemorySet::new();
+        let data = [u8::MAX; PAGE_SIZE];
+        memory_set.insert_segment(
+            VPNRange::new(VirtPageNum(0), VirtPageNum(2)),
+            R | W,
+            Some(&data),
+        );
+        let mut new_memory_set = memory_set.clone();
+        let ppn = new_memory_set.translate(VirtPageNum(0));
+        test_assert!(ppn.is_some());
+        for byte in ppn.unwrap().get_bytes_array() {
+            test_assert!(*byte == u8::MAX);
+        }
+        let ppn = new_memory_set.translate(VirtPageNum(1));
+        test_assert!(ppn.is_some());
+        for byte in ppn.unwrap().get_bytes_array() {
+            test_assert!(*byte == 0);
+        }
+        Ok("passed")
+    });
+}
