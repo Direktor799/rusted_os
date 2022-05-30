@@ -122,7 +122,7 @@ mod test {
     use crate::memory::frame::page_table::*;
     test!(test_user_buffer, {
         let mut memory_set = MemorySet::new();
-        memory_set.insert_segment(VPNRange::new(VirtPageNum(0), VirtPageNum(2)), R | W, None);
+        memory_set.insert_segment(VirtPageNum(0)..VirtPageNum(2), R | W, None);
         let user_buffer = get_user_buffer(memory_set.satp_token(), 0xff0 as *const u8, 32);
         test_assert!(user_buffer.0.len() == 2);
         test_assert!(user_buffer.0[0].len() == 16 && user_buffer.0[1].len() == 16);
@@ -131,7 +131,7 @@ mod test {
 
     test!(test_user_string, {
         let mut memory_set = MemorySet::new();
-        memory_set.insert_segment(VPNRange::new(VirtPageNum(0), VirtPageNum(1)), R | W, None);
+        memory_set.insert_segment(VirtPageNum(0)..VirtPageNum(1), R | W, None);
         let string = String::from("hello world\0123");
         let user_buffer = get_user_buffer(memory_set.satp_token(), 0 as *const u8, string.len());
         for (i, byte) in user_buffer.into_iter().enumerate() {

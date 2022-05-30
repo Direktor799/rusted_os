@@ -1,6 +1,6 @@
 use crate::config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE};
 use crate::memory::frame::{
-    address::{VPNRange, VirtAddr},
+    address::VirtAddr,
     memory_set::KERNEL_MEMORY_SET,
     page_table::{R, W},
 };
@@ -71,10 +71,7 @@ impl KernelStack {
         let (kernel_stack_bottom, kernel_stack_top) = kernel_stack_position(pid);
         unsafe {
             KERNEL_MEMORY_SET.insert_segment(
-                VPNRange::new(
-                    VirtAddr(kernel_stack_bottom).vpn(),
-                    VirtAddr(kernel_stack_top).vpn(),
-                ),
+                VirtAddr(kernel_stack_bottom).vpn()..VirtAddr(kernel_stack_top).vpn(),
                 R | W,
                 None,
             );

@@ -3,6 +3,7 @@
 #![feature(panic_info_message)]
 #![feature(alloc_error_handler)]
 #![feature(custom_test_frameworks)]
+#![feature(step_trait)]
 #![test_runner(test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 

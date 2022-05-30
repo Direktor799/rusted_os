@@ -3,6 +3,7 @@
 use super::page_table::PageTableEntry;
 use crate::config::{PAGE_SIZE, PAGE_SIZE_BITS};
 use core::fmt::{self, Debug, Formatter};
+use core::iter::Step;
 use core::marker::Copy;
 
 /// 物理地址
@@ -108,32 +109,21 @@ impl VirtPageNum {
     }
 }
 
-/// 虚拟页号区间迭代器
-#[derive(Clone, Copy, Debug)]
-pub struct VPNRange {
-    pub curr_vpn: VirtPageNum,
-    pub end_vpn: VirtPageNum,
-}
-
-impl Iterator for VPNRange {
-    type Item = VirtPageNum;
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut res = Option::None;
-        if self.curr_vpn < self.end_vpn {
-            res = Some(self.curr_vpn);
-            self.curr_vpn.0 += 1;
+impl Step for VirtPageNum {
+    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+        if start.0 <= end.0 {
+            Some(end.0 - start.0)
+        } else {
+            None
         }
-        res
     }
-}
 
-impl VPNRange {
-    /// 创建新的虚拟页号区间
-    pub fn new(start_vpn: VirtPageNum, end_vpn: VirtPageNum) -> Self {
-        Self {
-            end_vpn,
-            curr_vpn: start_vpn,
-        }
+    fn forward_checked(start: Self, count: usize) -> Option<Self> {
+        Some(Self(start.0 + count))
+    }
+
+    fn backward_checked(start: Self, count: usize) -> Option<Self> {
+        Some(Self(start.0 - count))
     }
 }
 
@@ -163,15 +153,6 @@ mod test {
             indices[0] == 0b111111111 && indices[1] == 0b101010101 && indices[2] == 0b000000000,
             "Convertion from VPN to indices failed"
         );
-        Ok("passed")
-    });
-
-    test!(test_vpn_range, {
-        let start_vpn = VirtPageNum(0);
-        let end_vpn = VirtPageNum(100);
-        for (i, vpn) in VPNRange::new(start_vpn, end_vpn).enumerate() {
-            test_assert!(vpn.0 == i, "Iteration failed")
-        }
         Ok("passed")
     });
 }

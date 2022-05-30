@@ -1,4 +1,6 @@
 //! 地址空间子模块
+use core::ops::Range;
+
 use super::address::*;
 use super::page_table::{PageTable, R, U, W, X};
 use super::segment::{MemorySegment, SegFlags};
@@ -51,38 +53,23 @@ impl MemorySet {
         // println!("kernel end at {:x}", kernel_end as usize);
         let mut memory_set = Self::new();
         memory_set.map_trampoline();
-        for vpn in VPNRange::new(
-            VirtAddr(text_start as usize).vpn(),
-            VirtAddr(text_end as usize).vpn(),
-        ) {
+        for vpn in VirtAddr(text_start as usize).vpn()..VirtAddr(text_end as usize).vpn() {
             memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R | X);
         }
-        for vpn in VPNRange::new(
-            VirtAddr(rodata_start as usize).vpn(),
-            VirtAddr(rodata_end as usize).vpn(),
-        ) {
+        for vpn in VirtAddr(rodata_start as usize).vpn()..VirtAddr(rodata_end as usize).vpn() {
             memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R);
         }
-        for vpn in VPNRange::new(
-            VirtAddr(data_start as usize).vpn(),
-            VirtAddr(data_end as usize).vpn(),
-        ) {
+        for vpn in VirtAddr(data_start as usize).vpn()..VirtAddr(data_end as usize).vpn() {
             memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R | W);
         }
-        for vpn in VPNRange::new(
-            VirtAddr(bss_start as usize).vpn(),
-            VirtAddr(bss_end as usize).vpn(),
-        ) {
+        for vpn in VirtAddr(bss_start as usize).vpn()..VirtAddr(bss_end as usize).vpn() {
             memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R | W);
         }
-        for vpn in VPNRange::new(
-            VirtAddr(kernel_end as usize).vpn(),
-            VirtAddr(MEMORY_END_ADDR).vpn(),
-        ) {
+        for vpn in VirtAddr(kernel_end as usize).vpn()..VirtAddr(MEMORY_END_ADDR).vpn() {
             memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R | W);
         }
         for pair in MMIO {
-            for vpn in VPNRange::new(VirtAddr(pair.0).vpn(), VirtAddr(pair.0 + pair.1).vpn()) {
+            for vpn in VirtAddr(pair.0).vpn()..VirtAddr(pair.0 + pair.1).vpn() {
                 memory_set.page_table.map(vpn, PhysPageNum(vpn.0), R | W);
             }
         }
@@ -116,20 +103,16 @@ impl MemorySet {
                 perm |= X;
             }
             memory_set.insert_segment(
-                VPNRange::new(start_vpn, end_vpn),
+                start_vpn..end_vpn,
                 perm,
                 Some(&elf_data[ph.offset()..ph.offset() + ph.file_size()]),
             );
         }
         let user_stack_start_vpn = VirtPageNum(max_end_vpn.0 + 1);
         let user_stack_end_vpn = VirtPageNum(user_stack_start_vpn.0 + USER_STACK_SIZE / PAGE_SIZE);
+        memory_set.insert_segment(user_stack_start_vpn..user_stack_end_vpn, U | R | W, None);
         memory_set.insert_segment(
-            VPNRange::new(user_stack_start_vpn, user_stack_end_vpn),
-            U | R | W,
-            None,
-        );
-        memory_set.insert_segment(
-            VPNRange::new(VirtAddr(TRAP_CONTEXT).vpn(), VirtAddr(TRAMPOLINE).vpn()),
+            VirtAddr(TRAP_CONTEXT).vpn()..VirtAddr(TRAMPOLINE).vpn(),
             R | W,
             None,
         );
@@ -139,7 +122,7 @@ impl MemorySet {
     /// 在此地址空间中添加映射并分配物理页
     pub fn insert_segment(
         &mut self,
-        vpn_range: VPNRange,
+        vpn_range: Range<VirtPageNum>,
         seg_flags: SegFlags,
         data: Option<&[u8]>,
     ) {
@@ -158,9 +141,9 @@ impl MemorySet {
         let segment_index = self
             .segments
             .iter()
-            .position(|segment| segment.vpn_range.curr_vpn == start_vpn)
+            .position(|segment| segment.vpn_range.start == start_vpn)
             .unwrap();
-        for vpn in self.segments[segment_index].vpn_range {
+        for vpn in self.segments[segment_index].vpn_range.clone() {
             self.page_table.unmap(vpn);
         }
         self.segments.remove(segment_index);
@@ -183,7 +166,7 @@ impl MemorySet {
     pub fn get_size(&self) -> usize {
         self.segments
             .iter()
-            .map(|seg| seg.vpn_range.end_vpn.addr().0 - seg.vpn_range.curr_vpn.addr().0)
+            .map(|seg| seg.vpn_range.clone().count() * PAGE_SIZE)
             .sum()
     }
 
@@ -207,10 +190,10 @@ impl Clone for MemorySet {
         new_memory_set.map_trampoline();
         for segment in &self.segments {
             let mut data = Vec::new();
-            for vpn in segment.vpn_range {
+            for vpn in segment.vpn_range.clone() {
                 data.extend_from_slice(self.translate(vpn).unwrap().get_bytes_array());
             }
-            new_memory_set.insert_segment(segment.vpn_range, segment.flags, Some(&data));
+            new_memory_set.insert_segment(segment.vpn_range.clone(), segment.flags, Some(&data));
             // copy data from another space
             // for vpn in segment.vpn_range {
             //     let src_ppn = self.translate(vpn).unwrap();
@@ -235,10 +218,7 @@ pub fn init() {
 mod test {
     use super::*;
     test!(test_memory_set_kernel, {
-        for vpn in VPNRange::new(
-            VirtAddr(text_start as usize).vpn(),
-            VirtAddr(MEMORY_END_ADDR).vpn(),
-        ) {
+        for vpn in VirtAddr(text_start as usize).vpn()..VirtAddr(MEMORY_END_ADDR).vpn() {
             let ppn = unsafe { KERNEL_MEMORY_SET.translate(vpn) };
             test_assert!(ppn.is_some() && ppn.unwrap().0 == vpn.0);
         }
@@ -248,11 +228,7 @@ mod test {
     test!(test_memory_set_clone, {
         let mut memory_set = MemorySet::new();
         let data = [u8::MAX; PAGE_SIZE];
-        memory_set.insert_segment(
-            VPNRange::new(VirtPageNum(0), VirtPageNum(2)),
-            R | W,
-            Some(&data),
-        );
+        memory_set.insert_segment(VirtPageNum(0)..VirtPageNum(2), R | W, Some(&data));
         let mut new_memory_set = memory_set.clone();
         let ppn = new_memory_set.translate(VirtPageNum(0));
         test_assert!(ppn.is_some());
