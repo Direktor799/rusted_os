@@ -75,6 +75,10 @@ pub const RDWR: u32 = 1 << 1;
 pub const CREATE: u32 = 1 << 9;
 pub const TRUNC: u32 = 1 << 10;
 
+pub fn dup(fd: usize) -> isize {
+    sys_dup(fd)
+}
+
 pub fn read(fd: usize, buf: &mut [u8]) -> isize {
     sys_read(fd, buf)
 }

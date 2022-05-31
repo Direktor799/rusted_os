@@ -1,6 +1,7 @@
 use core::arch::asm;
 
 const SYS_CALL_GETCWD: usize = 17;
+const SYS_CALL_DUP: usize = 24;
 const SYS_CALL_MKDIR: usize = 34;
 const SYS_CALL_UNLINK: usize = 35;
 const SYS_CALL_SYMLINK: usize = 36;
@@ -33,6 +34,10 @@ fn sys_call(id: usize, args: [usize; 3]) -> isize {
         );
     }
     ret
+}
+
+pub fn sys_dup(fd: usize) -> isize {
+    sys_call(SYS_CALL_DUP, [fd, 0, 0])
 }
 
 pub fn sys_read(fd: usize, buffer: &mut [u8]) -> isize {

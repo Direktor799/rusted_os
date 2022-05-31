@@ -283,3 +283,18 @@ pub fn sys_fstat(fd: usize, stat: *mut u8) -> isize {
     }
     0
 }
+
+pub fn sys_dup(fd: usize) -> isize {
+    let proc = get_current_process();
+    let mut proc_inner = proc.inner.borrow_mut();
+
+    if fd >= proc_inner.fd_table.len() {
+        return -1;
+    }
+    if proc_inner.fd_table[fd].is_none() {
+        return -1;
+    }
+    let new_fd = proc_inner.alloc_fd();
+    proc_inner.fd_table[new_fd] = Some(proc_inner.fd_table[fd].clone().unwrap());
+    new_fd as isize
+}
