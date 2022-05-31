@@ -19,7 +19,7 @@ fn main() -> i32 {
                 continue;
             }
             println!(
-                "[deamon] Released a zombie process, pid = {}, exit_code = {}",
+                "[daemon] Released a zombie process, pid = {}, exit_code = {}",
                 pid, exit_code,
             );
         }

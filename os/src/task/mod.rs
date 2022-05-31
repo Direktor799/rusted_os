@@ -20,9 +20,9 @@ pub struct TaskManager {
 }
 
 impl TaskManager {
-    fn new(deamon: Rc<ProcessControlBlock>) -> Self {
+    fn new(daemon: Rc<ProcessControlBlock>) -> Self {
         Self {
-            current_task: deamon,
+            current_task: daemon,
             schd: SchdMaster::new(),
         }
     }
@@ -87,10 +87,10 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     inner.task_status = TaskStatus::Exited;
     inner.exit_code = exit_code;
     unsafe {
-        let mut deamon_inner = DEAMON.inner.borrow_mut();
+        let mut daemon_inner = DEAMON.inner.borrow_mut();
         for child in inner.children.iter() {
             child.inner.borrow_mut().parent = Rc::downgrade(&DEAMON);
-            deamon_inner.children.push(child.clone());
+            daemon_inner.children.push(child.clone());
         }
     }
     drop(inner);
@@ -122,7 +122,7 @@ pub fn init() {
         let root_inode = find_inode("/").expect("[kernel] No root inode??");
         let proc_inode = root_inode.create("proc", InodeType::Directory).unwrap();
         proc_inode.set_default_dirent(root_inode.get_inode_id());
-        let app_inode = find_inode("/bin/deamon").expect("[kernel] deamon not found!");
+        let app_inode = find_inode("/bin/daemon").expect("[kernel] daemon not found!");
         let size = app_inode.get_file_size() as usize;
         let mut app_data = vec![0u8; size];
         app_inode.read_at(0, &mut app_data);
