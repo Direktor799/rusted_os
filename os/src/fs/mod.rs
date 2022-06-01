@@ -1,6 +1,7 @@
 pub mod inode;
 pub mod rfs;
 pub mod stdio;
+pub mod pipe;
 use alloc::rc::Rc;
 
 use crate::memory::frame::user_buffer::UserBuffer;
