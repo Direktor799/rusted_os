@@ -19,7 +19,7 @@ impl File for Stdin {
         loop {
             let ch = console_getchar() as u8;
             if ch == 255 {
-                break 0;
+                break usize::MAX;
             } else {
                 unsafe {
                     user_buf.0[0].as_mut_ptr().write_volatile(ch);

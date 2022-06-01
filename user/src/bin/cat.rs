@@ -5,6 +5,7 @@ extern crate alloc;
 extern crate user_lib;
 
 use alloc::vec;
+use console::get_line;
 use core::str;
 use user_lib::*;
 
@@ -12,8 +13,14 @@ use user_lib::*;
 fn main(args: &[&str]) -> i32 {
     let mut buffer = vec![0u8; 128];
     if args.len() == 1 {
-        println!("cat for stdin not supported");
-        return 1;
+        loop {
+            let s = get_line();
+            if s.is_empty() {
+                break;
+            }
+            println!("{}", s);
+        }
+        return 0;
     }
     for target in &args[1..] {
         // TODO: check file type

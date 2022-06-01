@@ -26,7 +26,7 @@ fn main() -> i32 {
         }
         print!("root@rusted_os:{}# ", cwd);
         let input = get_line();
-        let mut args = input.split_whitespace().collect::<Vec<_>>();
+        let mut args = input.split_ascii_whitespace().collect::<Vec<_>>();
         if !args.is_empty() {
             match args[0] {
                 "cd" => cd(&mut cwd, &args),

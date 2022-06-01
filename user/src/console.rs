@@ -34,12 +34,20 @@ macro_rules! println {
 
 pub fn get_char() -> char {
     let mut c = [0u8; 1];
-    while read(STDIN, &mut c) == 0 {}
+    loop {
+        let len = read(STDIN, &mut c);
+        match len {
+            0 => return EOT,
+            -1 => continue,
+            _ => break,
+        }
+    }
     c[0] as char
 }
 
+pub const EOT: char = '\x04';
 const BS: char = '\x08';
-const LF: char = '\x0a';
+pub const LF: char = '\x0a';
 const CR: char = '\x0d';
 const DEL: char = '\x7f';
 
@@ -53,6 +61,9 @@ pub fn get_line() -> String {
                 print!("{BS} {BS}");
             }
             continue;
+        }
+        if ch == EOT {
+            break input;
         }
         input.push(ch);
         print!("{}", ch);
