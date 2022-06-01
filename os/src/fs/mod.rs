@@ -1,7 +1,7 @@
 pub mod inode;
+pub mod pipe;
 pub mod rfs;
 pub mod stdio;
-pub mod pipe;
 use alloc::rc::Rc;
 
 use crate::memory::frame::user_buffer::UserBuffer;
@@ -28,6 +28,8 @@ impl From<Rc<dyn File>> for Stat {
         }
     }
 }
+
+pub const EOT: char = '\x04';
 
 pub trait File {
     fn readable(&self) -> bool;

@@ -32,52 +32,22 @@ fn main() -> i32 {
                 "cd" => cd(&mut cwd, &args),
                 "exit" => break,
                 _ => {
+                    // 判断是否后台运行
+                    let background = if args.last().unwrap() == &"&" {
+                        args.pop();
+                        true
+                    } else {
+                        false
+                    };
                     let pid = fork();
                     if pid == 0 {
-                        if let Some(input_pos) = args.iter().position(|arg| *arg == "<") {
-                            if input_pos + 1 >= args.len() {
-                                println!("syntax error");
-                                continue;
-                            }
-                            let fd = open(args[input_pos + 1], RDONLY);
-                            if fd == -1 {
-                                println!("'{}': No such file or directory", args[input_pos + 1]);
-                                continue;
-                            }
-                            dup2(fd as usize, 0);
-                            args.drain(input_pos..=input_pos + 1);
-                        }
-                        if let Some(output_pos) = args.iter().position(|arg| *arg == ">") {
-                            if output_pos + 1 >= args.len() {
-                                println!("syntax error");
-                                continue;
-                            }
-                            let fd = open(args[output_pos + 1], WRONLY | CREATE);
-                            if fd == -1 {
-                                println!("'{}': No such file or directory", args[output_pos + 1]);
-                                continue;
-                            }
-                            dup2(fd as usize, 1);
-                            args.drain(output_pos..=output_pos + 1);
-                        }
-                    }
-                    match args.last().unwrap() {
-                        &"&" => {
-                            if pid == 0 {
-                                exec(&(String::from("/bin/") + args[0]), &args[..args.len() - 1]);
-                                println!("{}: command not found", args[0]);
-                            } else {
-                                backgroud_pids.push(pid as usize);
-                                println!("[{}] {}", backgroud_pids.len(), pid);
-                            }
-                        }
-                        _ => {
-                            if pid == 0 {
-                                exec(&(String::from("/bin/") + args[0]), &args);
-                                println!("{}: command not found", args[0]);
-                            } else {
-                                waitpid(pid as usize, &mut ret_code, false);
-                            }
+                        execute_cmd(args);
+                    } else {
+                        if background {
+                            backgroud_pids.push(pid as usize);
+                            println!("[{}] {}", backgroud_pids.len(), pid);
+                        } else {
+                            waitpid(pid as usize, &mut ret_code, false);
                         }
                     }
                 }
@@ -104,4 +74,58 @@ fn cd(cwd: &mut String, args: &Vec<&str>) {
         _ => panic!(),
     }
     getcwd(cwd);
+}
+
+fn execute_cmd(mut args: Vec<&str>) {
+    let splited = args
+        .rsplitn(2, |ch| *ch == "|")
+        .map(|slice| slice.to_vec())
+        .collect::<Vec<_>>();
+    if splited.len() == 2 {
+        args = splited[0].clone();
+        let mut pipe_fds = [0; 2];
+        pipe(&mut pipe_fds);
+        if fork() == 0 {
+            dup2(pipe_fds[1], 1);
+            close(pipe_fds[0]);
+            close(pipe_fds[1]);
+            println!("go {:?}", splited[1]);
+            execute_cmd(splited[1].clone());
+        } else {
+            dup2(pipe_fds[0], 0);
+            close(pipe_fds[0]);
+            close(pipe_fds[1]);
+            // wait(&mut ret_code);
+        }
+    }
+    // 输入重定向
+    if let Some(input_pos) = args.iter().position(|arg| *arg == "<") {
+        if input_pos + 1 >= args.len() {
+            println!("syntax error");
+            return;
+        }
+        let fd = open(args[input_pos + 1], RDONLY);
+        if fd == -1 {
+            println!("'{}': No such file or directory", args[input_pos + 1]);
+            return;
+        }
+        dup2(fd as usize, 0);
+        args.drain(input_pos..=input_pos + 1);
+    }
+    // 输出重定向
+    if let Some(output_pos) = args.iter().position(|arg| *arg == ">") {
+        if output_pos + 1 >= args.len() {
+            println!("syntax error");
+            return;
+        }
+        let fd = open(args[output_pos + 1], WRONLY | CREATE);
+        if fd == -1 {
+            println!("'{}': No such file or directory", args[output_pos + 1]);
+            return;
+        }
+        dup2(fd as usize, 1);
+        args.drain(output_pos..=output_pos + 1);
+    }
+    exec(&(String::from("/bin/") + args[0]), &args);
+    println!("{}: command not found", args[0]);
 }

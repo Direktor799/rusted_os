@@ -21,7 +21,7 @@ fn main(args: &[&str]) -> i32 {
             text.push_str(&s);
         }
         let (lines, words, chars) = count(&text);
-        println!("\t{}\t{}\t{}", lines, words, chars);
+        println!("{}\t{}\t{}", lines, words, chars);
         return 0;
     }
     for target in &args[1..] {
@@ -43,7 +43,7 @@ fn main(args: &[&str]) -> i32 {
         let mut buf = vec![0u8; stat.size as usize];
         read(fd as usize, &mut buf);
         let (lines, words, chars) = count(str::from_utf8(&buf).unwrap());
-        println!("\t{}\t{}\t{}\t{}", lines, words, chars, target);
+        println!("{}\t{}\t{}\t{}", lines, words, chars, target);
         close(fd as usize);
     }
     0

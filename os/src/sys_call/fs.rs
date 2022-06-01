@@ -65,10 +65,11 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     if fd >= fd_table.len() {
         return -1;
     }
-    if let Some(file) = &fd_table[fd] {
+    if let Some(file) = fd_table[fd].clone() {
         if !file.writable() {
             return -1;
         }
+        drop(proc_inner);
         file.write(user_buffer) as isize
     } else {
         -1

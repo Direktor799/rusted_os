@@ -1,5 +1,5 @@
 use super::File;
-use crate::memory::frame::user_buffer::UserBuffer;
+use crate::{fs::EOT, memory::frame::user_buffer::UserBuffer};
 use alloc::rc::{Rc, Weak};
 use core::cell::RefCell;
 
@@ -123,6 +123,10 @@ impl File for Pipe {
             let loop_read = ring_buffer.available_read();
             if loop_read == 0 {
                 if ring_buffer.all_write_ends_closed() {
+                    if let Some(byte_ref) = buf_iter.next() {
+                        *byte_ref = EOT as u8;
+                        read_size += 1;
+                    }
                     return read_size;
                 }
                 drop(ring_buffer);

@@ -8,7 +8,7 @@ use crate::fs::rfs::layout::InodeType;
 use crate::tools::uninit_cell::UninitCell;
 use crate::{fs::rfs::find_inode, interrupt::timer};
 use alloc::rc::Rc;
-use alloc::vec;
+use alloc::{format, vec};
 pub use context::TaskContext;
 use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
@@ -29,7 +29,10 @@ impl TaskManager {
 
     fn switch_to_next_task(&mut self) {
         let current_task = self.current_task.clone();
-        let mut current_task_inner = current_task.inner.borrow_mut();
+        let mut current_task_inner = current_task
+            .inner
+            .try_borrow_mut()
+            .expect(&format!("{}", current_task.pid.0));
         let current_task_cx = &mut current_task_inner.task_cx as *mut TaskContext;
         let current_task_status = current_task_inner.task_status;
         if current_task_status != TaskStatus::Exited {
@@ -85,6 +88,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
         );
     }
     inner.task_status = TaskStatus::Exited;
+    inner.fd_table.clear();
     inner.exit_code = exit_code;
     unsafe {
         let mut daemon_inner = DAEMON.inner.borrow_mut();
