@@ -1,4 +1,5 @@
 use super::File;
+use crate::fs::{CR, LF};
 use crate::memory::frame::user_buffer::UserBuffer;
 use crate::sbi::console_getchar;
 
@@ -17,10 +18,13 @@ impl File for Stdin {
         assert_eq!(user_buf.len(), 1);
         // busy loop
         loop {
-            let ch = console_getchar() as u8;
+            let mut ch = console_getchar() as u8;
             if ch == 255 {
                 break usize::MAX;
             } else {
+                if ch == CR as u8 {
+                    ch = LF as u8;
+                }
                 unsafe {
                     user_buf.0[0].as_mut_ptr().write_volatile(ch);
                 }

@@ -48,7 +48,6 @@ pub fn get_char() -> char {
 pub const EOT: char = '\x04';
 const BS: char = '\x08';
 pub const LF: char = '\x0a';
-const CR: char = '\x0d';
 const DEL: char = '\x7f';
 
 pub fn get_line() -> String {
@@ -66,8 +65,7 @@ pub fn get_line() -> String {
             break input;
         }
         input.push(ch);
-        if ch == CR {
-            print!("{LF}");
+        if ch == LF {
             break input;
         }
     }

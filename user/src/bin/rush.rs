@@ -89,7 +89,6 @@ fn execute_cmd(mut args: Vec<&str>) {
             dup2(pipe_fds[1], 1);
             close(pipe_fds[0]);
             close(pipe_fds[1]);
-            println!("go {:?}", splited[1]);
             execute_cmd(splited[1].clone());
         } else {
             dup2(pipe_fds[0], 0);

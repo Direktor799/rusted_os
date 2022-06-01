@@ -18,10 +18,6 @@ fn main() -> i32 {
                 r#yield();
                 continue;
             }
-            println!(
-                "[daemon] Released a zombie process, pid = {}, exit_code = {}",
-                pid, exit_code,
-            );
         }
     }
     0

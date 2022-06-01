@@ -11,6 +11,10 @@ const REG: usize = 1;
 const DIR: usize = 2;
 const LNK: usize = 3;
 
+const EOT: char = '\x04';
+const LF: char = '\x0a';
+const CR: char = '\x0d';
+
 pub struct Stat {
     pub ino: u32,
     pub mode: u32,
@@ -28,8 +32,6 @@ impl From<Rc<dyn File>> for Stat {
         }
     }
 }
-
-pub const EOT: char = '\x04';
 
 pub trait File {
     fn readable(&self) -> bool;

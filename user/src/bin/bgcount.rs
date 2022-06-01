@@ -9,7 +9,7 @@ use user_lib::*;
 #[no_mangle]
 fn main() -> i32 {
     loop {
-        println!("Now time: {}", gettime());
+        println!("Proc {}: {}", getpid(), gettime());
         sleep(5000)
     }
 }
