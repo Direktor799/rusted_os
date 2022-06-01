@@ -149,30 +149,6 @@ pub fn sys_pipe(pipe: *mut usize) -> isize {
     0
 }
 
-// target为源文件, link_path为link文件路径
-pub fn sys_symlink(target_path: *const u8, link_path: *const u8) -> isize {
-    let proc = get_current_process();
-    let proc_inner = proc.inner.borrow_mut();
-    let target_path = get_user_string(proc_inner.token(), target_path);
-    let target_path = get_full_path(&proc_inner.cwd, &target_path);
-    let link_path = get_user_string(proc_inner.token(), link_path);
-    let link_path = get_full_path(&proc_inner.cwd, &link_path);
-
-    let (parent_path, target) = link_path.rsplit_once('/').unwrap();
-    if let Some(parent_inode) = find_inode(parent_path) {
-        if let Some(cur_inode) = parent_inode.create(target, InodeType::SoftLink) {
-            cur_inode.write_at(0, target_path.as_bytes());
-            0
-        } else {
-            // file exists
-            -2
-        }
-    } else {
-        // no such file
-        -1
-    }
-}
-
 const SEEK_SET: u32 = 0;
 const SEEK_CUR: u32 = 1;
 const SEEK_END: u32 = 2;
@@ -199,35 +175,6 @@ pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
     } else {
         file.set_offset(new_offset as usize);
         new_offset
-    }
-}
-
-pub fn sys_readlink(path: *const u8, buf: *const u8, len: usize) -> isize {
-    let proc = get_current_process();
-    let proc_inner = proc.inner.borrow_mut();
-    let path = get_user_string(proc_inner.token(), path);
-    let path = get_full_path(&proc_inner.cwd, &path);
-    let user_buffer = get_user_buffer(proc_inner.token(), buf, len);
-
-    if let Some(inode) = find_inode(&path) {
-        if !inode.is_link() {
-            // not link file
-            return -3;
-        }
-        if inode.get_file_size() as usize > len {
-            // not big enough
-            return -2;
-        }
-        let mut cur_offset = 0;
-        for slice in user_buffer.0.into_iter() {
-            let len = slice.len().min(inode.get_file_size() as usize - cur_offset);
-            inode.read_at(cur_offset, &mut slice[cur_offset..cur_offset + len]);
-            cur_offset += len;
-        }
-        inode.get_file_size() as isize
-    } else {
-        // no such file
-        -1
     }
 }
 

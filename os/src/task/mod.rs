@@ -67,7 +67,7 @@ impl TaskManager {
 
 pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
 
-pub static mut DEAMON: UninitCell<Rc<ProcessControlBlock>> = UninitCell::uninit();
+pub static mut DAEMON: UninitCell<Rc<ProcessControlBlock>> = UninitCell::uninit();
 
 pub fn add_new_task(task: Rc<ProcessControlBlock>) {
     unsafe {
@@ -87,9 +87,9 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     inner.task_status = TaskStatus::Exited;
     inner.exit_code = exit_code;
     unsafe {
-        let mut daemon_inner = DEAMON.inner.borrow_mut();
+        let mut daemon_inner = DAEMON.inner.borrow_mut();
         for child in inner.children.iter() {
-            child.inner.borrow_mut().parent = Rc::downgrade(&DEAMON);
+            child.inner.borrow_mut().parent = Rc::downgrade(&DAEMON);
             daemon_inner.children.push(child.clone());
         }
     }
@@ -126,8 +126,8 @@ pub fn init() {
         let size = app_inode.get_file_size() as usize;
         let mut app_data = vec![0u8; size];
         app_inode.read_at(0, &mut app_data);
-        DEAMON = UninitCell::init(Rc::new(ProcessControlBlock::new(&app_data)));
-        TASK_MANAGER = UninitCell::init(TaskManager::new(DEAMON.clone()));
+        DAEMON = UninitCell::init(Rc::new(ProcessControlBlock::new(&app_data)));
+        TASK_MANAGER = UninitCell::init(TaskManager::new(DAEMON.clone()));
         println!("mod task initialized!");
     }
 }

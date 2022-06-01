@@ -33,7 +33,6 @@ fn main(args: &[&str]) -> i32 {
             CHR => "character special file",
             REG => "regular file",
             DIR => "directory",
-            LNK => "symbolic link",
             _ => panic!("Unknown mode: {}", stat.mode),
         };
         println!("File: {}\t\tType: {}", target, file_type);

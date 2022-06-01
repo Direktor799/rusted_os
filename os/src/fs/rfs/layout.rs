@@ -71,7 +71,6 @@ impl SuperBlock {
 pub enum InodeType {
     File,
     Directory,
-    SoftLink,
 }
 
 /// 间接块
@@ -105,10 +104,6 @@ impl Inode {
     /// 判断当前Inode是否为文件
     pub fn is_file(&self) -> bool {
         self.type_ == InodeType::File
-    }
-    /// 判断当前Inode是否为link
-    pub fn is_link(&self) -> bool {
-        self.type_ == InodeType::SoftLink
     }
 
     /// 用于存储Inode数据的块数量

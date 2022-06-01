@@ -3,7 +3,6 @@ use core::arch::asm;
 const SYS_CALL_GETCWD: usize = 17;
 const SYS_CALL_MKDIR: usize = 34;
 const SYS_CALL_UNLINK: usize = 35;
-const SYS_CALL_SYMLINK: usize = 36;
 const SYS_CALL_CHDIR: usize = 49;
 const SYS_CALL_OPEN: usize = 56;
 const SYS_CALL_CLOSE: usize = 57;
@@ -11,7 +10,6 @@ const SYS_CALL_PIPE: usize = 59;
 const SYS_CALL_LSEEK: usize = 62;
 const SYS_CALL_READ: usize = 63;
 const SYS_CALL_WRITE: usize = 64;
-const SYS_CALL_READLINK: usize = 78;
 const SYS_CALL_FSTAT: usize = 80;
 const SYS_CALL_EXIT: usize = 93;
 const SYS_CALL_YIELD: usize = 124;
@@ -80,26 +78,12 @@ pub fn sys_close(fd: usize) -> isize {
     sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
 }
 
-pub fn sys_pipe(pipe:&mut [usize]) -> isize{
+pub fn sys_pipe(pipe: &mut [usize]) -> isize {
     sys_call(SYS_CALL_PIPE, [pipe.as_mut_ptr() as usize, 0, 0])
-}
-
-pub fn sys_symlink(target_path: *const u8, link_path: *const u8) -> isize {
-    sys_call(
-        SYS_CALL_SYMLINK,
-        [target_path as usize, link_path as usize, 0],
-    )
 }
 
 pub fn sys_lseek(fd: usize, offset: isize, whence: u32) -> isize {
     sys_call(SYS_CALL_LSEEK, [fd, offset as usize, whence as usize])
-}
-
-pub fn sys_readlink(path: *const u8, buf: &mut [u8]) -> isize {
-    sys_call(
-        SYS_CALL_READLINK,
-        [path as usize, buf.as_ptr() as usize, buf.len()],
-    )
 }
 
 pub fn sys_unlink(path: *const u8, flags: u32) -> isize {

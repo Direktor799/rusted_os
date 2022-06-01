@@ -124,14 +124,8 @@ pub fn close(fd: usize) -> isize {
     sys_close(fd)
 }
 
-pub fn pipe(pipe_fd: &mut [usize]) -> isize{
+pub fn pipe(pipe_fd: &mut [usize]) -> isize {
     sys_pipe(pipe_fd)
-}
-
-pub fn symlink(target_path: &str, link_path: &str) -> isize {
-    let target_path = String::from(target_path) + "\0";
-    let link_path = String::from(link_path) + "\0";
-    sys_symlink(target_path.as_ptr(), link_path.as_ptr())
 }
 
 pub const SEEK_SET: u32 = 0;
@@ -140,19 +134,6 @@ pub const SEEK_END: u32 = 2;
 
 pub fn lseek(fd: usize, offset: isize, whence: u32) -> isize {
     sys_lseek(fd, offset, whence)
-}
-
-pub fn readlink(path: &str, s: &mut String) -> isize {
-    let path = String::from(path) + "\0";
-    let mut buffer = vec![0u8; 128];
-    let len = sys_readlink(path.as_ptr(), &mut buffer);
-    if len < 0 {
-        return len;
-    }
-    *s = str::from_utf8(&buffer[0..len as usize])
-        .unwrap()
-        .to_string();
-    len
 }
 
 pub const AT_REMOVEDIR: u32 = 1;
@@ -165,7 +146,6 @@ pub fn unlink(path: &str, flags: u32) -> isize {
 pub const CHR: usize = 0;
 pub const REG: usize = 1;
 pub const DIR: usize = 2;
-pub const LNK: usize = 3;
 
 pub struct Stat {
     pub ino: u32,
