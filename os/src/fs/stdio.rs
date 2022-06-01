@@ -24,6 +24,7 @@ impl File for Stdin {
                 unsafe {
                     user_buf.0[0].as_mut_ptr().write_volatile(ch);
                 }
+                print!("{}", ch as char);
                 break 1;
             }
         }

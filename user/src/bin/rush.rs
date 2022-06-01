@@ -33,8 +33,8 @@ fn main() -> i32 {
                 "exit" => break,
                 _ => {
                     let pid = fork();
-                    if let Some(input_pos) = args.iter().position(|arg| *arg == "<") {
-                        if pid == 0 {
+                    if pid == 0 {
+                        if let Some(input_pos) = args.iter().position(|arg| *arg == "<") {
                             if input_pos + 1 >= args.len() {
                                 println!("syntax error");
                                 continue;
@@ -45,11 +45,9 @@ fn main() -> i32 {
                                 continue;
                             }
                             dup2(fd as usize, 0);
+                            args.drain(input_pos..=input_pos + 1);
                         }
-                        args.drain(input_pos..=input_pos + 1);
-                    }
-                    if let Some(output_pos) = args.iter().position(|arg| *arg == ">") {
-                        if pid == 0 {
+                        if let Some(output_pos) = args.iter().position(|arg| *arg == ">") {
                             if output_pos + 1 >= args.len() {
                                 println!("syntax error");
                                 continue;
@@ -60,8 +58,8 @@ fn main() -> i32 {
                                 continue;
                             }
                             dup2(fd as usize, 1);
+                            args.drain(output_pos..=output_pos + 1);
                         }
-                        args.drain(output_pos..=output_pos + 1);
                     }
                     match args.last().unwrap() {
                         &"&" => {

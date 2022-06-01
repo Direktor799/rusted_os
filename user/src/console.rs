@@ -66,7 +66,6 @@ pub fn get_line() -> String {
             break input;
         }
         input.push(ch);
-        print!("{}", ch);
         if ch == CR {
             print!("{LF}");
             break input;
