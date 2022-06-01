@@ -238,3 +238,7 @@ pub fn sleep(ms: usize) {
         }
     }
 }
+
+pub fn dup2(old_fd: usize, new_fd: usize) -> isize {
+    sys_dup2(old_fd, new_fd)
+}

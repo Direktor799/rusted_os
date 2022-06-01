@@ -1,6 +1,7 @@
 use core::arch::asm;
 
 const SYS_CALL_GETCWD: usize = 17;
+const SYS_CALL_DUP2: usize = 24;
 const SYS_CALL_MKDIR: usize = 34;
 const SYS_CALL_UNLINK: usize = 35;
 const SYS_CALL_CHDIR: usize = 49;
@@ -75,7 +76,7 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 }
 // 返回值为-1表示close失败，为0表示执行成功
 pub fn sys_close(fd: usize) -> isize {
-    sys_call(SYS_CALL_CLOSE, [fd as usize, 0, 0])
+    sys_call(SYS_CALL_CLOSE, [fd, 0, 0])
 }
 
 pub fn sys_pipe(pipe: &mut [usize]) -> isize {
@@ -91,7 +92,7 @@ pub fn sys_unlink(path: *const u8, flags: u32) -> isize {
 }
 
 pub fn sys_fstat(fd: usize, stat: *mut u8) -> isize {
-    sys_call(SYS_CALL_FSTAT, [fd as usize, stat as usize, 0])
+    sys_call(SYS_CALL_FSTAT, [fd, stat as usize, 0])
 }
 
 pub fn sys_fork() -> isize {
@@ -111,5 +112,9 @@ pub fn sys_getpid() -> isize {
 }
 
 pub fn sys_kill(pid: usize) -> isize {
-    sys_call(SYS_CALL_KILL, [pid as usize, 0, 0])
+    sys_call(SYS_CALL_KILL, [pid, 0, 0])
+}
+
+pub fn sys_dup2(old_fd: usize, new_fd: usize) -> isize {
+    sys_call(SYS_CALL_DUP2, [old_fd, new_fd, 0])
 }

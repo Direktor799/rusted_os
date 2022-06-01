@@ -26,33 +26,64 @@ fn main() -> i32 {
         }
         print!("root@rusted_os:{}# ", cwd);
         let input = get_line();
-        let args = input.split_whitespace().collect::<Vec<_>>();
+        let mut args = input.split_whitespace().collect::<Vec<_>>();
         if !args.is_empty() {
             match args[0] {
                 "cd" => cd(&mut cwd, &args),
                 "write" => write_test(&args),
                 "exit" => break,
-                _ => match args.last().unwrap() {
-                    &"&" => {
-                        let pid = fork();
+                _ => {
+                    let pid = fork();
+                    if let Some(input_pos) = args.iter().position(|arg| *arg == "<") {
                         if pid == 0 {
-                            exec(&(String::from("/bin/") + args[0]), &args[..args.len() - 1]);
-                            println!("{}: command not found", args[0]);
-                        } else {
-                            backgroud_pids.push(pid as usize);
-                            println!("[{}] {}", backgroud_pids.len(), pid);
+                            if input_pos + 1 >= args.len() {
+                                println!("syntax error");
+                                continue;
+                            }
+                            let fd = open(args[input_pos + 1], RDONLY);
+                            if fd == -1 {
+                                println!("'{}': No such file or directory", args[input_pos + 1]);
+                                continue;
+                            }
+                            dup2(fd as usize, 0);
+                        }
+                        args.drain(input_pos..=input_pos + 1);
+                    }
+                    if let Some(output_pos) = args.iter().position(|arg| *arg == ">") {
+                        if pid == 0 {
+                            if output_pos + 1 >= args.len() {
+                                println!("syntax error");
+                                continue;
+                            }
+                            let fd = open(args[output_pos + 1], WRONLY | CREATE);
+                            if fd == -1 {
+                                println!("'{}': No such file or directory", args[output_pos + 1]);
+                                continue;
+                            }
+                            dup2(fd as usize, 1);
+                        }
+                        args.drain(output_pos..=output_pos + 1);
+                    }
+                    match args.last().unwrap() {
+                        &"&" => {
+                            if pid == 0 {
+                                exec(&(String::from("/bin/") + args[0]), &args[..args.len() - 1]);
+                                println!("{}: command not found", args[0]);
+                            } else {
+                                backgroud_pids.push(pid as usize);
+                                println!("[{}] {}", backgroud_pids.len(), pid);
+                            }
+                        }
+                        _ => {
+                            if pid == 0 {
+                                exec(&(String::from("/bin/") + args[0]), &args);
+                                println!("{}: command not found", args[0]);
+                            } else {
+                                waitpid(pid as usize, &mut ret_code, false);
+                            }
                         }
                     }
-                    _ => {
-                        let pid = fork();
-                        if pid == 0 {
-                            exec(&(String::from("/bin/") + args[0]), &args);
-                            println!("{}: command not found", args[0]);
-                        } else {
-                            waitpid(pid as usize, &mut ret_code, false);
-                        }
-                    }
-                },
+                }
             }
         }
     }
