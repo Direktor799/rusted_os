@@ -30,7 +30,6 @@ fn main() -> i32 {
         if !args.is_empty() {
             match args[0] {
                 "cd" => cd(&mut cwd, &args),
-                "write" => write_test(&args),
                 "exit" => break,
                 _ => {
                     let pid = fork();
@@ -107,24 +106,4 @@ fn cd(cwd: &mut String, args: &Vec<&str>) {
         _ => panic!(),
     }
     getcwd(cwd);
-}
-
-fn write_test(args: &Vec<&str>) {
-    if args.len() <= 2 {
-        println!("missing operand");
-        return;
-    }
-    let target = args[1];
-    let buf_str = args[2].as_bytes();
-    let fd = open(target, WRONLY | CREATE);
-    if fd == -1 {
-        println!("{}: No such file or directory", target);
-        return;
-    }
-    let len = write(fd as usize, buf_str);
-    match len {
-        -1 => println!("{}: Bad file descriptor", fd),
-        _ => println!("ok"),
-    }
-    close(fd as usize);
 }

@@ -33,7 +33,6 @@ fn main(args: &[&str]) -> i32 {
                 _ => print!("{}", str::from_utf8(&buffer[0..len as usize]).unwrap()),
             }
         }
-        println!("");
         close(fd as usize);
     }
     0
