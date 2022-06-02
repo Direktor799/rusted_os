@@ -77,3 +77,18 @@ impl Bitmap {
         self.blocks * BLOCK_BITS
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::drivers::BLOCK_DEVICE;
+    test!(test_bitmap_alloc, {
+        unsafe {
+            let cur_bitmap = Bitmap::new(0, 512);
+            let cur_block = cur_bitmap.alloc(&BLOCK_DEVICE.clone());
+            cur_bitmap.dealloc(&BLOCK_DEVICE.clone(), cur_block.unwrap());
+            test_assert!(cur_bitmap.alloc(&BLOCK_DEVICE.clone()) == cur_block, "Test alloc failed");
+        }
+        Ok("passed")
+    });
+}
