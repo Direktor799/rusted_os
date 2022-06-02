@@ -16,6 +16,7 @@ use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::mem::size_of;
 
+/// 任务状态枚举
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus {
     Ready,
@@ -23,6 +24,7 @@ pub enum TaskStatus {
     Exited,
 }
 
+/// 任务队列状态枚举
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskPos {
     Fcfs1,
@@ -30,6 +32,7 @@ pub enum TaskPos {
     Rr,
 }
 
+/// 进程控制块
 pub struct ProcessControlBlock {
     pub pid: PidHandle,
     pub kernel_stack: KernelStack,
@@ -37,6 +40,7 @@ pub struct ProcessControlBlock {
 }
 
 pub struct ProcessControlBlockInner {
+    /// 进程控制块内部可变结构
     pub task_status: TaskStatus,
     pub task_cx: TaskContext,
     pub task_pos: TaskPos,
@@ -50,6 +54,7 @@ pub struct ProcessControlBlockInner {
 }
 
 impl ProcessControlBlock {
+    /// 通过 elf 数据创建新进程
     pub fn new(elf_data: &[u8]) -> Self {
         let pid = pid_alloc();
         let kernel_stack = KernelStack::new(&pid);
@@ -91,6 +96,7 @@ impl ProcessControlBlock {
         }
     }
 
+    /// 使用本进程用相应参数执行指定 elf 数据
     pub fn exec(&self, elf_data: &[u8], args: &[String]) {
         let (memory_set, mut user_sp, entry_point) = MemorySet::from_elf(elf_data);
         let mem_inode =
@@ -144,6 +150,7 @@ impl ProcessControlBlock {
         *trap_cx_ppn.addr().get_mut() = trap_cx;
     }
 
+    /// fork 创建子进程
     pub fn fork(self: Rc<Self>) -> Rc<Self> {
         let mut inner = self.inner.borrow_mut();
         let memory_set = inner.memory_set.clone();
@@ -193,6 +200,7 @@ impl ProcessControlBlock {
     }
 }
 
+/// 进程控制块内部可变实现
 impl ProcessControlBlockInner {
     pub fn token(&self) -> usize {
         self.memory_set.satp_token()
@@ -212,6 +220,7 @@ impl ProcessControlBlockInner {
     }
 }
 
+/// 进程控制块Drop实现
 impl Drop for ProcessControlBlock {
     fn drop(&mut self) {
         let procs_inode = find_inode("/proc").unwrap();

@@ -14,12 +14,14 @@ use schd::{get_time_slice, SchdMaster};
 pub use switch::__switch;
 pub use task::{ProcessControlBlock, TaskPos, TaskStatus};
 
+/// 任务管理器
 pub struct TaskManager {
     current_task: Rc<ProcessControlBlock>,
     schd: SchdMaster,
 }
 
 impl TaskManager {
+    /// 创建新的任务管理器
     fn new(daemon: Rc<ProcessControlBlock>) -> Self {
         Self {
             current_task: daemon,
@@ -27,6 +29,7 @@ impl TaskManager {
         }
     }
 
+    /// 结束本任务 调度执行下一个任务
     fn switch_to_next_task(&mut self) {
         let current_task = self.current_task.clone();
         let mut current_task_inner = current_task
@@ -59,25 +62,31 @@ impl TaskManager {
         }
     }
 
+    /// 获取正在运行的任务
     pub fn get_current_process(&self) -> Rc<ProcessControlBlock> {
         self.current_task.clone()
     }
 
+    /// 获取全部任务迭代器
     pub fn tasks(&self) -> impl Iterator<Item = &Rc<ProcessControlBlock>> {
         self.schd.tasks()
     }
 }
 
+/// 全局任务管理器
 pub static mut TASK_MANAGER: UninitCell<TaskManager> = UninitCell::uninit();
 
+/// 守护进程
 pub static mut DAEMON: UninitCell<Rc<ProcessControlBlock>> = UninitCell::uninit();
 
+/// 向调度队列加入新的进程
 pub fn add_new_task(task: Rc<ProcessControlBlock>) {
     unsafe {
         TASK_MANAGER.schd.add_new_task(task);
     }
 }
 
+/// 退出目前进程并运行下一个
 pub fn exit_current_and_run_next(exit_code: i32) {
     let proc = get_current_process();
     let mut inner = proc.inner.borrow_mut();
@@ -102,6 +111,7 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     suspend_current_and_run_next();
 }
 
+/// 挂起当前进程并运行下一个
 pub fn suspend_current_and_run_next() {
     unsafe {
         TASK_MANAGER.switch_to_next_task();
@@ -116,10 +126,12 @@ pub fn schedule_callback() {
     }
 }
 
+/// 获取当前正在执行的进程
 pub fn get_current_process() -> Rc<ProcessControlBlock> {
     unsafe { TASK_MANAGER.get_current_process() }
 }
 
+/// 模块初始化
 pub fn init() {
     unsafe {
         id::init();
@@ -136,6 +148,7 @@ pub fn init() {
     }
 }
 
+/// 运行进程调度过程
 pub fn run() {
     unsafe {
         let current_task = TASK_MANAGER.current_task.clone();

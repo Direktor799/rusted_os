@@ -15,7 +15,7 @@ pub struct TaskContext {
 }
 
 impl TaskContext {
-    /// init task context
+    /// 全0初始化
     pub const fn zero_init() -> Self {
         Self {
             ra: 0,
