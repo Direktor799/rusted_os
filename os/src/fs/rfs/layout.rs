@@ -482,7 +482,7 @@ mod test {
         };
 
         unsafe {
-            test_reg.increase_size(700, [5,6].to_vec(), &BLOCK_DEVICE.clone());
+            test_reg.increase_size(700, [5, 6].to_vec(), &BLOCK_DEVICE.clone());
         }
         test_assert!(test_reg.data_blocks() == 2, "increase success");
         unsafe {
@@ -509,7 +509,7 @@ mod test {
         }
         let mut b = [0u8; 7];
         unsafe {
-                test_reg.read_at(0, b.as_mut(), &BLOCK_DEVICE.clone());
+            test_reg.read_at(0, b.as_mut(), &BLOCK_DEVICE.clone());
         }
         test_assert!(a == String::from_utf8(b.to_vec()).unwrap(), "Read Error");
         Ok("passed")

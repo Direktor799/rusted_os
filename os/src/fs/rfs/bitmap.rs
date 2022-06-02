@@ -87,7 +87,10 @@ mod test {
             let cur_bitmap = Bitmap::new(0, 512);
             let cur_block = cur_bitmap.alloc(&BLOCK_DEVICE.clone());
             cur_bitmap.dealloc(&BLOCK_DEVICE.clone(), cur_block.unwrap());
-            test_assert!(cur_bitmap.alloc(&BLOCK_DEVICE.clone()) == cur_block, "Test alloc failed");
+            test_assert!(
+                cur_bitmap.alloc(&BLOCK_DEVICE.clone()) == cur_block,
+                "Test alloc failed"
+            );
         }
         Ok("passed")
     });

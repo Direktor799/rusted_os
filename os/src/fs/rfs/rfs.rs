@@ -189,36 +189,25 @@ mod test {
                 );
             }
         }
-
         Ok("passed")
     });
+
     test!(test_get_inode_pos, {
         unsafe {
             if let Some(rfs) = RustedFileSystem::open(BLOCK_DEVICE.clone()) {
                 let (disk_id, offset) = rfs.as_ref().borrow().get_disk_inode_pos(3);
-                test_assert!(
-                    disk_id == 2 && offset == 384,
-                    "get_disk_inode_id_failed"
-                );
+                test_assert!(disk_id == 2 && offset == 384, "get_disk_inode_id_failed");
                 let (disk_id, offset) = rfs.as_ref().borrow().get_disk_inode_pos(4);
-                test_assert!(
-                    disk_id == 3 && offset == 0,
-                    "get_disk_inode_id_failed"
-                );
+                test_assert!(disk_id == 3 && offset == 0, "get_disk_inode_id_failed");
                 let (disk_id, offset) = rfs.as_ref().borrow().get_disk_inode_pos(5);
-                test_assert!(
-                    disk_id == 3 && offset == 128,
-                    "get_disk_inode_id_failed"
-                );
+                test_assert!(disk_id == 3 && offset == 128, "get_disk_inode_id_failed");
                 let (disk_id, offset) = rfs.as_ref().borrow().get_disk_inode_pos(8);
-                test_assert!(
-                    disk_id == 4 && offset == 0,
-                    "get_disk_inode_id_failed"
-                );
+                test_assert!(disk_id == 4 && offset == 0, "get_disk_inode_id_failed");
             }
         }
         Ok("passed")
     });
+
     test!(test_alloc, {
         unsafe {
             if let Some(rfs) = RustedFileSystem::open(BLOCK_DEVICE.clone()) {

@@ -24,7 +24,7 @@ impl InodeHandler {
         block_device: Rc<dyn BlockDevice>,
     ) -> Self {
         Self {
-            block_id: block_id,
+            block_id,
             block_offset,
             fs,
             block_device,
@@ -248,26 +248,35 @@ impl InodeHandler {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fs::rfs::ROOT_INODE;
     use crate::fs::rfs::String;
+    use crate::fs::rfs::ROOT_INODE;
     test!(test_inodehandler_create, {
         unsafe {
             let test_handler = ROOT_INODE.create("test", InodeType::File).unwrap();
             let find_result = ROOT_INODE.find("test").unwrap();
-            test_assert!(find_result.block_id == test_handler.block_id && find_result.block_offset == test_handler.block_offset, "Block id is wrong");
+            test_assert!(
+                find_result.block_id == test_handler.block_id
+                    && find_result.block_offset == test_handler.block_offset,
+                "Block id is wrong"
+            );
         }
         Ok("passed")
     });
+
     test!(test_inodehandler_delete, {
         unsafe {
             let old_size = ROOT_INODE.get_file_size();
             ROOT_INODE.delete("test");
             let new_size = ROOT_INODE.get_file_size();
             let find_result = ROOT_INODE.find("test");
-            test_assert!(find_result.is_none() && old_size -  new_size == 32, "Delete Failed");
+            test_assert!(
+                find_result.is_none() && old_size - new_size == 32,
+                "Delete Failed"
+            );
         }
         Ok("passed")
     });
+
     test!(test_inodehandler_file_type, {
         unsafe {
             let test_handler = ROOT_INODE.create("test", InodeType::File).unwrap();
@@ -278,13 +287,17 @@ mod test {
         }
         Ok("passed")
     });
+
     test!(test_inodehandler_read_write, {
         unsafe {
             let test_handler = ROOT_INODE.create("test1", InodeType::File).unwrap();
             test_handler.write_at(0, "1234".as_bytes());
-            let mut buf = [0u8;2];
+            let mut buf = [0u8; 2];
             test_handler.read_at(1, buf.as_mut());
-            test_assert!("23" == String::from_utf8(buf.to_vec()).unwrap(), "Read Error");
+            test_assert!(
+                "23" == String::from_utf8(buf.to_vec()).unwrap(),
+                "Read Error"
+            );
             Ok("passed")
         }
     });

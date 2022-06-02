@@ -229,7 +229,7 @@ mod test {
         let mut memory_set = MemorySet::new();
         let data = [u8::MAX; PAGE_SIZE];
         memory_set.insert_segment(VirtPageNum(0)..VirtPageNum(2), R | W, Some(&data));
-        let mut new_memory_set = memory_set.clone();
+        let new_memory_set = memory_set.clone();
         let ppn = new_memory_set.translate(VirtPageNum(0));
         test_assert!(ppn.is_some());
         for byte in ppn.unwrap().get_bytes_array() {

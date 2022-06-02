@@ -148,39 +148,24 @@ pub fn init() {
 mod test {
     use super::*;
     use crate::drivers::BLOCK_DEVICE;
-    use alloc::string::{String};
+    use alloc::string::String;
     test!(test_block_cache, {
         let cur_block;
         unsafe {
             cur_block = BLOCK_CACHE_MANAGER.get_block_cache(10, BLOCK_DEVICE.clone());
         }
         cur_block.borrow_mut().modify(0, |test: &mut [u8; 8]| {
-            test[0] = '1' as u8;
-            test[1] = '2' as u8;
-            test[2] = '3' as u8;
-            test[3] = '4' as u8;
+            test[0] = b'1';
+            test[1] = b'2';
+            test[2] = b'3';
+            test[3] = b'4';
         });
-        let a = cur_block.borrow().read(0, |test: &[u8; 4]| {
-            test_assert!(String::from_utf8(test.to_vec()).unwrap() == "1234", "Read or Write Failed");
-            Ok("1")
-        });
-        let b = cur_block.borrow().read(1, |test: &[u8; 3]| {
-            test_assert!(String::from_utf8(test.to_vec()).unwrap() == "234", "Read or Write Failed");
-            Ok("1")
-        });
-        let c = cur_block.borrow_mut().read(2, |test: &[u8; 2]| {
-            test_assert!(String::from_utf8(test.to_vec()).unwrap() == "34", "Read or Write Failed");
-            Ok("1")
-        });
-        let d = cur_block.borrow_mut().read(3, |test: &[u8; 1]| {
-            test_assert!(String::from_utf8(test.to_vec()).unwrap() == "4", "Read or Write Failed");
-            Ok("1")
-        });
-        if a.is_ok() && b.is_ok() && c.is_ok() && d.is_ok(){
-            Ok("passed")
+        for i in 0..4 {
+            let s = cur_block.borrow().read(i, |test: &[u8; 4]| {
+                String::from_utf8(test.to_vec()).unwrap()
+            });
+            test_assert!(s[..4 - i] == "1234"[i..], "Read or Write Failed");
         }
-        else {
-            Err("Cannot Passed")
-        }
+        Ok("passed")
     });
 }
