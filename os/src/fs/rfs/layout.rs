@@ -425,3 +425,93 @@ impl Dirent {
         self.inode_number
     }
 }
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::drivers::BLOCK_DEVICE;
+    use crate::fs::rfs::String;
+    test!(test_file_type, {
+        let mut test_reg: Inode = Inode {
+            size: 0,
+            direct: [1; 28],
+            indirect1: 0,
+            indirect2: 0,
+            type_: InodeType::File,
+        };
+        test_reg.init(InodeType::File);
+        let mut test_dir: Inode = Inode {
+            size: 0,
+            direct: [1; 28],
+            indirect1: 0,
+            indirect2: 0,
+            type_: InodeType::File,
+        };
+        test_dir.init(InodeType::Directory);
+        test_assert!(test_reg.is_file(), "Test_reg is not file");
+        test_assert!(!test_reg.is_dir(), "Test_reg is dir");
+        test_assert!(test_dir.is_dir(), "Test_dir is not dir");
+        test_assert!(!test_dir.is_file(), "Test_dir is file");
+        Ok("passed")
+    });
+    test!(test_file_total_blocks, {
+        test_assert!(Inode::total_blocks(1024) == 2, "Bad total blocks");
+        test_assert!(Inode::total_blocks(2048) == 4, "Bad total blocks");
+        test_assert!(Inode::total_blocks(3500) == 7, "Bad total blocks");
+        test_assert!(Inode::total_blocks(13500) == 27, "Bad total blocks");
+        test_assert!(Inode::total_blocks(20000) == 41, "Bad total blocks");
+        Ok("passed")
+    });
+    test!(test_dirent_change, {
+        let mut dir = Dirent::new("123", 1);
+        test_assert!(dir.inode_number() == 1, "Bad inode number");
+        test_assert!(dir.name() == "123", "Bad inode name");
+        let new_dir = dir.as_bytes_mut();
+        new_dir[3] = 'A' as u8;
+        new_dir[28] = 32;
+        test_assert!(dir.inode_number() == 32, "Bad inode number");
+        test_assert!(dir.name() == "123A", "Bad inode name");
+        Ok("passed")
+    });
+    test!(test_size_change, {
+        let mut test_reg: Inode = Inode {
+            size: 0,
+            direct: [4; 28],
+            indirect1: 0,
+            indirect2: 0,
+            type_: InodeType::File,
+        };
+
+        unsafe {
+            test_reg.increase_size(700, [5,6].to_vec(), &BLOCK_DEVICE.clone());
+        }
+        test_assert!(test_reg.data_blocks() == 2, "increase success");
+        unsafe {
+            test_reg.decrease_size(200, &BLOCK_DEVICE.clone());
+        }
+        test_assert!(test_reg.data_blocks() == 1, "decrease success");
+        Ok("passed")
+    });
+    test!(test_inode_read_write, {
+        let mut test_reg: Inode = Inode {
+            size: 0,
+            direct: [4; 28],
+            indirect1: 0,
+            indirect2: 0,
+            type_: InodeType::File,
+        };
+
+        unsafe {
+            test_reg.increase_size(10, [5].to_vec(), &BLOCK_DEVICE.clone());
+        }
+        let a = String::from("1234567");
+        unsafe {
+            test_reg.write_at(0, a.as_bytes(), &BLOCK_DEVICE.clone());
+        }
+        let mut b = [0u8; 7];
+        unsafe {
+                test_reg.read_at(0, b.as_mut(), &BLOCK_DEVICE.clone());
+        }
+        test_assert!(a == String::from_utf8(b.to_vec()).unwrap(), "Read Error");
+        Ok("passed")
+    });
+}

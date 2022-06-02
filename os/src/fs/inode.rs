@@ -138,3 +138,19 @@ impl File for OSInode {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    test!(test_file_attr, {
+        let test_file = open_file("/test_file_attr",  CREATE).unwrap();
+        test_assert!(test_file.readable, "Test file attr failed");
+        test_assert!(test_file.writable, "Test file attr failed");
+        test_assert!(test_file.get_mode() == REG, "Test file attr failed");
+        let test_file = open_file("/test_file_attr",WRONLY).unwrap();
+        test_assert!(!test_file.readable, "Test file attr failed");
+        test_assert!(test_file.writable, "Test file attr failed");
+        test_assert!(test_file.get_mode() == REG, "Test file attr failed");
+        Ok("passed")
+    });
+}
