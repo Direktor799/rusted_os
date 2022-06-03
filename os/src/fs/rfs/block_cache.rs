@@ -73,7 +73,7 @@ impl BlockCache {
         }
     }
 }
-
+/// 给BlockCache添加Drop Trait, 在每个BlockCache被替换出去时将块中内容写入物理磁盘
 impl Drop for BlockCache {
     fn drop(&mut self) {
         self.sync()

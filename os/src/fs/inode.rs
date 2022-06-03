@@ -1,3 +1,4 @@
+//! OSInode 文件描述符对应结构
 use super::rfs::layout::InodeType;
 use super::rfs::{find_inode, InodeHandler};
 use super::{File, DIR, LNK, REG};
@@ -50,7 +51,7 @@ impl OpenFlags {
         }
     }
 }
-
+/// 根据路径以指定Openflags打开文件
 pub fn open_file(path: &str, flags: OpenFlags) -> Option<Rc<OSInode>> {
     // TODO: app mode
     let (readable, writable) = flags.read_write();
@@ -84,7 +85,7 @@ impl File for OSInode {
     fn writable(&self) -> bool {
         self.writable
     }
-
+    /// 从文件offset处读出内容至Userbuffer内
     fn read(&self, buf: UserBuffer) -> usize {
         let mut inner = self.inner.borrow_mut();
         let mut total_read_size = 0usize;
@@ -98,7 +99,7 @@ impl File for OSInode {
         }
         total_read_size
     }
-
+    /// 将buf内容写入文件offset处
     fn write(&self, buf: UserBuffer) -> usize {
         let mut inner = self.inner.borrow_mut();
         let mut total_write_size = 0usize;
@@ -110,23 +111,23 @@ impl File for OSInode {
         }
         total_write_size
     }
-
+    /// 获取当前OSInode的偏移
     fn get_offset(&self) -> usize {
         self.inner.borrow().offset
     }
-
+    /// 设置当前OSInode的偏移
     fn set_offset(&self, offset: usize) {
         self.inner.borrow_mut().offset = offset;
     }
-
+    /// 获取当前OSInode的文件大小
     fn get_file_size(&self) -> usize {
         self.inner.borrow().inode.get_file_size() as usize
     }
-
+    /// 获取当前OSInode的inode_id
     fn get_inode_id(&self) -> usize {
         self.inner.borrow().inode.get_inode_id() as usize
     }
-
+    /// 获取当前文件类型
     fn get_mode(&self) -> usize {
         let inode = &self.inner.borrow().inode;
         if inode.is_file() {
