@@ -2,7 +2,7 @@ use super::task::*;
 use crate::config::{TASK_QUEUE_FCFS1_SLICE_MS, TASK_QUEUE_FCFS2_SLICE_MS, TASK_QUEUE_RR_SLICE_MS};
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
-        
+
 /// 多级反馈队列
 struct MultilevelFeedbackQueue {
     fcfs1_queue: VecDeque<Rc<ProcessControlBlock>>,
@@ -121,9 +121,9 @@ pub fn get_default_time_slice() -> usize {
 
 #[cfg(test)]
 mod test {
-    use alloc::vec;
-    use crate::fs::rfs::find_inode;
     use super::*;
+    use crate::fs::rfs::find_inode;
+    use alloc::vec;
 
     test!(test_mlfq, {
         let app_inode = find_inode("/bin/daemon").expect("[kernel] daemon not found!");
@@ -136,17 +136,17 @@ mod test {
         let mut mlfq = MultilevelFeedbackQueue::new();
         mlfq.enqueue(pcb);
         let pcb = mlfq.get_task();
-        assert!(pcb.is_some());
+        test_assert!(pcb.is_some());
         let pcb = pcb.unwrap();
-        assert!(pcb.as_ref().inner.borrow().task_pos == TaskPos::Fcfs1);
-        assert!(mlfq.get_task().is_none());
+        test_assert!(pcb.as_ref().inner.borrow().task_pos == TaskPos::Fcfs1);
+        test_assert!(mlfq.get_task().is_none());
 
         mlfq.requeue(pcb);
         let pcb = mlfq.get_task();
-        assert!(pcb.is_some());
+        test_assert!(pcb.is_some());
         let pcb = pcb.unwrap();
-        assert!(pcb.as_ref().inner.borrow().task_pos == TaskPos::Fcfs2);
-        assert!(mlfq.get_task().is_none());
+        test_assert!(pcb.as_ref().inner.borrow().task_pos == TaskPos::Fcfs2);
+        test_assert!(mlfq.get_task().is_none());
 
         let pcb1 = Rc::new(ProcessControlBlock::new(&app_data));
         let pcb2 = Rc::new(ProcessControlBlock::new(&app_data));
@@ -180,10 +180,10 @@ mod test {
         let pcb3 = mlfq.get_task().unwrap();
         let pcb1 = mlfq.get_task().unwrap();
 
-        assert!(pid1 == pcb1.as_ref().pid.0);
-        assert!(pid2 == pcb2.as_ref().pid.0);
-        assert!(pid3 == pcb3.as_ref().pid.0);
-        assert!(pid4 == pcb4.as_ref().pid.0);
+        test_assert!(pid1 == pcb1.as_ref().pid.0);
+        test_assert!(pid2 == pcb2.as_ref().pid.0);
+        test_assert!(pid3 == pcb3.as_ref().pid.0);
+        test_assert!(pid4 == pcb4.as_ref().pid.0);
 
         Ok("passed")
     });
@@ -205,7 +205,7 @@ mod test {
         let pid4 = pcb4.as_ref().pid.0;
 
         let mut master = SchdMaster::new();
-        
+
         master.add_new_task(pcb1);
         master.add_new_task(pcb2);
         master.add_new_task(pcb3);
@@ -215,13 +215,13 @@ mod test {
         let pcb2 = master.get_next().unwrap();
         let pcb3 = master.get_next().unwrap();
 
-        assert!(pid1 == pcb1.as_ref().pid.0);
-        assert!(pid2 == pcb2.as_ref().pid.0);
-        assert!(pid3 == pcb3.as_ref().pid.0);
+        test_assert!(pid1 == pcb1.as_ref().pid.0);
+        test_assert!(pid2 == pcb2.as_ref().pid.0);
+        test_assert!(pid3 == pcb3.as_ref().pid.0);
 
         master.requeue_current(pcb1);
         let pcb4 = master.get_next().unwrap();
-        assert!(pid4 == pcb4.as_ref().pid.0);
+        test_assert!(pid4 == pcb4.as_ref().pid.0);
 
         master.requeue_current(pcb2);
         master.requeue_current(pcb4);
@@ -232,10 +232,10 @@ mod test {
         let pcb4 = master.get_next().unwrap();
         let pcb3 = master.get_next().unwrap();
 
-        assert!(pid1 == pcb1.as_ref().pid.0);
-        assert!(pid2 == pcb2.as_ref().pid.0);
-        assert!(pid3 == pcb3.as_ref().pid.0);
-        assert!(pid4 == pcb4.as_ref().pid.0);
+        test_assert!(pid1 == pcb1.as_ref().pid.0);
+        test_assert!(pid2 == pcb2.as_ref().pid.0);
+        test_assert!(pid3 == pcb3.as_ref().pid.0);
+        test_assert!(pid4 == pcb4.as_ref().pid.0);
 
         Ok("passed")
     });

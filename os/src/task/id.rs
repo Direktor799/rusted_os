@@ -126,10 +126,10 @@ mod test {
         while i <= 1000000 {
             let pid = pid_alloc();
 
-            assert!(pid.0 != pid1.0);
-            assert!(pid.0 != pid2.0);
-            assert!(pid.0 != pid3.0);
-            assert!(pid.0 != pid4.0);
+            test_assert!(pid.0 != pid1.0);
+            test_assert!(pid.0 != pid2.0);
+            test_assert!(pid.0 != pid3.0);
+            test_assert!(pid.0 != pid4.0);
 
             drop(pid);
             i += 1;
