@@ -1,3 +1,4 @@
+//! 管道
 use super::File;
 use crate::{fs::EOT, memory::frame::user_buffer::UserBuffer};
 use alloc::rc::{Rc, Weak};
@@ -27,10 +28,11 @@ impl Pipe {
         }
     }
 }
-
+/// 管道缓冲区大小
 const RING_BUFFER_SIZE: usize = 32;
 
 #[derive(Copy, Clone, PartialEq)]
+/// 管道缓冲区状态
 enum RingBufferStatus {
     Full,
     Empty,
@@ -46,6 +48,7 @@ pub struct PipeRingBuffer {
     write_end: Weak<Pipe>,
 }
 
+/// 对管道缓冲区的操作
 impl PipeRingBuffer {
     pub fn new() -> Self {
         Self {
@@ -56,7 +59,7 @@ impl PipeRingBuffer {
             write_end: Weak::new(),
         }
     }
-    //返回write_end的weak
+    /// 返回write_end的weak指针
     pub fn set_write_end(&mut self, write_end: &Rc<Pipe>) {
         self.write_end = Rc::downgrade(write_end);
     }
@@ -77,6 +80,7 @@ impl PipeRingBuffer {
         }
         c
     }
+    /// 判断管道是否可读
     pub fn available_read(&self) -> usize {
         if self.status == RingBufferStatus::Empty {
             0
@@ -86,6 +90,7 @@ impl PipeRingBuffer {
             self.tail + RING_BUFFER_SIZE - self.head
         }
     }
+    /// 判断管道是否可写
     pub fn available_write(&self) -> usize {
         if self.status == RingBufferStatus::Full {
             0
@@ -93,6 +98,7 @@ impl PipeRingBuffer {
             RING_BUFFER_SIZE - self.available_read()
         }
     }
+    /// 判断管道是否所有写端都已关闭
     pub fn all_write_ends_closed(&self) -> bool {
         self.write_end.upgrade().is_none()
     }
@@ -114,6 +120,7 @@ impl File for Pipe {
     fn writable(&self) -> bool {
         self.writable
     }
+    // 从管道中读
     fn read(&self, buf: UserBuffer) -> usize {
         assert!(self.readable());
         let mut buf_iter = buf.into_iter();
@@ -144,6 +151,7 @@ impl File for Pipe {
             }
         }
     }
+    /// 向管道中写
     fn write(&self, buf: UserBuffer) -> usize {
         assert!(self.writable());
         let mut buf_iter = buf.into_iter();

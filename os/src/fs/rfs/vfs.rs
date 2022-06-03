@@ -1,3 +1,4 @@
+//! InodeHandler子模块
 use super::{
     block_cache::{block_cache_sync_all, get_block_cache},
     block_dev::BlockDevice,
@@ -44,13 +45,13 @@ impl InodeHandler {
             .borrow_mut()
             .modify(self.block_offset, f)
     }
-
+    /// 获取自身inode_id
     pub fn get_inode_id(&self) -> u32 {
         self.fs
             .borrow()
             .get_disk_inode_id(self.block_id, self.block_offset)
     }
-
+    /// 根据当前目录下的文件名找到inode_id
     fn find_inode_id(&self, name: &str, disk_inode: &Inode) -> Option<u32> {
         // assert it is a directory
         assert!(disk_inode.is_dir());
@@ -64,7 +65,7 @@ impl InodeHandler {
         }
         None
     }
-
+    /// 根据当前目录下的文件名找到inodehandler
     pub fn find(&self, name: &str) -> Option<Rc<InodeHandler>> {
         let fs = self.fs.borrow();
         self.read_disk_inode(|disk_inode| {
@@ -78,7 +79,7 @@ impl InodeHandler {
             )))
         })
     }
-
+    /// 扩充当前文件的大小
     fn increase_size(&self, new_size: u32, disk_inode: &mut Inode, fs: &mut RustedFileSystem) {
         if new_size < disk_inode.size {
             return;
@@ -89,7 +90,7 @@ impl InodeHandler {
             .collect();
         disk_inode.increase_size(new_size, v, &self.block_device);
     }
-
+    /// 回收当前文件的部分空间
     fn decrease_size(&self, new_size: u32, disk_inode: &mut Inode, fs: &mut RustedFileSystem) {
         if new_size >= disk_inode.size {
             return;
@@ -99,7 +100,7 @@ impl InodeHandler {
             .into_iter()
             .for_each(|block_id| fs.dealloc_data(block_id));
     }
-
+    /// 在当前目录下创建文件
     pub fn create(&self, name: &str, filetype: InodeType) -> Option<Rc<InodeHandler>> {
         let mut fs = self.fs.borrow_mut();
         let op = |dir_inode: &Inode| {
@@ -161,7 +162,7 @@ impl InodeHandler {
             Some(Rc::new(new_inode_handler))
         }
     }
-
+    /// 给当前文件设置默认目录项(.和..)
     pub fn set_default_dirent(&self, parent_inode_id: u32) {
         let mut fs = self.fs.borrow_mut();
         self.modify_disk_inode(|cur_dir_inode| {
@@ -177,7 +178,7 @@ impl InodeHandler {
             cur_dir_inode.write_at(DIRENT_SZ, dirent_parent.as_bytes(), &self.block_device);
         });
     }
-
+    /// 根据当前目录下的文件名删除指定文件
     pub fn delete(&self, name: &str) {
         let mut fs = self.fs.borrow_mut();
         self.modify_disk_inode(|dir_inode| {
@@ -205,20 +206,20 @@ impl InodeHandler {
             }
         });
     }
-
+    /// 判断当前文件是否为目录
     pub fn is_dir(&self) -> bool {
         self.read_disk_inode(|disk_inode| disk_inode.is_dir())
     }
-
+    /// 判断当前文件是否为普通文件
     pub fn is_file(&self) -> bool {
         self.read_disk_inode(|disk_inode| disk_inode.is_file())
     }
-
+    /// 从指定偏移处读文件内容
     pub fn read_at(&self, offset: usize, buf: &mut [u8]) -> usize {
         let _fs = self.fs.borrow();
         self.read_disk_inode(|disk_inode| disk_inode.read_at(offset, buf, &self.block_device))
     }
-
+    /// 向指定偏移处写入文件内容
     pub fn write_at(&self, offset: usize, buf: &[u8]) -> usize {
         let mut fs = self.fs.borrow_mut();
         let size = self.modify_disk_inode(|disk_inode| {
@@ -228,7 +229,7 @@ impl InodeHandler {
         block_cache_sync_all();
         size
     }
-
+    /// 获取当前文件的大小
     pub fn get_file_size(&self) -> u32 {
         self.read_disk_inode(|disk_inode| disk_inode.size)
     }

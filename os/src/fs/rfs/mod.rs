@@ -1,3 +1,4 @@
+//! 内核态文件系统模块
 mod bitmap;
 mod block_cache;
 pub mod block_dev;
@@ -17,9 +18,9 @@ use alloc::string::String;
 use alloc::vec;
 pub use rfs::RustedFileSystem;
 pub use vfs::InodeHandler;
-
+/// 根目录节点
 pub static mut ROOT_INODE: UninitCell<Rc<InodeHandler>> = UninitCell::uninit();
-
+/// 由路径找到文件的inodehandler
 pub fn find_inode(path: &str) -> Option<Rc<InodeHandler>> {
     let root_inode = unsafe { ROOT_INODE.clone() };
     path.split('/').fold(Some(root_inode), |res, name| {
@@ -34,7 +35,7 @@ pub fn find_inode(path: &str) -> Option<Rc<InodeHandler>> {
         }
     })
 }
-
+/// 做相对路径和绝对路径之间的转换
 pub fn get_full_path(cwd: &String, path: &String) -> String {
     let mut v = vec![];
     let new_path = if path.as_str().chars().next().unwrap() == '/' {
@@ -55,7 +56,7 @@ pub fn get_full_path(cwd: &String, path: &String) -> String {
     });
     String::from("/") + &v.join("/")
 }
-
+/// 初始化文件系统,创建root目录
 pub fn init() {
     block_cache::init();
     unsafe {
