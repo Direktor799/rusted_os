@@ -111,3 +111,30 @@ pub fn init() {
         PID_ALLOCATOR = UninitCell::init(RecycleAllocator::new());
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    test!(test_pid_allocator, {
+        let pid1 = pid_alloc();
+        let pid2 = pid_alloc();
+        let pid3 = pid_alloc();
+        let pid4 = pid_alloc();
+
+        let mut i = 0;
+        while i <= 1000000 {
+            let pid = pid_alloc();
+
+            assert!(pid.0 != pid1.0);
+            assert!(pid.0 != pid2.0);
+            assert!(pid.0 != pid3.0);
+            assert!(pid.0 != pid4.0);
+
+            drop(pid);
+            i += 1;
+        }
+
+        Ok("passed")
+    });
+}

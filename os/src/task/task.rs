@@ -224,8 +224,9 @@ impl ProcessControlBlockInner {
 impl Drop for ProcessControlBlock {
     fn drop(&mut self) {
         let procs_inode = find_inode("/proc").unwrap();
-        let proc_inode = procs_inode.find(&self.pid.0.to_string()).unwrap();
-        proc_inode.delete("mem");
-        procs_inode.delete(&self.pid.0.to_string());
+        if let Some(proc_inode) = procs_inode.find(&self.pid.0.to_string()) {
+            proc_inode.delete("mem");
+            procs_inode.delete(&self.pid.0.to_string());
+        }
     }
 }
